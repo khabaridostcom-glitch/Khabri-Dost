@@ -1,0 +1,6 @@
+{
+  "name": "Khabri Dost - Hindi News Publisher Portal",
+  "description": "भारत का अग्रणी, स्वतंत्र और निष्पक्ष डिजिटल समाचार मंच। सत्य, सटीकता और जनहित की पत्रकारिता के प्रति पूर्णतः समर्पित।",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

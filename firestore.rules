@@ -1,0 +1,166 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Server-side verified Administrator check
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'khabaridost.com@gmail.com' ||
+        request.auth.token.email == 'khabridost.com@gmail.com' ||
+        request.auth.token.email == 'admin@khabridost.com' ||
+        request.auth.token.email == 'contact@khabridost.com' ||
+        (request.auth.token.email != null && request.auth.token.email.matches('^khabridost.*')) ||
+        (request.auth.token.email != null && request.auth.token.email.matches('^khabaridost.*')) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Server-side Editorial Staff check
+    function isStaff() {
+      return isSignedIn() && (
+        isAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'editor', 'reporter', 'super_admin'])
+      );
+    }
+
+    // Articles validation
+    function isValidArticle(data) {
+      return data.title is string && data.title.size() >= 3 && data.title.size() <= 300 &&
+             data.summary is string && data.summary.size() <= 1000 &&
+             data.content is string && data.content.size() >= 10 && data.content.size() <= 50000 &&
+             data.category is string && data.category.size() <= 50 &&
+             data.authorName is string && data.authorName.size() <= 100 &&
+             data.authorUid is string && data.authorUid.size() <= 128;
+    }
+
+    match /articles/{articleId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidId(articleId) &&
+                       isValidArticle(incoming()) &&
+                       (isAdmin() || (isStaff() && incoming().authorUid == request.auth.uid));
+      allow update: if isValidId(articleId) && (
+        isAdmin() ||
+        (isStaff() && existing().authorUid == request.auth.uid && incoming().authorUid == existing().authorUid && isValidArticle(incoming())) ||
+        // Action: view count increment
+        (incoming().diff(existing()).affectedKeys().hasOnly(['viewsCount']) && incoming().viewsCount is number) ||
+        // Action: like count increment (signed in readers)
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['likesCount']) && incoming().likesCount is number) ||
+        // Action: emoji reactions
+        (incoming().diff(existing()).affectedKeys().hasOnly(['reactions', 'likesCount']))
+      );
+      allow delete: if isValidId(articleId) && (isAdmin() || (isStaff() && existing().authorUid == request.auth.uid));
+    }
+
+    // Comments validation
+    function isValidComment(data) {
+      return data.articleId is string && data.articleId.size() <= 128 &&
+             data.authorUid is string && data.authorUid.size() <= 128 &&
+             data.authorName is string && data.authorName.size() <= 100 &&
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 2000;
+    }
+
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidId(commentId) &&
+                       isValidComment(incoming()) &&
+                       incoming().authorUid == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(commentId) && (
+        isAdmin() ||
+        (existing().authorUid == request.auth.uid && incoming().authorUid == existing().authorUid && isValidComment(incoming())) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount']) && incoming().likesCount is number)
+      );
+      allow delete: if isValidId(commentId) && (isAdmin() || (isSignedIn() && existing().authorUid == request.auth.uid));
+    }
+
+    // Bookmarks: Private to user
+    match /bookmarks/{bookmarkId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(bookmarkId) &&
+                       incoming().userId == request.auth.uid;
+      allow delete: if isSignedIn() && isValidId(bookmarkId) &&
+                       existing().userId == request.auth.uid;
+    }
+
+    // Connection test document
+    match /test/{docId} {
+      allow read: if true;
+    }
+
+    // User Profiles with Server-Side Privilege Escalation Protection
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidId(userId) && (
+        request.auth.uid == userId || isAdmin()
+      ) && (
+        !('role' in incoming()) || incoming().role == 'reader' || isAdmin()
+      );
+      allow update: if isSignedIn() && isValidId(userId) && (
+        isAdmin() ||
+        (request.auth.uid == userId && (
+          !incoming().diff(existing()).affectedKeys().hasAny(['role']) || isAdmin()
+        ))
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Admins registry
+    match /admins/{adminId} {
+      allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Portal Settings
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Newsletter Subscribers
+    match /subscribers/{subscriberId} {
+      allow read: if isAdmin();
+      allow create: if isValidId(subscriberId);
+      allow update, delete: if isAdmin();
+    }
+
+    // Media Assets
+    match /media/{mediaId} {
+      allow read: if true;
+      allow write: if isAdmin() || isStaff();
+    }
+
+    // Live Blogs & Real-Time Coverage
+    match /live_blogs/{blogId} {
+      allow read: if true;
+      allow write: if isAdmin() || isStaff();
+    }
+
+    // Contact Inquiries
+    match /inquiries/{inquiryId} {
+      allow read: if isAdmin() || isStaff();
+      allow create: if isValidId(inquiryId);
+      allow update, delete: if isAdmin() || isStaff();
+    }
+  }
+}

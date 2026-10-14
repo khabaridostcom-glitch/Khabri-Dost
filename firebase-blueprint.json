@@ -1,0 +1,146 @@
+{
+  "entities": {
+    "articles": {
+      "title": "Article",
+      "description": "Published news articles in Hindi across multiple categories",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 300 },
+        "summary": { "type": "string", "maxLength": 1000 },
+        "content": { "type": "string", "maxLength": 50000 },
+        "category": { "type": "string", "maxLength": 50 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "imageCaption": { "type": "string", "maxLength": 300 },
+        "authorName": { "type": "string", "maxLength": 100 },
+        "authorEmail": { "type": "string", "maxLength": 150 },
+        "authorUid": { "type": "string", "maxLength": 128 },
+        "location": { "type": "string", "maxLength": 100 },
+        "isBreaking": { "type": "boolean" },
+        "isTopStory": { "type": "boolean" },
+        "viewsCount": { "type": "number" },
+        "likesCount": { "type": "number" },
+        "tags": {
+          "type": "array",
+          "description": "Tags for the news article"
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "summary", "content", "category", "authorName", "authorUid", "createdAt"]
+    },
+    "comments": {
+      "title": "Comment",
+      "description": "Reader comments on Hindi news articles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "articleId": { "type": "string", "maxLength": 128 },
+        "authorUid": { "type": "string", "maxLength": 128 },
+        "authorName": { "type": "string", "maxLength": 100 },
+        "authorEmail": { "type": "string", "maxLength": 150 },
+        "authorPhoto": { "type": "string", "maxLength": 1000 },
+        "content": { "type": "string", "maxLength": 2000 },
+        "likesCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["articleId", "authorUid", "authorName", "content", "createdAt"]
+    },
+    "bookmarks": {
+      "title": "Bookmark",
+      "description": "Saved articles for later reading by users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string", "maxLength": 128 },
+        "articleId": { "type": "string", "maxLength": 128 },
+        "articleTitle": { "type": "string", "maxLength": 300 },
+        "articleCategory": { "type": "string", "maxLength": 50 },
+        "articleImageUrl": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "articleId", "articleTitle", "createdAt"]
+    },
+    "users": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "photoURL": { "type": "string", "maxLength": 1000 },
+        "role": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "createdAt"]
+    },
+    "admins": {
+      "title": "Admin",
+      "description": "Server-side administrator whitelist records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "maxLength": 30 },
+        "verifiedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Portal wide configuration and customizer settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "data": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id"]
+    },
+    "subscribers": {
+      "title": "Subscriber",
+      "description": "Newsletter and breaking alert subscribers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "maxLength": 150 },
+        "status": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "status"]
+    }
+  },
+  "firestore": {
+    "/articles/{articleId}": {
+      "schema": "articles",
+      "description": "Public news articles published on the portal"
+    },
+    "/comments/{commentId}": {
+      "schema": "comments",
+      "description": "User comments on articles"
+    },
+    "/bookmarks/{bookmarkId}": {
+      "schema": "bookmarks",
+      "description": "User saved bookmarks"
+    },
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profile records"
+    },
+    "/admins/{adminId}": {
+      "schema": "admins",
+      "description": "Server-side verified administrator records"
+    },
+    "/settings/{settingId}": {
+      "schema": "settings",
+      "description": "Portal configuration settings"
+    },
+    "/subscribers/{subscriberId}": {
+      "schema": "subscribers",
+      "description": "Newsletter subscribers records"
+    }
+  }
+}

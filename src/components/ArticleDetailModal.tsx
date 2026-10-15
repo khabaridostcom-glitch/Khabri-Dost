@@ -35,6 +35,8 @@ interface ArticleDetailModalProps {
   onClose: () => void;
   isBookmarked: boolean;
   onToggleBookmark: (article: NewsArticle) => void;
+  isReadLater?: boolean;
+  onToggleReadLater?: (article: NewsArticle) => void;
   fontSize: 'normal' | 'large' | 'xlarge';
 }
 
@@ -43,6 +45,8 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
   onClose,
   isBookmarked,
   onToggleBookmark,
+  isReadLater = false,
+  onToggleReadLater,
   fontSize,
 }) => {
   const { user, isAdmin, signInWithGoogle } = useAuth();
@@ -181,11 +185,24 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
               <span>{showAudioPlayer ? 'ऑडियो चालू' : 'ख़बर सुनें'}</span>
             </button>
 
+            {/* Read Later Button */}
+            {onToggleReadLater && (
+              <button
+                onClick={() => onToggleReadLater(article)}
+                className={`p-1.5 rounded-full hover:bg-slate-100 transition cursor-pointer ${
+                  isReadLater ? 'text-indigo-600 bg-indigo-50' : 'text-slate-500'
+                }`}
+                title={isReadLater ? 'रीड लेटर से हटाएं' : 'बाद में पढ़ें (Read Later)'}
+              >
+                <Clock className="w-4 h-4" />
+              </button>
+            )}
+
             {/* Bookmark */}
             <button
               onClick={() => onToggleBookmark(article)}
-              className={`p-1.5 rounded-full hover:bg-slate-100 transition ${
-                isBookmarked ? 'text-red-600' : 'text-slate-500'
+              className={`p-1.5 rounded-full hover:bg-slate-100 transition cursor-pointer ${
+                isBookmarked ? 'text-red-600 bg-red-50' : 'text-slate-500'
               }`}
               title="बुकमार्क करें"
             >

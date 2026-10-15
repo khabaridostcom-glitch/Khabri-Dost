@@ -61,6 +61,22 @@
       },
       "required": ["userId", "articleId", "articleTitle", "createdAt"]
     },
+    "read_laters": {
+      "title": "Read Later",
+      "description": "Articles saved specifically to a user reading queue separate from bookmarks",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string", "maxLength": 128 },
+        "articleId": { "type": "string", "maxLength": 128 },
+        "articleTitle": { "type": "string", "maxLength": 300 },
+        "articleCategory": { "type": "string", "maxLength": 50 },
+        "articleImageUrl": { "type": "string", "maxLength": 1000 },
+        "estimatedReadTime": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "articleId", "articleTitle", "createdAt"]
+    },
     "users": {
       "title": "User",
       "description": "User profile information",
@@ -125,6 +141,10 @@
     "/bookmarks/{bookmarkId}": {
       "schema": "bookmarks",
       "description": "User saved bookmarks"
+    },
+    "/read_laters/{readLaterId}": {
+      "schema": "read_laters",
+      "description": "User saved read later queue"
     },
     "/users/{userId}": {
       "schema": "users",

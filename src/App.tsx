@@ -6,6 +6,7 @@ import { ArticlePageView } from './components/ArticlePageView';
 import { PublisherCMS } from './components/PublisherCMS';
 import { AdminBackendPanel } from './components/AdminBackendPanel';
 import { BookmarksModal } from './components/BookmarksModal';
+import { ReadLaterModal } from './components/ReadLaterModal';
 import { EPaperModal } from './components/EPaperModal';
 import { AdminSettingsModal, AdminSettingsTab } from './components/AdminSettingsModal';
 import { SpotlightHeroSlider } from './components/SpotlightHeroSlider';
@@ -30,6 +31,7 @@ import { DailySudokuModal } from './components/DailySudokuModal';
 import {
   NewsArticle,
   NewsBookmark,
+  NewsReadLater,
   NewsCategory,
   PortalSettings,
   SubscriberItem,
@@ -44,6 +46,10 @@ import {
   subscribeToArticles,
   subscribeToUserBookmarks,
   toggleBookmark,
+  subscribeToUserReadLater,
+  toggleReadLater,
+  removeReadLaterItem,
+  clearAllUserReadLater,
   fetchArticles,
   seedInitialArticlesIfEmpty,
   publishArticle,
@@ -103,11 +109,13 @@ import {
 } from 'lucide-react';
 import { formatHindiTimeAgo } from './utils/hindiHelpers';
 import { useGoogleServices } from './utils/useGoogleServices';
+import { resetRootCssVariablesToDefault } from './utils/cssDefaults';
 
 function NewsPortalMain() {
   const { user, isStaff, isAdmin } = useAuth();
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [bookmarks, setBookmarks] = useState<NewsBookmark[]>([]);
+  const [readLaterItems, setReadLaterItems] = useState<NewsReadLater[]>([]);
   const [currentCategory, setCurrentCategory] = useState<NewsCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -119,6 +127,7 @@ function NewsPortalMain() {
   const [showAdminBackend, setShowAdminBackend] = useState(false);
   const [showPublisherCMS, setShowPublisherCMS] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
+  const [showReadLater, setShowReadLater] = useState(false);
   const [showEPaper, setShowEPaper] = useState(false);
   const [showSudokuModal, setShowSudokuModal] = useState(false);
   const [adminInitialTab, setAdminInitialTab] = useState<string>('dashboard');
@@ -387,7 +396,6 @@ function NewsPortalMain() {
           ...parsed,
           typography: {
             ...DEFAULT_PORTAL_SETTINGS.typography,
-            ...(parsed.typography || {}),
           },
           displayOptions: {
             ...DEFAULT_PORTAL_SETTINGS.displayOptions,
@@ -439,6 +447,34 @@ function NewsPortalMain() {
     return DEFAULT_PORTAL_SETTINGS;
   });
 
+  // Ensure default font sizes and typography CSS variables are completely clean on load
+  useEffect(() => {
+    resetRootCssVariablesToDefault();
+    try {
+      localStorage.removeItem('kd_reader_font_size');
+      localStorage.removeItem('kd_reader_font_family');
+    } catch {}
+  }, []);
+
+  // Completely reset font size and all default typography settings across the portal
+  const handleResetTypography = () => {
+    setFontSize('normal');
+    setPortalSettings((prev) => {
+      const updated: PortalSettings = {
+        ...prev,
+        typography: { ...DEFAULT_PORTAL_SETTINGS.typography },
+      };
+      try {
+        localStorage.setItem('kd_portal_settings', JSON.stringify(updated));
+        localStorage.removeItem('kd_reader_font_size');
+        localStorage.removeItem('kd_reader_font_family');
+      } catch {}
+      savePortalSettings(updated).catch(() => {});
+      return updated;
+    });
+    resetRootCssVariablesToDefault();
+  };
+
   // Apply typography CSS variables dynamically to the document
   useEffect(() => {
     if (portalSettings?.typography) {
@@ -451,10 +487,10 @@ function NewsPortalMain() {
       root.style.setProperty('--weight-headline', String(portalSettings.typography.headlineWeight || 700));
       root.style.setProperty('--weight-body', String(portalSettings.typography.bodyWeight || 400));
 
-      const scaleMap = { compact: '0.96', normal: '1.02', large: '1.14' };
-      const baseMap = { small: '0.94', normal: '1', large: '1.08', xlarge: '1.16' };
+      const scaleMap = { compact: '0.94', normal: '1', large: '1.1' };
+      const baseMap = { small: '0.92', normal: '1', large: '1.08', xlarge: '1.16' };
       root.style.setProperty('--scale-font', baseMap[portalSettings.typography.baseSize || 'normal'] || '1');
-      root.style.setProperty('--mobile-scale', scaleMap[portalSettings.typography.mobileScale || 'normal'] || '1.02');
+      root.style.setProperty('--mobile-scale', scaleMap[portalSettings.typography.mobileScale || 'normal'] || '1');
 
       const sizeScaleMap = { sm: '0.9', normal: '1', large: '1.12', xlarge: '1.24' };
       const metaScaleMap = { sm: '0.88', normal: '1', large: '1.1' };
@@ -802,6 +838,66 @@ function NewsPortalMain() {
 
   const isArticleBookmarked = (articleId: string) => {
     return bookmarks.some((b) => b.articleId === articleId);
+  };
+
+  // Live subscription to Read Later queue (Firestore + local profile fallback)
+  useEffect(() => {
+    const unsubscribe = subscribeToUserReadLater(user?.uid || '', (items) => {
+      setReadLaterItems(items);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  // Handle Read Later toggle
+  const handleToggleReadLater = async (article: NewsArticle) => {
+    const isCurrentlySaved = readLaterItems.some((r) => r.articleId === article.id);
+    try {
+      const added = await toggleReadLater(user?.uid || '', article, isCurrentlySaved);
+      setActivePushToast({
+        id: 'toast-' + Date.now(),
+        title: added ? 'बाद में पढ़ें (कतार में जोड़ा)' : 'रीड लेटर से हटाया गया',
+        message: added
+          ? `"${article.title.slice(0, 42)}..." को आपकी निजी पठन कतार में सहेज लिया गया है।`
+          : 'लेख आपकी पठन कतार से हटा दिया गया है।',
+        status: 'sent',
+        targetAudience: 'all',
+        sentAt: new Date().toISOString(),
+        clicksCount: 0,
+        reachCount: 1,
+      });
+    } catch {
+      setActivePushToast({
+        id: 'toast-' + Date.now(),
+        title: 'त्रुटि',
+        message: 'रीड लेटर सूची अपडेट नहीं हो सकी।',
+        status: 'sent',
+        targetAudience: 'all',
+        sentAt: new Date().toISOString(),
+        clicksCount: 0,
+        reachCount: 1,
+      });
+    }
+  };
+
+  const isArticleInReadLater = (articleId: string) => {
+    return readLaterItems.some((r) => r.articleId === articleId);
+  };
+
+  const handleRemoveReadLater = async (articleId: string) => {
+    try {
+      await removeReadLaterItem(user?.uid || '', articleId);
+    } catch (err) {
+      console.warn('Error removing read later item:', err);
+    }
+  };
+
+  const handleClearAllReadLater = async () => {
+    try {
+      await clearAllUserReadLater(user?.uid || '', readLaterItems);
+      setReadLaterItems([]);
+    } catch (err) {
+      console.warn('Error clearing read later:', err);
+    }
   };
 
   // Open Article in Dedicated Page View (NOT A POPUP)
@@ -1210,6 +1306,7 @@ function NewsPortalMain() {
           else setShowPublisherCMS(true);
         }}
         onOpenBookmarks={() => setShowBookmarks(true)}
+        onOpenReadLater={() => setShowReadLater(true)}
         onOpenEPaper={() => setShowEPaper(true)}
         onOpenAdminSettings={(tab) => {
           if (!isAdmin) {
@@ -1228,6 +1325,7 @@ function NewsPortalMain() {
         onOpenTypography={() => openAdminStudio('typography')}
         onScrollToLiveVideo={handleScrollToLiveVideo}
         bookmarksCount={bookmarks.length}
+        readLaterCount={readLaterItems.length}
         fontSize={fontSize}
         onChangeFontSize={setFontSize}
         portalSettings={portalSettings}
@@ -1241,6 +1339,7 @@ function NewsPortalMain() {
         onOpenLegalPolicy={handleOpenLegalPolicy}
         onOpenArchivePage={handleOpenArchivePage}
         onOpenSudokuGame={() => setShowSudokuModal(true)}
+        onResetTypography={handleResetTypography}
         onBackToHome={handleBackToHome}
       />
 
@@ -1253,6 +1352,8 @@ function NewsPortalMain() {
           allArticles={articles}
           isBookmarked={isArticleBookmarked(activeArticle.id)}
           onToggleBookmark={handleToggleBookmark}
+          isReadLater={isArticleInReadLater(activeArticle.id)}
+          onToggleReadLater={handleToggleReadLater}
           fontSize={fontSize}
           portalSettings={portalSettings}
           onOpenAdminSettings={(tab) => {
@@ -1264,6 +1365,7 @@ function NewsPortalMain() {
             openAdminStudio(tab || 'sidebar_widgets');
           }}
           onOpenTypography={() => openAdminStudio('typography')}
+          onResetTypography={handleResetTypography}
           onUpdateSettings={handleUpdateSettings}
           onOpenEPaper={() => setShowEPaper(true)}
           onEditArticle={(art) => {
@@ -1573,6 +1675,8 @@ function NewsPortalMain() {
                           onSelectArticle={handleSelectArticle}
                           isBookmarked={isArticleBookmarked}
                           onToggleBookmark={handleToggleBookmark}
+                          isReadLater={isArticleInReadLater}
+                          onToggleReadLater={handleToggleReadLater}
                           displayOptions={portalSettings.displayOptions}
                           mobileScale={portalSettings.typography?.mobileScale || 'normal'}
                           onOpenSettings={isAdmin ? handleOpenSpotlightSettings : undefined}
@@ -1584,6 +1688,8 @@ function NewsPortalMain() {
                           onSelectArticle={handleSelectArticle}
                           isBookmarked={isArticleBookmarked(heroArticle.id)}
                           onToggleBookmark={handleToggleBookmark}
+                          isReadLater={isArticleInReadLater(heroArticle.id)}
+                          onToggleReadLater={handleToggleReadLater}
                           displayOptions={portalSettings.displayOptions}
                           mobileScale={portalSettings.typography?.mobileScale || 'normal'}
                         />
@@ -1600,6 +1706,8 @@ function NewsPortalMain() {
                             onSelectArticle={handleSelectArticle}
                             isBookmarked={isArticleBookmarked(art.id)}
                             onToggleBookmark={handleToggleBookmark}
+                            isReadLater={isArticleInReadLater(art.id)}
+                            onToggleReadLater={handleToggleReadLater}
                             displayOptions={portalSettings.displayOptions}
                             mobileScale={portalSettings.typography?.mobileScale || 'normal'}
                           />
@@ -1797,6 +1905,8 @@ function NewsPortalMain() {
                                   onSelectArticle={handleSelectArticle}
                                   isBookmarked={isArticleBookmarked(item.id)}
                                   onToggleBookmark={handleToggleBookmark}
+                                  isReadLater={isArticleInReadLater(item.id)}
+                                  onToggleReadLater={handleToggleReadLater}
                                   displayOptions={portalSettings.displayOptions}
                                   mobileScale={portalSettings.typography?.mobileScale || 'normal'}
                                 />
@@ -1953,6 +2063,20 @@ function NewsPortalMain() {
           allArticles={articles}
           onSelectArticle={handleSelectArticle}
           onRemoveBookmark={handleToggleBookmark}
+        />
+      )}
+
+      {/* READ LATER MODAL (SEPARATE FROM BOOKMARKS) */}
+      {showReadLater && (
+        <ReadLaterModal
+          onClose={() => setShowReadLater(false)}
+          readLaterItems={readLaterItems}
+          allArticles={articles}
+          bookmarks={bookmarks}
+          onSelectArticle={handleSelectArticle}
+          onRemoveReadLater={handleRemoveReadLater}
+          onToggleBookmark={handleToggleBookmark}
+          onClearAllReadLater={handleClearAllReadLater}
         />
       )}
 

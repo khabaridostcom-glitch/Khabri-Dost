@@ -6,13 +6,13 @@ html, body {
   scroll-behavior: smooth;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  font-size: calc(16px * var(--scale-font, 1.05));
+  font-size: calc(16px * var(--scale-font, 1));
   line-height: 1.6;
 }
 
 @media (min-width: 640px) {
   html {
-    font-size: calc(16.5px * var(--scale-font, 1.05));
+    font-size: calc(16px * var(--scale-font, 1));
   }
 }
 

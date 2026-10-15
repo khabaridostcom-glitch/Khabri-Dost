@@ -485,22 +485,22 @@ export const TypographyCustomizerModal: React.FC<TypographyCustomizerModalProps>
                         📰 न्यूज़ आर्टिकल टाइटल साइज़ (H1 Headline)
                       </span>
                       <span className="text-[11px] font-mono font-bold text-red-600">
-                        {current.articleTitleDesktopPx || 38}px
+                        {current.articleTitleDesktopPx || 32}px
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <input
                         type="range"
-                        min={24}
+                        min={22}
                         max={54}
-                        value={current.articleTitleDesktopPx || 38}
+                        value={current.articleTitleDesktopPx || 32}
                         onChange={(e) => onUpdateTypography({ articleTitleDesktopPx: Number(e.target.value) })}
                         className="w-full accent-red-600 cursor-pointer"
                       />
                     </div>
                     <div className="flex justify-between text-[10px] text-slate-400">
                       <span>छोटा (24px)</span>
-                      <span>नेचुरल (38px)</span>
+                      <span>नेचुरल (32px)</span>
                       <span>विशाल (54px)</span>
                     </div>
                   </div>

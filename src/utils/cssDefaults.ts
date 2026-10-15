@@ -11,6 +11,8 @@ export const INDEX_CSS_ROOT_VARIABLES: Record<string, string> = {
   '--weight-headline': '700',
   '--weight-body': '400',
   '--scale-font': '1.0',
+  '--mobile-scale': '1.0',
+  '--base-font-size': '16px',
   '--size-heading-scale': '1',
   '--size-title-scale': '1',
   '--size-content-scale': '1',

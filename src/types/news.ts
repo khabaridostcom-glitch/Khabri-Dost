@@ -164,6 +164,17 @@ export interface NewsBookmark {
   createdAt: string;
 }
 
+export interface NewsReadLater {
+  id: string;
+  userId: string;
+  articleId: string;
+  articleTitle: string;
+  articleCategory: string;
+  articleImageUrl: string;
+  createdAt: string;
+  estimatedReadTime?: string;
+}
+
 export interface UserProfile {
   uid: string;
   name: string;

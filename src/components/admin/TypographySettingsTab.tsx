@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Type, Smartphone, Check, Sparkles, Sliders, RotateCcw, RefreshCw, AlertTriangle, X } from 'lucide-react';
 import { PortalSettings, TypographySettings } from '../../types/news';
 import { DEFAULT_PORTAL_SETTINGS } from '../../data/portalDefaults';
+import { resetRootCssVariablesToDefault } from '../../utils/cssDefaults';
 
 export interface TypographySettingsTabProps {
   settings: PortalSettings;
@@ -35,8 +36,13 @@ export const TypographySettingsTab: React.FC<TypographySettingsTabProps> = ({
   // Reset to original system defaults
   const handleResetTypography = () => {
     onUpdateTypography(DEFAULT_PORTAL_SETTINGS.typography);
+    resetRootCssVariablesToDefault();
+    try {
+      localStorage.removeItem('kd_reader_font_size');
+      localStorage.removeItem('kd_reader_font_family');
+    } catch {}
     setShowResetConfirm(false);
-    setResetToast('✓ सभी फ़ॉन्ट सेटिंग्स मूल डिफ़ॉल्ट पर रीसेट कर दी गईं!');
+    setResetToast('✓ सभी फ़ॉन्ट सेटिंग्स व आकार मूल डिफ़ॉल्ट पर रीसेट कर दी गईं!');
     setTimeout(() => setResetToast(null), 3500);
   };
 
@@ -190,7 +196,7 @@ export const TypographySettingsTab: React.FC<TypographySettingsTabProps> = ({
                 headlineFont: "'Rozha One', serif",
                 bodyFont: "'Mukta', sans-serif",
                 footerFont: "'Mukta', sans-serif",
-                articleTitleDesktopPx: 38,
+                articleTitleDesktopPx: 32,
                 articleBodyFontSizePx: 17,
                 articleBodyLineHeight: 1.75,
               })
@@ -548,25 +554,25 @@ export const TypographySettingsTab: React.FC<TypographySettingsTabProps> = ({
           {/* Desktop Article Title Size */}
           {renderCustomControl(
             'Desktop Article H1 Title Size (डेस्कटॉप शीर्षक)',
-            typo.articleTitleDesktopPx || 38,
+            typo.articleTitleDesktopPx || 32,
             (val) => onUpdateTypography({ articleTitleDesktopPx: val }),
-            24,
-            60,
+            22,
+            54,
             1,
-            [30, 34, 38, 42, 48],
+            [26, 28, 32, 36, 40],
             'px',
-            'डेस्कटॉप व लैपटॉप स्क्रीन पर आर्टिकल का मुख्य H1 हेडिंग साइज़'
+            'डेस्कटॉप व लैपटॉप स्क्रीन पर आर्टिकल का मुख्य H1 हेडिंग साइज़ (Default 32px)'
           )}
 
           {/* Mobile Article Title Size */}
           {renderCustomControl(
             'Mobile Article H1 Title Size (मोबाइल शीर्षक)',
-            typo.articleTitleMobilePx || 28,
+            typo.articleTitleMobilePx || 26,
             (val) => onUpdateTypography({ articleTitleMobilePx: val }),
             18,
-            42,
+            40,
             1,
-            [22, 26, 28, 30, 34],
+            [20, 24, 26, 28, 32],
             'px',
             'स्मार्टफोन पर आर्टिकल हेडिंग का प्राकृतिक साइज़'
           )}

@@ -41,6 +41,7 @@ import {
 import { NewsArticle, NewsComment, PortalSettings, ReactionType, ArticleReactions } from '../types/news';
 import { getAuthorPhoto, CATEGORIES } from '../data/seedNews';
 import {
+  DEFAULT_PORTAL_SETTINGS,
   DEFAULT_ARTICLE_META_SETTINGS,
   DEFAULT_ARTICLE_SIDEBAR_WIDGETS,
   DEFAULT_SIDEBAR_ADS_CONFIG,
@@ -87,6 +88,8 @@ interface ArticlePageViewProps {
   allArticles: NewsArticle[];
   isBookmarked: boolean;
   onToggleBookmark: (article: NewsArticle) => void;
+  isReadLater?: boolean;
+  onToggleReadLater?: (article: NewsArticle) => void;
   fontSize: 'normal' | 'large' | 'xlarge';
   portalSettings: PortalSettings;
   onOpenAdminSettings?: (tab?: any) => void;
@@ -95,6 +98,7 @@ interface ArticlePageViewProps {
   onEditArticle?: (article: NewsArticle) => void;
   onOpenTypography?: () => void;
   onOpenSudokuModal?: () => void;
+  onResetTypography?: () => void;
 }
 
 export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
@@ -104,6 +108,8 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
   allArticles,
   isBookmarked,
   onToggleBookmark,
+  isReadLater = false,
+  onToggleReadLater,
   fontSize,
   portalSettings,
   onOpenAdminSettings,
@@ -112,6 +118,7 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
   onEditArticle,
   onOpenTypography,
   onOpenSudokuModal,
+  onResetTypography,
 }) => {
   const { user, signInWithGoogle, isAdmin } = useAuth();
   const [comments, setComments] = useState<NewsComment[]>([]);
@@ -705,6 +712,19 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
+            {onToggleReadLater && (
+              <button
+                onClick={() => onToggleReadLater(article)}
+                className={`p-1.5 rounded-full border transition cursor-pointer shadow-2xs ${
+                  isReadLater
+                    ? 'bg-indigo-600 text-white border-indigo-700'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+                title={isReadLater ? 'रीड लेटर कतार से हटाएं' : 'बाद में पढ़ें (Read Later)'}
+              >
+                <Clock className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={() => onToggleBookmark(article)}
               className={`p-1.5 rounded-full border transition cursor-pointer shadow-2xs ${
@@ -1004,13 +1024,14 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          handleUpdateReaderFontSize(portalSettings.typography?.articleBodyFontSizePx || 17);
-                          handleUpdateReaderFontFamily(portalSettings.typography?.bodyFont || "'Mukta', sans-serif");
-                          setReaderLineHeight(portalSettings.typography?.articleBodyLineHeight || 1.75);
+                          handleUpdateReaderFontSize(DEFAULT_PORTAL_SETTINGS.typography.articleBodyFontSizePx || 17);
+                          handleUpdateReaderFontFamily(DEFAULT_PORTAL_SETTINGS.typography.bodyFont || "'Mukta', sans-serif");
+                          setReaderLineHeight(DEFAULT_PORTAL_SETTINGS.typography.articleBodyLineHeight || 1.75);
+                          onResetTypography?.();
                         }}
                         className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
                       >
-                        डिफ़ॉल्ट पर रीसेट
+                        डिफ़ॉल्ट पर रीसेट (Reset Default)
                       </button>
 
                       {onOpenTypography && (
@@ -1090,7 +1111,7 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
               <div>
                 <h1
                   style={{
-                    fontSize: '32px',
+                    fontSize: `${portalSettings.typography?.articleTitleDesktopPx || 32}px`,
                     lineHeight: 1.28,
                   }}
                   className="font-black font-kd-headline text-slate-900 tracking-tight break-words transition-all duration-150"
@@ -1218,6 +1239,22 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
             >
               {/* Left Side: Bookmark & Reading Action */}
               <div className="flex items-center space-x-1 sm:space-x-1.5 shrink-0">
+                {/* Read Later Button */}
+                {onToggleReadLater && (
+                  <button
+                    onClick={() => onToggleReadLater(article)}
+                    className={`flex items-center space-x-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border text-xs font-semibold transition-all duration-200 cursor-pointer shadow-2xs active:scale-90 shrink-0 ${
+                      isReadLater
+                        ? 'bg-indigo-50 text-indigo-700 border-indigo-300 ring-2 ring-indigo-100'
+                        : 'bg-white text-slate-700 border-slate-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/50'
+                    }`}
+                    title={isReadLater ? 'रीड लेटर से हटाएं' : 'बाद में पढ़ें (Read Later)'}
+                  >
+                    <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                    <span className="text-[11px] font-semibold">{isReadLater ? 'कतार में है' : 'बाद में पढ़ें'}</span>
+                  </button>
+                )}
+
                 {/* Bookmark Toggle */}
                 {metaSettings.showBookmarkButton && (
                   <button

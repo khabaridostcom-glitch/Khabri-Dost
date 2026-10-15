@@ -20,6 +20,8 @@ interface SpotlightHeroSliderProps {
   onSelectArticle: (article: NewsArticle) => void;
   isBookmarked: (id: string) => boolean;
   onToggleBookmark: (article: NewsArticle) => void;
+  isReadLater?: (id: string) => boolean;
+  onToggleReadLater?: (article: NewsArticle) => void;
   displayOptions?: PortalSettings['displayOptions'];
   mobileScale?: 'compact' | 'normal' | 'large';
   onOpenSettings?: () => void;
@@ -31,6 +33,8 @@ export const SpotlightHeroSlider: React.FC<SpotlightHeroSliderProps> = ({
   onSelectArticle,
   isBookmarked,
   onToggleBookmark,
+  isReadLater,
+  onToggleReadLater,
   displayOptions = {
     showExcerptOnMobile: false,
     showAuthor: true,
@@ -115,6 +119,13 @@ export const SpotlightHeroSlider: React.FC<SpotlightHeroSliderProps> = ({
     onToggleBookmark(currentArticle);
   };
 
+  const handleReadLaterClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggleReadLater) {
+      onToggleReadLater(currentArticle);
+    }
+  };
+
   const handleShareClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (navigator.share) {
@@ -197,6 +208,20 @@ export const SpotlightHeroSlider: React.FC<SpotlightHeroSliderProps> = ({
               className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-red-600/85 hover:bg-red-600 text-white flex items-center justify-center backdrop-blur-xs transition shadow-sm cursor-pointer"
             >
               <Sliders className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+            </button>
+          )}
+
+          {onToggleReadLater && (
+            <button
+              onClick={handleReadLaterClick}
+              className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center backdrop-blur-xs transition shadow-sm cursor-pointer ${
+                isReadLater && isReadLater(currentArticle.id)
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-900/75 hover:bg-slate-900 text-white/90 hover:text-white'
+              }`}
+              title={isReadLater && isReadLater(currentArticle.id) ? 'रीड लेटर से हटाएं' : 'बाद में पढ़ें (Read Later)'}
+            >
+              <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             </button>
           )}
 

@@ -75,6 +75,7 @@ import {
   DEFAULT_ARTICLE_SIDEBAR_WIDGETS,
   DEFAULT_PORTAL_SETTINGS,
 } from '../data/portalDefaults';
+import { savePortalSettings } from '../services/newsService';
 import { RichPostEditorModal } from './RichPostEditorModal';
 import { BulkArticleManager } from './admin/BulkArticleManager';
 import { MediaLibraryTab } from './admin/MediaLibraryTab';
@@ -388,6 +389,9 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
     }));
   }, [activeTab]);
 
+  // WordPress-Style Sidebar Search Filter
+  const [sidebarSearch, setSidebarSearch] = useState('');
+
   // Local settings state
   const [localSettings, setLocalSettings] = useState<PortalSettings>(() => ({
     ...portalSettings,
@@ -691,118 +695,222 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
     );
   }
 
+  // WordPress-Style Light Mode Admin Navigation Categories & Submenus
+  const menuSections = [
+    {
+      groupTitle: 'Dashboard',
+      items: [
+        { id: 'dashboard', label: 'Dashboard Overview', labelHindi: 'डैशबोर्ड अवलोकन', icon: LayoutDashboard },
+        { id: 'speed_vitals', label: 'Speed & Web Vitals', labelHindi: 'स्पीड व परफॉरमेंस', icon: Zap, badge: '98/100', badgeColor: 'bg-emerald-100 text-emerald-800' },
+      ],
+    },
+    {
+      groupTitle: 'Posts (लेख व समाचार)',
+      items: [
+        { id: 'articles', label: 'All Articles', labelHindi: 'सभी समाचार लेख', icon: FileText, badge: `${articles.length}`, badgeColor: 'bg-blue-100 text-blue-800' },
+        { id: 'new_article', label: 'Add New Article', labelHindi: 'नया लेख लिखें', icon: Plus, badge: 'NEW', badgeColor: 'bg-red-100 text-red-700' },
+        {
+          id: 'citizen_news',
+          label: 'Citizen Desk',
+          labelHindi: 'नागरिक पत्रकारिता',
+          icon: Inbox,
+          badge:
+            citizenSubmissions.filter((s) => s.status === 'pending').length > 0
+              ? `${citizenSubmissions.filter((s) => s.status === 'pending').length} NEW`
+              : undefined,
+          badgeColor: 'bg-amber-100 text-amber-800',
+        },
+        { id: 'live', label: 'Live Coverage Desk', labelHindi: 'लाइव न्यूज़ फ़ीड', icon: Radio, badge: `${activeLiveBlogs.length}`, badgeColor: 'bg-red-100 text-red-700' },
+        { id: 'trending', label: 'Trending & Tickers', labelHindi: 'सुर्खियां व हैशटैग', icon: Flame },
+        { id: 'epaper', label: 'E-Paper Edition', labelHindi: 'डिजिटल ई-पेपर', icon: Newspaper, badge: 'PDF', badgeColor: 'bg-amber-100 text-amber-800' },
+      ],
+    },
+    {
+      groupTitle: 'Media (मीडिया)',
+      items: [
+        { id: 'media', label: 'Media Library', labelHindi: 'मीडिया गैलरी', icon: ImageIcon, badge: `${mediaAssets.length}`, badgeColor: 'bg-purple-100 text-purple-800' },
+        { id: 'video_gallery', label: 'Video Bulletins', labelHindi: 'वीडियो बुलेटिन', icon: Tv },
+        { id: 'photo_stories', label: 'Photo Stories', labelHindi: 'फ़ोटो स्टोरीज़', icon: Camera },
+      ],
+    },
+    {
+      groupTitle: 'Appearance (प्रकटन)',
+      items: [
+        { id: 'homepage_sections', label: 'Homepage Sections', labelHindi: 'होमपेज ग्रिड', icon: Layout },
+        { id: 'spotlight', label: 'Spotlight Hero', labelHindi: 'टॉप स्पॉटलाइट', icon: Layers },
+        { id: 'settings_header', label: 'Header & Navigation', labelHindi: 'हेडर व नेविगेशन', icon: Menu },
+        { id: 'settings_footer', label: 'Footer & About', labelHindi: 'फुटर व संपर्क', icon: FileText },
+        { id: 'sidebar_widgets', label: 'Sidebar & Rashifal', labelHindi: 'विजेट्स व राशिफल', icon: Sliders },
+        { id: 'sidebar_ads', label: 'Sidebar Ad Slots', labelHindi: 'विज्ञापन स्लॉट्स', icon: DollarSign },
+        { id: 'mobile_sidebar', label: 'Mobile Drawer', labelHindi: 'मोबाइल साइडबार', icon: Smartphone },
+        { id: 'article_meta', label: 'Article Single View', labelHindi: 'लेख लेआउट व मेटा', icon: FileText },
+      ],
+    },
+    {
+      groupTitle: 'Typography (फ़ॉन्ट व लिखावट)',
+      items: [
+        { id: 'typography', label: 'Typography & Fonts', labelHindi: 'फ़ॉन्ट व टेक्स्ट आकार', icon: Type, badge: 'FONTS', badgeColor: 'bg-rose-100 text-rose-800' },
+      ],
+    },
+    {
+      groupTitle: 'Monetization (कमाई)',
+      items: [
+        { id: 'monetization', label: 'AdSense & Banners', labelHindi: 'विज्ञापन व कमाई', icon: DollarSign },
+      ],
+    },
+    {
+      groupTitle: 'SEO & Tools (एसईओ)',
+      items: [
+        { id: 'seo_audit', label: 'SEO Audit & Sitemap', labelHindi: 'एसईओ व साइटमैप', icon: Globe, badge: 'PRO', badgeColor: 'bg-emerald-100 text-emerald-800' },
+        { id: 'google_suite', label: 'Google Suite (GA4/GSC)', labelHindi: 'गूगल एनालिटिक्स', icon: Globe },
+        { id: 'ai_seo_assistant', label: 'AI SEO Assistant', labelHindi: 'एआई सहायक', icon: Sparkles, badge: 'AI', badgeColor: 'bg-indigo-100 text-indigo-800' },
+      ],
+    },
+    {
+      groupTitle: 'Audience & Inbox',
+      items: [
+        {
+          id: 'inquiries',
+          label: 'Contact Inquiries',
+          labelHindi: 'पाठक संदेश',
+          icon: Mail,
+          badge:
+            (inquiries || []).filter((i) => i.status === 'new').length > 0
+              ? `${(inquiries || []).filter((i) => i.status === 'new').length} NEW`
+              : undefined,
+          badgeColor: 'bg-rose-100 text-rose-800',
+        },
+        { id: 'subscribers', label: 'Subscribers & VIPs', labelHindi: 'सब्सक्राइबर्स', icon: Users, badge: `${activeSubscribersCount}`, badgeColor: 'bg-blue-100 text-blue-800' },
+        { id: 'notifications', label: 'Push Notifications', labelHindi: 'पुश नोटिफिकेशन', icon: Bell },
+        { id: 'popups', label: 'Reader Alerts & Popups', labelHindi: 'पॉपअप अलर्ट्स', icon: AlertTriangle },
+      ],
+    },
+    {
+      groupTitle: 'Users (उपयोगकर्ता व टीम)',
+      items: [
+        { id: 'users', label: 'Editorial Team', labelHindi: 'संपादकीय टीम', icon: Users, badge: `${editorialUsers.length}`, badgeColor: 'bg-purple-100 text-purple-800' },
+        { id: 'admins', label: 'Admin Access', labelHindi: 'मुख्य एडमिन', icon: Lock },
+      ],
+    },
+    {
+      groupTitle: 'Settings (सिस्टम सेटिंग्स)',
+      items: [
+        { id: 'settings_general', label: 'General & Branding', labelHindi: 'सामान्य सेटिंग्स', icon: Sliders },
+        { id: 'settings_social', label: 'Social Channels', labelHindi: 'सोशल मीडिया लिंक्स', icon: Globe },
+        { id: 'settings_policies', label: 'Legal Policies', labelHindi: 'नीतियां व नियम', icon: Shield },
+        { id: 'settings_contact', label: 'Newsroom Desk', labelHindi: 'न्यूज़रूम संपर्क', icon: Mail },
+        { id: 'api_config', label: 'API Keys & Cloud', labelHindi: 'एपीआई कॉन्फ़िग', icon: Key, badge: 'KEYS', badgeColor: 'bg-amber-100 text-amber-800' },
+        { id: 'factory_reset', label: 'Factory Reset', labelHindi: 'फ़ैक्टरी रीसेट', icon: RotateCcw, badge: 'RESET', badgeColor: 'bg-red-100 text-red-700' },
+      ],
+    },
+  ];
+
+  const filteredMenuSections = React.useMemo(() => {
+    if (!sidebarSearch.trim()) return menuSections;
+    const q = sidebarSearch.toLowerCase().trim();
+    return menuSections
+      .map((sec) => ({
+        ...sec,
+        items: sec.items.filter(
+          (item) =>
+            item.label.toLowerCase().includes(q) ||
+            (item.labelHindi && item.labelHindi.toLowerCase().includes(q)) ||
+            sec.groupTitle.toLowerCase().includes(q)
+        ),
+      }))
+      .filter((sec) => sec.items.length > 0);
+  }, [sidebarSearch, articles.length, citizenSubmissions, activeLiveBlogs.length, mediaAssets.length, inquiries, activeSubscribersCount, editorialUsers.length]);
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex flex-col text-slate-800 font-sans">
-      {/* TOP HEADER BAR (Light Theme) */}
-      <header className="h-16 px-3 sm:px-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-2xs z-30">
-        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+      {/* TOP HEADER BAR (WordPress Light Theme) */}
+      <header className="h-14 px-3 sm:px-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-2xs z-30">
+        <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 md:hidden cursor-pointer shrink-0 transition"
+            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 md:hidden cursor-pointer shrink-0 transition"
             title="Toggle Menu"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-red-600 to-amber-600 flex items-center justify-center font-bold text-white shadow-md text-base sm:text-xl shrink-0">
-            KD
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center space-x-2">
-              <h1 className="text-xs sm:text-base font-bold text-slate-900 tracking-tight truncate max-w-[140px] xs:max-w-[200px] sm:max-w-none">
-                Khabri Dost Hub
-              </h1>
-              <span className="hidden xs:inline-block bg-red-50 text-red-700 border border-red-200 text-[10px] font-black uppercase px-2 py-0.5 rounded-full shrink-0">
-                ADMIN
-              </span>
+
+          <div className="flex items-center space-x-2.5 shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white shadow-xs text-sm">
+              KD
             </div>
-            <p className="text-[11px] text-slate-500 hidden sm:block truncate">
-              Newsroom CMS, Live Updates, Media Assets, Users & Monetization
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          {savedSuccessMsg && (
-            <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg flex items-center gap-1.5 animate-in fade-in">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{savedSuccessMsg}</span>
-            </span>
-          )}
-
-          {/* Current Authenticated Staff Member Badge */}
-          {staffSession && (
-            <div className="hidden md:flex items-center space-x-2 bg-slate-100 border border-slate-200 px-3 py-1 rounded-xl text-xs">
-              <span className={`w-2 h-2 rounded-full ${isAdmin ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`}></span>
-              <div className="flex flex-col text-left leading-tight">
-                <span className="font-bold text-slate-900">{staffSession.name}</span>
-                <span className={`text-[10px] font-mono font-bold uppercase ${isAdmin ? 'text-red-700' : 'text-slate-500'}`}>
-                  {isAdmin ? '👑 SUPER ADMIN' : staffSession.role.replace('_', ' ')}
+            <div className="min-w-0">
+              <div className="flex items-center space-x-1.5">
+                <span className="text-sm font-bold text-slate-900 tracking-tight">Khabri Dost</span>
+                <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-1.5 py-0.2 rounded border border-slate-200 uppercase">
+                  Admin
                 </span>
               </div>
-              <button
-                onClick={logoutStaff}
-                title="Logout Staff"
-                className="text-slate-400 hover:text-red-600 transition ml-1 p-1 rounded-lg hover:bg-slate-200 cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
             </div>
-          )}
+          </div>
 
-          {/* Server-Side RBAC Verification Badge */}
-          {isAdmin && (
-            <span
-              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
-              title="Firestore Server-Side RBAC Active"
-            >
-              <Shield className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{serverVerifiedAdmin ? 'सर्वर प्रमाणित Admin' : 'RBAC सुरक्षा सक्रिय'}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="hidden sm:flex items-center space-x-1.5 text-xs text-slate-600 hover:text-blue-700 px-2.5 py-1 rounded-lg hover:bg-slate-100 transition cursor-pointer border border-transparent hover:border-slate-200"
+            title="मुख्य पोर्टल देखें"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>वेबसाइट देखें (Visit Site)</span>
+          </button>
+        </div>
+
+        <div className="flex items-center space-x-2 sm:space-x-2.5">
+          {savedSuccessMsg && (
+            <span className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-2xs animate-in fade-in">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="truncate max-w-[180px] sm:max-w-none">{savedSuccessMsg}</span>
             </span>
           )}
 
-          {/* Quick Session Lock Button for Admins */}
-          {isAdmin && (
-            <button
-              onClick={markSessionStale}
-              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition cursor-pointer"
-              title="सत्र लॉक करें (Lock Session to test re-authentication)"
-            >
-              <Lock className="w-3.5 h-3.5 text-slate-500" />
-              <span className="hidden md:inline">सत्र लॉक करें</span>
-            </button>
-          )}
+          {/* Quick 1-Click Reset Default Fonts Button */}
+          <button
+            type="button"
+            onClick={() => {
+              handleUpdateTypography(DEFAULT_PORTAL_SETTINGS.typography);
+              resetRootCssVariablesToDefault();
+              try {
+                localStorage.removeItem('kd_reader_font_size');
+                localStorage.removeItem('kd_reader_font_family');
+              } catch {}
+              setSavedSuccessMsg('✓ सभी फ़ॉन्ट व आकार डिफ़ॉल्ट पर रीसेट कर दिए गए!');
+              setTimeout(() => setSavedSuccessMsg(null), 3500);
+            }}
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-slate-200 hover:border-amber-300 rounded-lg text-xs font-semibold transition cursor-pointer shadow-2xs"
+            title="वेबसाइट के सभी फ़ॉन्ट और टेक्स्ट आकार डिफ़ॉल्ट पर रीसेट करें"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span className="hidden md:inline">डिफ़ॉल्ट फ़ॉन्ट रीसेट (Reset Fonts)</span>
+            <span className="md:hidden">फ़ॉन्ट रीसेट</span>
+          </button>
 
-          {/* Reset Settings / Font Settings Button */}
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={() => {
-                setResetScope(activeTab === 'typography' ? 'typography' : 'all');
-                setShowAdminResetModal(true);
-              }}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer shadow-2xs"
-              title="फ़ॉन्ट सेटिंग्स या एडमिन सेटिंग्स रीसेट करें (Reset Settings)"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-              <span>{activeTab === 'typography' ? 'Reset Fonts' : 'Reset Settings'}</span>
-            </button>
-          )}
-
-          {/* Save Live Changes - Only for Admin */}
+          {/* Save Live Changes - Primary WordPress Action */}
           {isAdmin && (
             <button
               onClick={handleSaveAllSettings}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs flex items-center space-x-1.5 cursor-pointer"
+              className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-xs flex items-center space-x-1.5 cursor-pointer"
             >
-              <Check className="w-4 h-4" />
-              <span className="hidden sm:inline">Save Live Changes</span>
+              <Check className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Save Changes</span>
             </button>
+          )}
+
+          {/* Current Staff Member Badge */}
+          {staffSession && (
+            <div className="hidden lg:flex items-center space-x-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg text-xs">
+              <span className={`w-2 h-2 rounded-full ${isAdmin ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`}></span>
+              <span className="font-bold text-slate-800 truncate max-w-[110px]">{staffSession.name}</span>
+            </div>
           )}
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer ml-1"
             title="Exit Admin Panel"
           >
             <X className="w-5 h-5" />
@@ -820,143 +928,66 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
           />
         )}
 
-        {/* SIDEBAR NAVIGATION - WordPress Style Categorized Submenus & Responsive */}
+        {/* SIDEBAR NAVIGATION - WordPress-Style Light Mode Sidebar Menu */}
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 flex flex-col shrink-0 shadow-2xl transition-transform duration-200 md:static md:w-64 md:shadow-none md:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-50/95 border-r border-slate-200/90 flex flex-col shrink-0 shadow-2xl transition-transform duration-200 md:static md:w-64 md:shadow-none md:translate-x-0 ${
             isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
           }`}
         >
           {/* Mobile Drawer Header with Close */}
-          <div className="p-3 border-b border-slate-100 flex items-center justify-between md:hidden bg-slate-50">
+          <div className="p-3 border-b border-slate-200 flex items-center justify-between md:hidden bg-white">
             <div className="flex items-center space-x-2">
-              <div className="w-7 h-7 rounded-lg bg-red-600 text-white font-bold flex items-center justify-center text-xs">
+              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs">
                 KD
               </div>
               <span className="font-bold text-xs text-slate-800">Admin Navigation</span>
             </div>
             <button
               onClick={() => setIsMobileMenuOpen(false)}
-              className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 cursor-pointer"
+              className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="p-3 space-y-2 overflow-y-auto flex-1 font-kd-meta">
-            {/* 1. CORE MENU: DASHBOARD */}
-            <div>
-              <button
-                type="button"
-                onClick={() => toggleCategory('dashboard')}
-                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  getMenuForTab(activeTab) === 'dashboard'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  <LayoutDashboard className={`w-4 h-4 shrink-0 ${getMenuForTab(activeTab) === 'dashboard' ? 'text-red-400' : 'text-slate-500'}`} />
-                  <span className="font-bold">Dashboard</span>
-                </div>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                    openCategories.dashboard ? 'rotate-180 text-red-400' : 'text-slate-400'
-                  }`}
-                />
-              </button>
-
-              {openCategories.dashboard && (
-                <div className="mt-1 pl-3 border-l-2 border-red-500/40 ml-2 space-y-0.5 animate-fadeIn">
-                  {[
-                    { id: 'dashboard', label: 'Dashboard Overview', icon: LayoutDashboard },
-                    { id: 'speed_vitals', label: 'Speed & Web Vitals', icon: Zap, badge: '98/100' },
-                  ].map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          setActiveTab(item.id as any);
-                          setIsMobileMenuOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
-                          isActive
-                            ? 'bg-red-600 text-white font-bold shadow-2xs'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2 truncate">
-                          <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                          <span className="truncate">{item.label}</span>
-                        </div>
-                        {item.badge && (
-                          <span
-                            className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full shrink-0 ml-1 ${
-                              isActive ? 'bg-black/20 text-white' : 'bg-emerald-100 text-emerald-800'
-                            }`}
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+          {/* Quick Menu Search / Filter */}
+          <div className="p-2.5 border-b border-slate-200/80 bg-white">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={sidebarSearch}
+                onChange={(e) => setSidebarSearch(e.target.value)}
+                placeholder="मेनू खोजें (Filter tabs...)"
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs transition"
+              />
+              {sidebarSearch && (
+                <button
+                  type="button"
+                  onClick={() => setSidebarSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               )}
             </div>
+          </div>
 
-            {/* 2. CORE MENU: NEWS & CONTENT */}
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => toggleCategory('news')}
-                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  getMenuForTab(activeTab) === 'news'
-                    ? 'bg-red-50 text-red-900 border border-red-200/70 shadow-2xs'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  <FileText className="w-4 h-4 text-red-600 shrink-0" />
-                  <span className="font-bold">News & Content</span>
+          {/* WordPress Menu Navigation List */}
+          <div className="p-2 space-y-3 overflow-y-auto flex-1 font-sans scrollbar-thin">
+            {filteredMenuSections.map((group) => (
+              <div key={group.groupTitle} className="space-y-0.5">
+                <div className="px-2.5 pt-1.5 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                  <span>{group.groupTitle}</span>
                 </div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-red-100 text-red-700">
-                    {articles.length}
-                  </span>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                      openCategories.news ? 'rotate-180 text-red-600' : ''
-                    }`}
-                  />
-                </div>
-              </button>
-
-              {openCategories.news && (
-                <div className="mt-1 pl-3 border-l-2 border-red-200/80 ml-2 space-y-0.5 animate-fadeIn">
-                  {[
-                    { id: 'articles', label: 'All News Articles', icon: FileText, badge: `${articles.length}` },
-                    { id: 'new_article', label: 'Add New Article', icon: Plus, badge: 'NEW' },
-                    {
-                      id: 'citizen_news',
-                      label: 'Citizen Desk (नागरिक पत्रकारिता)',
-                      icon: Inbox,
-                      badge:
-                        citizenSubmissions.filter((s) => s.status === 'pending').length > 0
-                          ? `${citizenSubmissions.filter((s) => s.status === 'pending').length} NEW`
-                          : undefined,
-                    },
-                    { id: 'live', label: 'Live Coverage Desk', icon: Radio, badge: `${activeLiveBlogs.length}` },
-                    { id: 'trending', label: 'Trending & Tickers', icon: Flame },
-                    { id: 'epaper', label: 'E-Paper Edition', icon: Newspaper, badge: 'PDF' },
-                    { id: 'ai_seo_assistant', label: 'AI SEO Assistant', icon: Sparkles, badge: 'AI' },
-                  ].map((item) => {
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
                     return (
                       <button
                         key={item.id}
+                        type="button"
                         onClick={() => {
                           if (item.id === 'new_article') {
                             setEditingArticle(null);
@@ -964,296 +995,98 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                           setActiveTab(item.id as any);
                           setIsMobileMenuOpen(false);
                         }}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
+                        className={`w-full group flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer text-left ${
                           isActive
-                            ? 'bg-red-600 text-white font-bold shadow-2xs'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                            ? 'bg-white text-blue-700 font-bold border-l-4 border-blue-600 shadow-xs border-y border-r border-slate-200/80'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90 font-medium'
                         }`}
                       >
-                        <div className="flex items-center space-x-2 truncate">
-                          <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                          <span className="truncate">{item.label}</span>
-                        </div>
-                        {item.badge && (
-                          <span
-                            className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full shrink-0 ml-1 ${
-                              isActive ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-600'
+                        <div className="flex items-center space-x-2.5 truncate">
+                          <Icon
+                            className={`w-4 h-4 shrink-0 transition ${
+                              isActive
+                                ? 'text-blue-600'
+                                : 'text-slate-400 group-hover:text-slate-600'
                             }`}
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* 3. CORE MENU: MEDIA */}
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => toggleCategory('media')}
-                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  getMenuForTab(activeTab) === 'media'
-                    ? 'bg-purple-50 text-purple-900 border border-purple-200/70 shadow-2xs'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  <ImageIcon className="w-4 h-4 text-purple-600 shrink-0" />
-                  <span className="font-bold">Media Library</span>
-                </div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-700">
-                    {mediaAssets.length}
-                  </span>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                      openCategories.media ? 'rotate-180 text-purple-600' : ''
-                    }`}
-                  />
-                </div>
-              </button>
-
-              {openCategories.media && (
-                <div className="mt-1 pl-3 border-l-2 border-purple-200/80 ml-2 space-y-0.5 animate-fadeIn">
-                  {[
-                    { id: 'media', label: 'Media Library & WebP', icon: ImageIcon, badge: `${mediaAssets.length}` },
-                    { id: 'video_gallery', label: 'Video Bulletin & Reels', icon: Tv },
-                    { id: 'photo_stories', label: 'Photo Stories & Gallery', icon: Camera },
-                  ].map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          setActiveTab(item.id as any);
-                          setIsMobileMenuOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
-                          isActive
-                            ? 'bg-purple-600 text-white font-bold shadow-2xs'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2 truncate">
-                          <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                          <span className="truncate">{item.label}</span>
-                        </div>
-                        {item.badge && (
-                          <span
-                            className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full shrink-0 ml-1 ${
-                              isActive ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* 4. CORE MENU: APPEARANCE & CUSTOMIZATION */}
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => toggleCategory('appearance')}
-                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  getMenuForTab(activeTab) === 'appearance'
-                    ? 'bg-blue-50 text-blue-900 border border-blue-200/70 shadow-2xs'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <div className="flex items-center space-x-2">
-                  <Layout className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="font-bold">Appearance & Customization</span>
-                </div>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                    openCategories.appearance ? 'rotate-180 text-blue-600' : ''
-                  }`}
-                />
-              </button>
-
-              {openCategories.appearance && (
-                <div className="mt-1 pl-3 border-l-2 border-blue-200/80 ml-2 space-y-0.5 animate-fadeIn">
-                  {[
-                    { id: 'homepage_sections', label: 'Homepage Sections & Grid', icon: Layout, badge: 'CORE' },
-                    { id: 'spotlight', label: 'Top Stories Spotlight', icon: Layers },
-                    { id: 'settings_header', label: 'Header & Navigation', icon: Menu },
-                    { id: 'settings_footer', label: 'Footer & About Section', icon: FileText },
-                    { id: 'sidebar_widgets', label: 'Sidebar Widgets & Rashi', icon: Sliders, badge: 'WIDGETS' },
-                    { id: 'sidebar_ads', label: 'Sidebar Ad Slots', icon: DollarSign },
-                    { id: 'article_meta', label: 'Article Layout & Meta', icon: FileText },
-                    { id: 'mobile_sidebar', label: 'Mobile Drawer Menu', icon: Smartphone },
-                    { id: 'typography', label: 'Typography & Hindi Fonts', icon: Type, badge: 'FONTS' },
-                  ].map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          setActiveTab(item.id as any);
-                          setIsMobileMenuOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
-                          isActive
-                            ? 'bg-blue-600 text-white font-bold shadow-2xs'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2 truncate">
-                          <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                          <span className="truncate">{item.label}</span>
-                        </div>
-                        {item.badge && (
-                          <span
-                            className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full shrink-0 ml-1 ${
-                              isActive ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* 5. CORE MENU: SETTINGS & SEO (ADMIN ONLY) */}
-            {isAdmin ? (
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => toggleCategory('settings')}
-                  className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    getMenuForTab(activeTab) === 'settings'
-                      ? 'bg-emerald-50 text-emerald-900 border border-emerald-200/70 shadow-2xs'
-                      : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Settings className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="font-bold">Settings & SEO</span>
-                  </div>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                      openCategories.settings ? 'rotate-180 text-emerald-600' : ''
-                    }`}
-                  />
-                </button>
-
-                {openCategories.settings && (
-                  <div className="mt-1 pl-3 border-l-2 border-emerald-200/80 ml-2 space-y-0.5 animate-fadeIn">
-                    {[
-                      { id: 'settings_general', label: 'General & Site Identity', icon: Sliders },
-                      { id: 'factory_reset', label: 'Factory Reset', icon: RotateCcw, badge: 'RESET' },
-                      { id: 'seo_audit', label: 'SEO Audit & XML Sitemap', icon: Globe, badge: 'PRO' },
-                      { id: 'google_suite', label: 'Google Suite & Analytics', icon: Globe },
-                      { id: 'monetization', label: 'Monetization & AdSense', icon: DollarSign },
-                      {
-                        id: 'inquiries',
-                        label: 'Contact Inquiries',
-                        icon: Mail,
-                        badge:
-                          (inquiries || []).filter((i) => i.status === 'new').length > 0
-                            ? `${(inquiries || []).filter((i) => i.status === 'new').length} NEW`
-                            : undefined,
-                      },
-                      { id: 'settings_contact', label: 'Contact Information', icon: Mail },
-                      { id: 'settings_social', label: 'Social & WhatsApp Broadcast', icon: Globe },
-                      { id: 'settings_policies', label: 'Policies & Legal Compliance', icon: Shield },
-                      { id: 'users', label: 'Editorial Staff & Roles', icon: Users, badge: `${editorialUsers.length}` },
-                      { id: 'admins', label: 'Administrator Access', icon: Lock },
-                      { id: 'subscribers', label: 'Subscribers & VIPs', icon: Users, badge: `${activeSubscribersCount}` },
-                      { id: 'notifications', label: 'Push Notifications', icon: Bell },
-                      { id: 'popups', label: 'Popups & Reader Alerts', icon: AlertTriangle },
-                      { id: 'api_config', label: 'API Keys & Cloud Providers', icon: Key, badge: 'KEYS' },
-                    ].map((item) => {
-                      const Icon = item.icon;
-                      const isActive = activeTab === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            setActiveTab(item.id as any);
-                            setIsMobileMenuOpen(false);
-                          }}
-                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer ${
-                            isActive
-                              ? 'bg-emerald-600 text-white font-bold shadow-2xs'
-                              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-2 truncate">
-                            <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                            <span className="truncate">{item.label}</span>
+                          />
+                          <div className="truncate flex flex-col">
+                            <span className="truncate leading-tight">{item.label}</span>
+                            {item.labelHindi && (
+                              <span className="text-[10px] text-slate-400 font-normal leading-none group-hover:text-slate-500">
+                                {item.labelHindi}
+                              </span>
+                            )}
                           </div>
-                          {item.badge && (
-                            <span
-                              className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full shrink-0 ml-1 ${
-                                isActive ? 'bg-black/20 text-white' : 'bg-slate-100 text-slate-600'
-                              }`}
-                            >
-                              {item.badge}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                        </div>
+
+                        {item.badge && (
+                          <span
+                            className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full shrink-0 ml-1.5 ${
+                              item.badgeColor || 'bg-slate-200 text-slate-700'
+                            }`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            ) : null}
+            ))}
+
+            {filteredMenuSections.length === 0 && (
+              <div className="p-4 text-center text-xs text-slate-400">
+                कोई मेनू नहीं मिला।
+              </div>
+            )}
           </div>
 
           {/* SIDEBAR FOOTER */}
-          <div className="p-3 border-t border-slate-200 bg-slate-50 text-[11px] text-slate-500 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800">खबरी दोस्त CMS</span>
-              <span className="text-emerald-700 font-bold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Active</span>
+          <div className="p-2.5 border-t border-slate-200 bg-white text-[11px] text-slate-500 space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>WP-Style Light Mode</span>
               </span>
+              <span className="text-[10px] font-mono text-slate-400">v2.6</span>
             </div>
+
             {isAdmin && (
-              <div className="pt-0.5 flex gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                 <button
                   type="button"
                   onClick={() => {
-                    setResetScope('typography');
-                    setShowAdminResetModal(true);
+                    handleUpdateTypography(DEFAULT_PORTAL_SETTINGS.typography);
+                    resetRootCssVariablesToDefault();
+                    try {
+                      localStorage.removeItem('kd_reader_font_size');
+                      localStorage.removeItem('kd_reader_font_family');
+                    } catch {}
+                    setSavedSuccessMsg('✓ फ़ॉन्ट व आकार डिफ़ॉल्ट पर रीसेट कर दिए गए!');
+                    setTimeout(() => setSavedSuccessMsg(null), 3500);
                   }}
-                  className="flex-1 py-1.5 px-2 bg-white hover:bg-amber-50 text-amber-800 hover:text-amber-900 border border-slate-200 hover:border-amber-300 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition shadow-2xs cursor-pointer"
-                  title="फ़ॉन्ट सेटिंग्स रीसेट करें"
+                  className="py-1.5 px-2 bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-slate-200 hover:border-amber-300 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition shadow-2xs cursor-pointer"
+                  title="वेबसाइट के सभी फ़ॉन्ट डिफ़ॉल्ट पर रीसेट करें"
                 >
-                  <Type className="w-3 h-3 text-amber-600 shrink-0" />
+                  <RotateCcw className="w-3 h-3 text-amber-600 shrink-0" />
                   <span className="truncate">Reset Fonts</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => {
                     setResetScope('all');
                     setShowAdminResetModal(true);
                   }}
-                  className="flex-1 py-1.5 px-2 bg-white hover:bg-red-50 text-red-700 hover:text-red-900 border border-slate-200 hover:border-red-300 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition shadow-2xs cursor-pointer"
-                  title="एडमिन सेटिंग्स रीसेट करें"
+                  className="py-1.5 px-2 bg-slate-50 hover:bg-red-50 text-slate-700 hover:text-red-900 border border-slate-200 hover:border-red-300 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition shadow-2xs cursor-pointer"
+                  title="एडमिन सेटिंग्स फ़ैक्टरी रीसेट करें"
                 >
                   <RotateCcw className="w-3 h-3 text-red-600 shrink-0" />
                   <span className="truncate">Reset Admin</span>
                 </button>
               </div>
             )}
-            <p className="text-[10px] text-slate-400 truncate">WordPress-Style Admin Architecture</p>
           </div>
         </aside>
 

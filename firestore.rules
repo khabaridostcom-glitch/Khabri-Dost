@@ -103,6 +103,15 @@ service cloud.firestore {
                        existing().userId == request.auth.uid;
     }
 
+    // Read Later: Private to user
+    match /read_laters/{readLaterId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(readLaterId) &&
+                       incoming().userId == request.auth.uid;
+      allow delete: if isSignedIn() && isValidId(readLaterId) &&
+                       existing().userId == request.auth.uid;
+    }
+
     // Connection test document
     match /test/{docId} {
       allow read: if true;

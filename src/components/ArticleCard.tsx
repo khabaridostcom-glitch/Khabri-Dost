@@ -9,6 +9,8 @@ interface ArticleCardProps {
   onSelectArticle: (article: NewsArticle) => void;
   isBookmarked?: boolean;
   onToggleBookmark?: (article: NewsArticle) => void;
+  isReadLater?: boolean;
+  onToggleReadLater?: (article: NewsArticle) => void;
   displayOptions?: PortalSettings['displayOptions'];
   mobileScale?: 'compact' | 'normal' | 'large';
 }
@@ -19,6 +21,8 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   onSelectArticle,
   isBookmarked = false,
   onToggleBookmark,
+  isReadLater = false,
+  onToggleReadLater,
   displayOptions = {
     showExcerptOnMobile: false,
     showAuthor: true,
@@ -33,6 +37,13 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
     e.stopPropagation();
     if (onToggleBookmark) {
       onToggleBookmark(article);
+    }
+  };
+
+  const handleReadLaterClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggleReadLater) {
+      onToggleReadLater(article);
     }
   };
 
@@ -95,9 +106,22 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
 
           {/* Floating actions */}
           <div className="absolute top-3 right-3 flex items-center space-x-1.5">
+            {onToggleReadLater && (
+              <button
+                onClick={handleReadLaterClick}
+                className={`p-1.5 rounded-full backdrop-blur-md transition cursor-pointer ${
+                  isReadLater
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-black/50 text-white hover:bg-black/70'
+                }`}
+                title={isReadLater ? 'रीड लेटर से हटाएं' : 'बाद में पढ़ें (Read Later)'}
+              >
+                <Clock className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               onClick={handleBookmarkClick}
-              className={`p-1.5 rounded-full backdrop-blur-md transition ${
+              className={`p-1.5 rounded-full backdrop-blur-md transition cursor-pointer ${
                 isBookmarked
                   ? 'bg-amber-500 text-white'
                   : 'bg-black/50 text-white hover:bg-black/70'
@@ -236,9 +260,20 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
           </div>
 
           <div className="flex items-center space-x-1 shrink-0">
+            {onToggleReadLater && (
+              <button
+                onClick={handleReadLaterClick}
+                className={`p-1 rounded hover:bg-slate-100 transition cursor-pointer ${
+                  isReadLater ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-indigo-600'
+                }`}
+                title={isReadLater ? 'रीड लेटर से हटाएं' : 'बाद में पढ़ें (Read Later)'}
+              >
+                <Clock className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               onClick={handleBookmarkClick}
-              className={`p-1 rounded hover:bg-slate-100 transition ${
+              className={`p-1 rounded hover:bg-slate-100 transition cursor-pointer ${
                 isBookmarked ? 'text-amber-500' : 'text-slate-400 hover:text-slate-700'
               }`}
               title="सहेजें"

@@ -18,6 +18,7 @@ import {
   NewsComment,
   NewsBookmark,
   NewsCategory,
+  NewsReadLater,
   ReactionType,
   ArticleReactions,
   PortalSettings,
@@ -35,6 +36,7 @@ import {
 const ARTICLES_COLLECTION = 'articles';
 const COMMENTS_COLLECTION = 'comments';
 const BOOKMARKS_COLLECTION = 'bookmarks';
+const READ_LATERS_COLLECTION = 'read_laters';
 const SETTINGS_COLLECTION = 'settings';
 const INQUIRIES_COLLECTION = 'inquiries';
 const MEDIA_COLLECTION = 'media';
@@ -423,6 +425,174 @@ export async function toggleBookmark(
     const op = isCurrentlyBookmarked ? OperationType.DELETE : OperationType.CREATE;
     handleFirestoreError(error, op, `${BOOKMARKS_COLLECTION}/${bookmarkId}`);
     throw error;
+  }
+}
+
+/**
+ * Subscribe to user Read Later queue (Firestore with local fallback cache).
+ */
+export function subscribeToUserReadLater(
+  userId: string,
+  onReadLater: (items: NewsReadLater[]) => void
+) {
+  // If guest or no userId, return local cache
+  if (!userId) {
+    try {
+      const local = localStorage.getItem('kd_guest_read_later');
+      onReadLater(local ? JSON.parse(local) : []);
+    } catch {
+      onReadLater([]);
+    }
+    return () => {};
+  }
+
+  const q = query(
+    collection(db, READ_LATERS_COLLECTION),
+    where('userId', '==', userId)
+  );
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const items: NewsReadLater[] = [];
+      snapshot.forEach((docSnap) => {
+        items.push(docSnap.data() as NewsReadLater);
+      });
+      // Sort newest first
+      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      try {
+        localStorage.setItem(`kd_read_later_cache_${userId}`, JSON.stringify(items));
+      } catch {}
+      onReadLater(items);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, READ_LATERS_COLLECTION);
+      // Fallback to local cache if offline
+      try {
+        const cached = localStorage.getItem(`kd_read_later_cache_${userId}`);
+        if (cached) onReadLater(JSON.parse(cached));
+      } catch {}
+    }
+  );
+}
+
+/**
+ * Toggle Read Later for a user in Firestore & local cache.
+ */
+export async function toggleReadLater(
+  userId: string,
+  article: NewsArticle,
+  isCurrentlySaved: boolean
+): Promise<boolean> {
+  const safeArticleId = article.id.replace(/[^a-zA-Z0-9_\-]/g, '_');
+  const safeUserId = (userId || 'guest').replace(/[^a-zA-Z0-9_\-]/g, '_');
+  const readLaterId = `rl_${safeUserId.slice(0, 40)}_${safeArticleId.slice(0, 40)}`;
+
+  // Approximate reading time in Hindi (e.g. "3 मिनट पठन")
+  const wordCount = (article.content || article.summary || '').trim().split(/\s+/).length;
+  const minutes = Math.max(1, Math.ceil(wordCount / 180));
+  const estimatedReadTime = `${minutes} मिनट पठन`;
+
+  if (!userId) {
+    // Guest storage
+    try {
+      const existing: NewsReadLater[] = JSON.parse(localStorage.getItem('kd_guest_read_later') || '[]');
+      if (isCurrentlySaved) {
+        const filtered = existing.filter((item) => item.articleId !== article.id);
+        localStorage.setItem('kd_guest_read_later', JSON.stringify(filtered));
+        return false;
+      } else {
+        const newItem: NewsReadLater = {
+          id: readLaterId,
+          userId: 'guest',
+          articleId: article.id,
+          articleTitle: article.title,
+          articleCategory: article.category,
+          articleImageUrl: article.imageUrl,
+          estimatedReadTime,
+          createdAt: new Date().toISOString(),
+        };
+        localStorage.setItem('kd_guest_read_later', JSON.stringify([newItem, ...existing]));
+        return true;
+      }
+    } catch {
+      return !isCurrentlySaved;
+    }
+  }
+
+  try {
+    const docRef = doc(db, READ_LATERS_COLLECTION, readLaterId);
+    if (isCurrentlySaved) {
+      await deleteDoc(docRef);
+      return false;
+    } else {
+      const item: NewsReadLater = {
+        id: readLaterId,
+        userId,
+        articleId: article.id,
+        articleTitle: article.title,
+        articleCategory: article.category,
+        articleImageUrl: article.imageUrl,
+        estimatedReadTime,
+        createdAt: new Date().toISOString(),
+      };
+      await setDoc(docRef, item);
+      return true;
+    }
+  } catch (error) {
+    const op = isCurrentlySaved ? OperationType.DELETE : OperationType.CREATE;
+    handleFirestoreError(error, op, `${READ_LATERS_COLLECTION}/${readLaterId}`);
+    throw error;
+  }
+}
+
+/**
+ * Remove specific item from Read Later.
+ */
+export async function removeReadLaterItem(
+  userId: string,
+  articleId: string
+): Promise<void> {
+  const safeArticleId = articleId.replace(/[^a-zA-Z0-9_\-]/g, '_');
+  const safeUserId = (userId || 'guest').replace(/[^a-zA-Z0-9_\-]/g, '_');
+  const readLaterId = `rl_${safeUserId.slice(0, 40)}_${safeArticleId.slice(0, 40)}`;
+
+  if (!userId) {
+    try {
+      const existing: NewsReadLater[] = JSON.parse(localStorage.getItem('kd_guest_read_later') || '[]');
+      const filtered = existing.filter((item) => item.articleId !== articleId);
+      localStorage.setItem('kd_guest_read_later', JSON.stringify(filtered));
+    } catch {}
+    return;
+  }
+
+  try {
+    const docRef = doc(db, READ_LATERS_COLLECTION, readLaterId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `${READ_LATERS_COLLECTION}/${readLaterId}`);
+    throw error;
+  }
+}
+
+/**
+ * Clear all items in Read Later for a user.
+ */
+export async function clearAllUserReadLater(
+  userId: string,
+  items: NewsReadLater[]
+): Promise<void> {
+  if (!userId) {
+    localStorage.removeItem('kd_guest_read_later');
+    return;
+  }
+  for (const item of items) {
+    try {
+      const docRef = doc(db, READ_LATERS_COLLECTION, item.id);
+      await deleteDoc(docRef);
+    } catch (err) {
+      console.warn('Error clearing read later item:', err);
+    }
   }
 }
 

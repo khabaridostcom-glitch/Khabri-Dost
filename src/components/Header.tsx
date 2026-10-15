@@ -39,6 +39,7 @@ import {
   Home,
   MapPin,
   Gamepad2,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { NewsCategory, PortalSettings, NewsArticle, MobileSidebarMenuConfig } from '../types/news';
@@ -53,6 +54,7 @@ interface HeaderProps {
   onSearchChange: (query: string) => void;
   onOpenPublisherCMS: () => void;
   onOpenBookmarks: () => void;
+  onOpenReadLater?: () => void;
   onOpenEPaper: () => void;
   onOpenAdminSettings: (tab?: any) => void;
   onOpenAdminBackend?: () => void;
@@ -62,8 +64,10 @@ interface HeaderProps {
   onOpenTypography?: () => void;
   onOpenAllStatesModal?: () => void;
   bookmarksCount: number;
+  readLaterCount?: number;
   fontSize: 'normal' | 'large' | 'xlarge';
   onChangeFontSize: (size: 'normal' | 'large' | 'xlarge') => void;
+  onResetTypography?: () => void;
   portalSettings: PortalSettings;
   onUpdateSettings: (newSettings: Partial<PortalSettings>) => void;
   articles: NewsArticle[];
@@ -117,6 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSearchChange,
   onOpenPublisherCMS,
   onOpenBookmarks,
+  onOpenReadLater,
   onOpenEPaper,
   onOpenAdminSettings,
   onOpenAdminBackend,
@@ -126,8 +131,10 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTypography,
   onOpenAllStatesModal,
   bookmarksCount,
+  readLaterCount = 0,
   fontSize,
   onChangeFontSize,
+  onResetTypography,
   portalSettings,
   onUpdateSettings,
   articles,
@@ -481,7 +488,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={onOpenBookmarks}
                 className="hidden sm:flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-amber-300 px-2.5 py-1 rounded-lg border border-slate-800 hover:border-slate-700 transition text-xs font-medium shadow-2xs relative cursor-pointer shrink-0"
-                title="Saved Articles (Bookmarks)"
+                title="सहेजी गई ख़बरें (Bookmarks)"
               >
                 <BookMarked className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span className="hidden sm:inline">Bookmarks</span>
@@ -493,7 +500,77 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* 3.1 Typography / Font Size Customizer Button */}
+            {/* 3.05 Read Later Queue Button */}
+            {onOpenReadLater && (
+              <button
+                onClick={onOpenReadLater}
+                className="flex items-center space-x-1 sm:space-x-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-indigo-300 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg border border-slate-800 hover:border-slate-700 transition text-[11px] sm:text-xs font-medium shadow-2xs relative cursor-pointer shrink-0"
+                title="बाद में पढ़ें (Read Later Queue) - ऑफ़लाइन व क्लाउड सिंक"
+              >
+                <Clock className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span className="hidden sm:inline">Read Later</span>
+                <span className="sm:hidden">रीड लेटर</span>
+                {readLaterCount > 0 && (
+                  <span className="bg-indigo-600 text-white rounded-full text-[9px] px-1.5 min-w-[15px] h-[15px] flex items-center justify-center font-bold">
+                    {readLaterCount}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* 3.1 Quick Font Size Control & Reset (A / A+ / A++) */}
+            {onChangeFontSize && (
+              <div className="hidden sm:flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 space-x-0.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onChangeFontSize('normal')}
+                  className={`px-1.5 py-0.5 text-[11px] font-bold rounded transition cursor-pointer ${
+                    fontSize === 'normal'
+                      ? 'bg-red-600 text-white shadow-2xs'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title="सामान्य फ़ॉन्ट आकार (Default Normal Font Size 100%)"
+                >
+                  A
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChangeFontSize('large')}
+                  className={`px-1.5 py-0.5 text-xs font-bold rounded transition cursor-pointer ${
+                    fontSize === 'large'
+                      ? 'bg-red-600 text-white shadow-2xs'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title="बड़ा फ़ॉन्ट आकार (Large Font Size)"
+                >
+                  A+
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChangeFontSize('xlarge')}
+                  className={`px-1.5 py-0.5 text-xs font-black rounded transition cursor-pointer ${
+                    fontSize === 'xlarge'
+                      ? 'bg-red-600 text-white shadow-2xs'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title="विशाल फ़ॉन्ट आकार (Extra Large Font Size)"
+                >
+                  A++
+                </button>
+                {onResetTypography && (
+                  <button
+                    type="button"
+                    onClick={onResetTypography}
+                    className="px-1.5 py-0.5 text-[10px] text-slate-400 hover:text-amber-300 hover:bg-slate-800 rounded transition cursor-pointer border-l border-slate-800"
+                    title="सभी फ़ॉन्ट व आकार डिफ़ॉल्ट पर रीसेट करें (Reset All Fonts & Font Size to Default)"
+                  >
+                    <RotateCcw className="w-3 h-3 inline" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* 3.11 Typography / Font Size Customizer Button */}
             {onOpenTypography && (
               <button
                 onClick={onOpenTypography}
@@ -1812,6 +1889,108 @@ export const Header: React.FC<HeaderProps> = ({
                     : 'text-sm'
                 }`}
               >
+                {/* 0. READER BOOKMARKS & READ LATER QUICK BUTTONS */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onOpenBookmarks();
+                    }}
+                    className="p-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition cursor-pointer flex items-center justify-between border border-slate-700 shadow-2xs"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <BookMarked className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs font-bold">बुकमार्क</span>
+                    </div>
+                    {bookmarksCount > 0 && (
+                      <span className="bg-red-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                        {bookmarksCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {onOpenReadLater && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        onOpenReadLater();
+                      }}
+                      className="p-2.5 bg-indigo-950 hover:bg-indigo-900 text-white rounded-xl transition cursor-pointer flex items-center justify-between border border-indigo-800 shadow-2xs"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-4 h-4 text-indigo-400" />
+                        <span className="text-xs font-bold">रीड लेटर</span>
+                      </div>
+                      {readLaterCount > 0 && (
+                        <span className="bg-indigo-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                          {readLaterCount}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </div>
+
+                {/* 0.5 READER FONT SIZE & RESET CONTROLS */}
+                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
+                    <span className="flex items-center space-x-1">
+                      <Type className="w-3.5 h-3.5 text-red-600" />
+                      <span>फ़ॉन्ट आकार (Font Size):</span>
+                    </span>
+                    {onResetTypography && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onResetTypography();
+                          setMobileMenuOpen(false);
+                        }}
+                        className="text-[10px] font-semibold text-red-600 hover:underline flex items-center space-x-1 cursor-pointer"
+                        title="मूल डिफ़ॉल्ट पर रीसेट करें"
+                      >
+                        <RotateCcw className="w-2.5 h-2.5" />
+                        <span>डिफ़ॉल्ट रीसेट</span>
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onChangeFontSize?.('normal')}
+                      className={`py-1 text-xs font-bold rounded-lg border transition cursor-pointer text-center ${
+                        fontSize === 'normal'
+                          ? 'bg-red-600 text-white border-red-600 shadow-2xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      सामान्य (A)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onChangeFontSize?.('large')}
+                      className={`py-1 text-xs font-bold rounded-lg border transition cursor-pointer text-center ${
+                        fontSize === 'large'
+                          ? 'bg-red-600 text-white border-red-600 shadow-2xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      बड़ा (A+)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onChangeFontSize?.('xlarge')}
+                      className={`py-1 text-xs font-black rounded-lg border transition cursor-pointer text-center ${
+                        fontSize === 'xlarge'
+                          ? 'bg-red-600 text-white border-red-600 shadow-2xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      विशाल (A++)
+                    </button>
+                  </div>
+                </div>
+
                 {/* 1. NEWS ARCHIVE QUICK ACCESS BUTTON */}
                 {onOpenArchivePage && (
                   <button

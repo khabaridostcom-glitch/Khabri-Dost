@@ -603,23 +603,23 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="w-full bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
-      {/* 1. TOP UTILITY STRIP (CLEAN, MINIMAL & PREMIUM) */}
-      <div className="w-full bg-slate-900 text-slate-300 text-[11px] sm:text-xs py-1.5 border-b border-slate-800 select-none">
+      {/* 1. TOP UTILITY STRIP (CLEAN, MINIMAL & PREMIUM LIGHT) */}
+      <div className="w-full bg-slate-50 text-slate-700 text-[11px] sm:text-xs py-1.5 border-b border-slate-200 select-none">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-3">
           {/* Left: Date & Live Time (DESKTOP ONLY - HIDDEN ON MOBILE AS REQUESTED) */}
           <div className="hidden sm:flex items-center space-x-2 sm:space-x-3 shrink-0 font-kd-meta">
             {/* Hindi Date */}
-            <div className="flex items-center space-x-1.5 text-slate-200 whitespace-nowrap font-medium">
-              <Calendar className="w-3.5 h-3.5 text-red-500 shrink-0" />
+            <div className="flex items-center space-x-1.5 text-slate-800 whitespace-nowrap font-medium">
+              <Calendar className="w-3.5 h-3.5 text-red-600 shrink-0" />
               <span>{todayHindi}</span>
             </div>
 
-            <span className="text-slate-700 hidden sm:inline">•</span>
+            <span className="text-slate-300 hidden sm:inline">•</span>
 
             {/* Live Real-time Clock */}
-            <div className="hidden sm:flex items-center space-x-1.5 text-slate-400 whitespace-nowrap font-medium">
-              <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="font-mono text-[11px] sm:text-xs">{currentTime || '11:45 AM'}</span>
+            <div className="hidden sm:flex items-center space-x-1.5 text-slate-600 whitespace-nowrap font-medium">
+              <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              <span className="font-mono text-[11px] sm:text-xs font-semibold text-slate-700">{currentTime || '11:45 AM'}</span>
             </div>
           </div>
 
@@ -631,7 +631,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={onScrollToLiveVideo}
-                  className="flex items-center space-x-1 sm:space-x-1.5 bg-red-600/90 hover:bg-red-600 text-white px-2 sm:px-2.5 py-1 rounded-full transition text-[11px] sm:text-xs font-bold shadow-xs relative cursor-pointer group shrink-0"
+                  className="flex items-center space-x-1 sm:space-x-1.5 bg-red-600 hover:bg-red-700 text-white px-2 sm:px-2.5 py-1 rounded-full transition text-[11px] sm:text-xs font-bold shadow-xs relative cursor-pointer group shrink-0"
                   title="लाइव टीवी देखें (Watch Live TV)"
                 >
                   <span className="relative flex h-2 w-2">
@@ -648,15 +648,14 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={onOpenEPaper}
-                  className="flex items-center space-x-1 sm:space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-amber-300 px-2 sm:px-2.5 py-1 rounded-full border border-slate-700 hover:border-slate-600 transition text-[11px] sm:text-xs font-semibold shadow-xs cursor-pointer shrink-0"
+                  className="flex items-center space-x-1 sm:space-x-1.5 bg-white hover:bg-slate-100 text-slate-700 hover:text-red-600 px-2 sm:px-2.5 py-1 rounded-full border border-slate-200 hover:border-slate-300 transition text-[11px] sm:text-xs font-semibold shadow-xs cursor-pointer shrink-0"
                   title="डिजिटल ई-पेपर पढ़ें (Digital e-Paper)"
                 >
-                  <Newspaper className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
+                  <Newspaper className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-red-600 shrink-0" />
                   <span className="hidden sm:inline whitespace-nowrap">e-Paper</span>
                 </button>
               )}
 
-              {/* 2.5 Language / Brand Network Editions Switcher */}
               {/* 2.5 Language / Brand Network Editions Switcher */}
               {portalSettings.headerFooter?.headerShowLanguageEditions !== false && (
                 <div className="relative shrink-0" ref={editionsDropdownRef}>
@@ -666,13 +665,13 @@ export const Header: React.FC<HeaderProps> = ({
                     className={`flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 rounded-full border transition text-[11px] sm:text-xs font-semibold shadow-xs cursor-pointer ${
                       editionsOpen
                         ? 'bg-red-600 text-white border-red-500'
-                        : 'bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border-slate-700'
+                        : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-red-600 border-slate-200'
                     }`}
                     title="Select Language / Edition"
                     aria-expanded={editionsOpen}
                     aria-haspopup="true"
                   >
-                    <Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-400 shrink-0" />
+                    <Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600 shrink-0" />
                     <span className="hidden sm:inline whitespace-nowrap">Editions</span>
                     <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${editionsOpen ? 'rotate-180' : ''}`} />
                   </button>
@@ -793,16 +792,16 @@ export const Header: React.FC<HeaderProps> = ({
                   className={`flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1 rounded-full border transition text-[11px] sm:text-xs font-semibold shadow-xs cursor-pointer ${
                     cityPickerOpen
                       ? 'bg-red-600 text-white border-red-500'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-amber-300 border-slate-700'
+                      : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-red-600 border-slate-200'
                   }`}
                   title="अपना शहर / ज़िला चुनें (Select My City)"
                   aria-expanded={cityPickerOpen}
                   aria-haspopup="true"
                 >
-                  <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-red-500 shrink-0" />
-                  <span className="hidden sm:inline text-slate-400 font-normal">शहर:</span>
-                  <span className="font-bold text-amber-300 max-w-[70px] sm:max-w-none truncate">{selectedCity}</span>
-                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${cityPickerOpen ? 'rotate-180' : ''}`} />
+                  <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-red-600 shrink-0" />
+                  <span className="hidden sm:inline text-slate-500 font-normal">शहर:</span>
+                  <span className="font-bold text-slate-900 max-w-[70px] sm:max-w-none truncate">{selectedCity}</span>
+                  <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform ${cityPickerOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* City Picker Dropdown Modal / Popover (Dual-mode: Screen-Centered Modal on Mobile, Absolute on Desktop) */}
@@ -904,10 +903,10 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={onOpenBookmarks}
-                  className="hidden sm:flex items-center space-x-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-amber-300 px-2.5 py-1 rounded-full border border-slate-700/80 transition text-xs font-medium shadow-2xs relative cursor-pointer shrink-0"
+                  className="hidden sm:flex items-center space-x-1.5 bg-white hover:bg-slate-100 text-slate-700 hover:text-red-600 px-2.5 py-1 rounded-full border border-slate-200 transition text-xs font-medium shadow-2xs relative cursor-pointer shrink-0"
                   title="सहेजी गई ख़बरें (Bookmarks)"
                 >
-                  <BookMarked className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <BookMarked className="w-3.5 h-3.5 text-red-600 shrink-0" />
                   <span className="hidden md:inline">Bookmarks</span>
                   {bookmarksCount > 0 && (
                     <span className="bg-red-600 text-white rounded-full text-[9px] px-1.5 min-w-[15px] h-[15px] flex items-center justify-center font-bold">
@@ -919,7 +918,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Subtle Divider before Social Channels */}
-            <span className="text-slate-700 hidden sm:inline">|</span>
+            <span className="text-slate-300 hidden sm:inline">|</span>
 
             {/* 4. Streamlined Social Media Channels: FULLY RESPONSIVE & ALWAYS VISIBLE ON MOBILE & DESKTOP */}
             <div className="flex items-center space-x-1 sm:space-x-1.5 shrink-0" aria-label="Follow Us Social Channels">
@@ -970,11 +969,11 @@ export const Header: React.FC<HeaderProps> = ({
                 href={socialLinks.twitter}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden md:flex w-6 h-6 rounded-full bg-slate-800 hover:bg-black active:scale-95 text-white border border-slate-700 items-center justify-center shadow-xs transition-transform hover:scale-105 shrink-0"
+                className="hidden md:flex w-6 h-6 rounded-full bg-white hover:bg-slate-100 active:scale-95 text-slate-800 border border-slate-200 items-center justify-center shadow-xs transition-transform hover:scale-105 shrink-0"
                 title="Follow on X"
                 aria-label="X Twitter"
               >
-                <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 fill-slate-800 fill-current" viewBox="0 0 24 24">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                 </svg>
               </a>
@@ -1109,10 +1108,10 @@ export const Header: React.FC<HeaderProps> = ({
                 if (onOpenAdminBackend) onOpenAdminBackend();
                 else onOpenAdminSettings('header');
               }}
-              className="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-amber-300 hover:text-white px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold border border-slate-700 shadow-xs transition cursor-pointer"
+              className="flex items-center space-x-1.5 bg-white hover:bg-slate-100 text-slate-800 hover:text-red-600 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold border border-slate-300 shadow-xs transition cursor-pointer"
               title="Admin Panel & Header Settings"
             >
-              <Sliders className="w-3.5 h-3.5 text-amber-400" />
+              <Sliders className="w-3.5 h-3.5 text-slate-700" />
               <span className="hidden md:inline">Admin Panel</span>
             </button>
           )}
@@ -1177,7 +1176,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* SEARCH MODAL / DIALOG OVERLAY (CLEAN, POWERFUL, INSTANT SEARCH) */}
       {searchModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex justify-center p-3 sm:p-6 animate-fadeIn font-kd-body">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-xs flex justify-center p-3 sm:p-6 animate-fadeIn font-kd-body">
           <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden my-auto border border-slate-200 flex flex-col max-h-[85vh]">
             {/* Modal Search Header */}
             <div className="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 flex items-center gap-3">
@@ -1293,7 +1292,7 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
               <button
                 onClick={() => setSearchModalOpen(false)}
-                className="bg-slate-900 hover:bg-black text-white px-4 py-1.5 rounded-lg font-semibold cursor-pointer"
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg font-semibold cursor-pointer shadow-xs"
               >
                 खोज बंद करें (Close)
               </button>
@@ -1302,8 +1301,8 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
-      {/* 4. CATEGORY NAVIGATION & DESKTOP MEGA MENU */}
-      <nav className="w-full bg-slate-900 text-white border-t border-slate-800 relative z-40">
+      {/* 4. CATEGORY NAVIGATION & DESKTOP MEGA MENU (CLEAN LIGHT THEME) */}
+      <nav className="w-full bg-white text-slate-800 border-t border-b border-slate-200 relative z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <div
             style={{
@@ -1325,7 +1324,7 @@ export const Header: React.FC<HeaderProps> = ({
               className={`px-3 py-1.5 text-sm font-bold rounded-lg transition whitespace-nowrap cursor-pointer flex items-center space-x-1.5 shrink-0 mr-1 ${
                 currentCategory === 'all' && !searchQuery
                   ? 'bg-red-600 text-white shadow-xs'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  : 'text-slate-700 hover:text-red-600 hover:bg-slate-100'
               }`}
               title="होमपेज (Homepage)"
             >
@@ -1346,14 +1345,14 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => setDesktopMegaMenuOpen((prev) => !prev)}
                 className={`px-3 py-1.5 text-sm font-bold transition whitespace-nowrap cursor-pointer flex items-center space-x-1.5 shrink-0 mr-1.5 rounded-lg ${
                   desktopMegaMenuOpen
-                    ? 'text-amber-400 font-black bg-slate-800/80 shadow-2xs'
-                    : 'text-amber-300 hover:text-white hover:bg-slate-800/50'
+                    ? 'text-red-600 font-black bg-red-50 shadow-2xs border border-red-200'
+                    : 'text-slate-800 hover:text-red-600 hover:bg-slate-100'
                 }`}
                 title="प्रमुख ख़बरें (Hover or click to view top news & categories)"
               >
-                <Layout className="w-4 h-4 text-amber-400" />
+                <Layout className="w-4 h-4 text-red-600" />
                 <span>प्रमुख ख़बरें</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${desktopMegaMenuOpen ? 'rotate-180 text-amber-400' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${desktopMegaMenuOpen ? 'rotate-180 text-red-600' : 'text-slate-400'}`} />
               </button>
             </div>
 
@@ -1379,13 +1378,13 @@ export const Header: React.FC<HeaderProps> = ({
                       className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition whitespace-nowrap cursor-pointer flex items-center space-x-1 shrink-0 ${
                         statesMenuOpen || isActive
                           ? 'bg-red-600 text-white font-bold shadow-xs'
-                          : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                          : 'text-slate-700 hover:text-red-600 hover:bg-slate-100'
                       }`}
                       title="राज्य समाचार (Hover to view all states by region)"
                     >
-                      <MapPin className="w-4 h-4 text-amber-400" />
+                      <MapPin className={`w-4 h-4 ${statesMenuOpen || isActive ? 'text-white' : 'text-red-600'}`} />
                       <span>{catDisplayLabel}</span>
-                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${statesMenuOpen ? 'rotate-180 text-amber-400' : ''}`} />
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${statesMenuOpen || isActive ? 'rotate-180 text-white' : 'text-slate-400'}`} />
                     </button>
                   </div>
                 );
@@ -1404,11 +1403,11 @@ export const Header: React.FC<HeaderProps> = ({
                     isActive
                       ? 'bg-red-600 text-white font-bold shadow-xs'
                       : cat.id === 'trending'
-                      ? 'text-amber-400 hover:text-white hover:bg-slate-800'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                      ? 'text-red-600 hover:bg-red-50 font-bold'
+                      : 'text-slate-700 hover:text-red-600 hover:bg-slate-100'
                   }`}
                 >
-                  {cat.id === 'trending' && <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30" />}
+                  {cat.id === 'trending' && <Flame className="w-3.5 h-3.5 text-red-600 fill-red-600/30" />}
                   <span>{catDisplayLabel}</span>
                 </button>
               );
@@ -1944,8 +1943,8 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
 
               {speedMenuOpen && (
-                <div className="absolute left-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1.5 text-xs z-50 flex flex-col space-y-1 min-w-[170px]">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase px-2 py-0.5 border-b border-slate-800">
+                <div className="absolute left-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl p-1.5 text-xs z-50 flex flex-col space-y-1 min-w-[170px]">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase px-2 py-0.5 border-b border-slate-100">
                     स्लाइडिंग गति (Ticker Speed)
                   </span>
                   {[
@@ -1965,7 +1964,7 @@ export const Header: React.FC<HeaderProps> = ({
                       className={`text-left px-2.5 py-1 rounded-lg transition flex items-center justify-between cursor-pointer ${
                         portalSettings.tickerSpeed === spd.id
                           ? 'bg-red-600 text-white font-bold'
-                          : 'text-slate-300 hover:bg-slate-800'
+                          : 'text-slate-700 hover:bg-slate-100'
                       }`}
                     >
                       <span>{spd.label}</span>
@@ -1974,11 +1973,11 @@ export const Header: React.FC<HeaderProps> = ({
                   ))}
 
                   {/* Custom Speed in seconds */}
-                  <div className="pt-1 border-t border-slate-800">
+                  <div className="pt-1 border-t border-slate-100">
                     <button
                       onClick={() => setShowCustomSpeedForm(!showCustomSpeedForm)}
-                      className={`w-full text-left px-2.5 py-1 rounded-lg transition flex items-center justify-between text-amber-300 hover:bg-slate-800 cursor-pointer ${
-                        portalSettings.tickerSpeed === 'custom' ? 'bg-amber-950/60 font-bold' : ''
+                      className={`w-full text-left px-2.5 py-1 rounded-lg transition flex items-center justify-between text-slate-800 hover:bg-slate-100 cursor-pointer ${
+                        portalSettings.tickerSpeed === 'custom' ? 'bg-red-50 text-red-700 font-bold' : ''
                       }`}
                     >
                       <span>⚙️ Custom Speed</span>
@@ -1986,10 +1985,10 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
 
                     {showCustomSpeedForm && (
-                      <div className="p-2 mt-1 bg-slate-950 rounded-lg space-y-1.5 border border-slate-800">
-                        <div className="flex items-center justify-between text-xs text-slate-400">
+                      <div className="p-2 mt-1 bg-slate-50 rounded-lg space-y-1.5 border border-slate-200">
+                        <div className="flex items-center justify-between text-xs text-slate-600">
                           <span>Duration (20s - 180s):</span>
-                          <span className="font-mono text-white font-bold">{customSpeedInput}s</span>
+                          <span className="font-mono text-slate-900 font-bold">{customSpeedInput}s</span>
                         </div>
                         <input
                           type="range"
@@ -2536,10 +2535,10 @@ export const Header: React.FC<HeaderProps> = ({
                       href={socialLinks.twitter || "https://x.com"}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full bg-slate-900 text-white flex items-center justify-center hover:scale-110 active:scale-95 transition shadow-xs"
+                      className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full bg-slate-100 text-slate-800 flex items-center justify-center hover:scale-110 active:scale-95 transition shadow-xs border border-slate-200"
                       title="X / Twitter"
                     >
-                      <svg width="20" height="20" className="w-4.5 h-4.5 fill-white fill-current shrink-0" style={{ width: '18px', height: '18px' }} viewBox="0 0 24 24">
+                      <svg width="20" height="20" className="w-4.5 h-4.5 fill-slate-800 fill-current shrink-0" style={{ width: '18px', height: '18px' }} viewBox="0 0 24 24">
                         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                       </svg>
                     </a>
@@ -2588,9 +2587,9 @@ export const Header: React.FC<HeaderProps> = ({
                           if (onOpenAdminBackend) onOpenAdminBackend();
                           else onOpenAdminSettings('dashboard');
                         }}
-                        className="w-full bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold text-xs p-2 rounded-lg flex items-center justify-center space-x-1.5 transition cursor-pointer border border-slate-700"
+                        className="w-full bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs p-2 rounded-lg flex items-center justify-center space-x-1.5 transition cursor-pointer border border-slate-300 shadow-xs"
                       >
-                        <Sliders className="w-3.5 h-3.5 text-amber-400" />
+                        <Sliders className="w-3.5 h-3.5 text-slate-700" />
                         <span>👑 एडमिन हब (Admin Panel)</span>
                       </button>
                     )}

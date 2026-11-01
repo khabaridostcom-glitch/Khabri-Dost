@@ -1237,6 +1237,67 @@ app.post('/api/sitemap/sync-articles', (req: Request, res: Response) => {
   res.json({ success: true, count: sitemapArticlesRegistry.length });
 });
 
+// POST /api/news/slugify - Generate clean, Google Discover-ready Latin slug from Hindi headline
+app.post('/api/news/slugify', (req: Request, res: Response): void => {
+  try {
+    const { title } = req.body || {};
+    if (!title || typeof title !== 'string') {
+      res.status(400).json({ error: 'Missing title parameter' });
+      return;
+    }
+
+    const devanagariMap: Record<string, string> = {
+      'अ': 'a', 'आ': 'aa', 'इ': 'i', 'ई': 'ee', 'उ': 'u', 'ऊ': 'oo', 'ऋ': 'ri',
+      'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au', 'अं': 'an', 'अः': 'ah',
+      'ा': 'a', 'ि': 'i', 'ी': 'ee', 'ु': 'u', 'ू': 'oo', 'ृ': 'ri',
+      'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au', 'ं': 'n', 'ँ': 'n', 'ः': 'h',
+      'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'ng',
+      'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'ny',
+      'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n',
+      'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n',
+      'प': 'p', 'फ': 'ph', 'ब': 'b', 'भ': 'bh', 'म': 'm',
+      'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v', 'श': 'sh', 'ष': 'sh', 'स': 's', 'ह': 'h',
+      'क्ष': 'ksh', 'त्र': 'tr', 'ज्ञ': 'gy', 'श्र': 'shr',
+      'क़': 'q', 'ख़': 'kh', 'ग़': 'gh', 'ज़': 'z', 'फ़': 'f', 'ड़': 'd', 'ढ़': 'dh',
+      '०': '0', '१': '1', '२': '2', '३': '3', '४': '4', '५': '5', '६': '6', '७': '7', '८': '8', '९': '9'
+    };
+
+    let transliterated = '';
+    const chars = Array.from(title.trim());
+
+    for (let i = 0; i < chars.length; i++) {
+      const ch = chars[i];
+      if (/[a-zA-Z0-9]/.test(ch)) {
+        transliterated += ch.toLowerCase();
+      } else if (devanagariMap[ch]) {
+        transliterated += devanagariMap[ch];
+      } else if (/\s|[-_:,|]/.test(ch)) {
+        transliterated += '-';
+      }
+    }
+
+    const stopWords = new Set(['ka', 'ki', 'ke', 'ko', 'se', 'me', 'mein', 'par', 'aur', 'hai', 'hain', 'tha', 'thi', 'the']);
+    const tokens = transliterated
+      .split('-')
+      .map(t => t.trim().toLowerCase())
+      .filter(t => t.length > 1 && !stopWords.has(t));
+
+    const slug = (tokens.length > 0 ? tokens.slice(0, 7).join('-') : 'khabri-dost-news')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    res.json({
+      success: true,
+      slug,
+      tokens: tokens.slice(0, 10),
+      timestamp: new Date().toISOString()
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed to slugify title' });
+  }
+});
+
 // POST /api/epaper/upload-pdf - Upload real newspaper PDF edition to persistent disk storage
 app.post('/api/epaper/upload-pdf', (req: Request, res: Response): void => {
   try {

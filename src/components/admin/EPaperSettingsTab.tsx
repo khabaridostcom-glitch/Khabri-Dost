@@ -102,6 +102,9 @@ export const EPaperSettingsTab: React.FC<EPaperSettingsTabProps> = ({
       let detectedPages = 15;
       try {
         const pdfjsLib = await import('pdfjs-dist/build/pdf.mjs');
+        if (pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+        }
         const arrayBuffer = await file.arrayBuffer();
         const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
         detectedPages = doc.numPages;

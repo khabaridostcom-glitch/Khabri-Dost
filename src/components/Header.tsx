@@ -988,11 +988,12 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center space-x-2 sm:space-x-3 justify-self-start shrink-0">
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="md:hidden flex items-center space-x-1.5 p-1 text-slate-800 hover:text-red-600 transition cursor-pointer group bg-transparent border-0 shadow-none outline-none"
+            className="md:hidden flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-800 hover:text-red-600 border border-slate-200 transition cursor-pointer group shadow-2xs font-kd-meta"
             aria-label="मेनू खोलें"
             title="मेनू खोलें (Menu)"
           >
-            <Menu className="w-5 h-5 text-red-600 group-hover:scale-110 transition-transform" />
+            <Menu className="w-4 h-4 text-red-600 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-bold text-slate-800">मेनू</span>
           </button>
         </div>
 
@@ -1324,7 +1325,7 @@ export const Header: React.FC<HeaderProps> = ({
               className={`px-3 py-1.5 text-sm font-bold rounded-lg transition whitespace-nowrap cursor-pointer flex items-center space-x-1.5 shrink-0 mr-1 ${
                 currentCategory === 'all' && !searchQuery
                   ? 'bg-red-600 text-white shadow-xs'
-                  : 'text-slate-700 hover:text-red-600 hover:bg-slate-100'
+                  : 'text-slate-900 hover:text-red-600 hover:bg-slate-100'
               }`}
               title="होमपेज (Homepage)"
             >
@@ -1346,13 +1347,13 @@ export const Header: React.FC<HeaderProps> = ({
                 className={`px-3 py-1.5 text-sm font-bold transition whitespace-nowrap cursor-pointer flex items-center space-x-1.5 shrink-0 mr-1.5 rounded-lg ${
                   desktopMegaMenuOpen
                     ? 'text-red-600 font-black bg-red-50 shadow-2xs border border-red-200'
-                    : 'text-slate-800 hover:text-red-600 hover:bg-slate-100'
+                    : 'text-slate-900 hover:text-red-600 hover:bg-slate-100'
                 }`}
                 title="प्रमुख ख़बरें (Hover or click to view top news & categories)"
               >
                 <Layout className="w-4 h-4 text-red-600" />
                 <span>प्रमुख ख़बरें</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${desktopMegaMenuOpen ? 'rotate-180 text-red-600' : 'text-slate-400'}`} />
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${desktopMegaMenuOpen ? 'rotate-180 text-red-600' : 'text-slate-500'}`} />
               </button>
             </div>
 
@@ -1375,16 +1376,16 @@ export const Header: React.FC<HeaderProps> = ({
                         setStatesMenuOpen((prev) => !prev);
                         setDesktopMegaMenuOpen(false);
                       }}
-                      className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition whitespace-nowrap cursor-pointer flex items-center space-x-1 shrink-0 ${
+                      className={`px-3 py-1.5 text-sm font-bold rounded-lg transition whitespace-nowrap cursor-pointer flex items-center space-x-1 shrink-0 ${
                         statesMenuOpen || isActive
-                          ? 'bg-red-600 text-white font-bold shadow-xs'
-                          : 'text-slate-700 hover:text-red-600 hover:bg-slate-100'
+                          ? 'bg-red-600 text-white font-black shadow-xs'
+                          : 'text-slate-900 hover:text-red-600 hover:bg-slate-100'
                       }`}
                       title="राज्य समाचार (Hover to view all states by region)"
                     >
                       <MapPin className={`w-4 h-4 ${statesMenuOpen || isActive ? 'text-white' : 'text-red-600'}`} />
                       <span>{catDisplayLabel}</span>
-                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${statesMenuOpen || isActive ? 'rotate-180 text-white' : 'text-slate-400'}`} />
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${statesMenuOpen || isActive ? 'rotate-180 text-white' : 'text-slate-500'}`} />
                     </button>
                   </div>
                 );
@@ -1399,15 +1400,15 @@ export const Header: React.FC<HeaderProps> = ({
                     setStatesMenuOpen(false);
                     onSelectCategory(cat.id);
                   }}
-                  className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition whitespace-nowrap cursor-pointer flex items-center space-x-1 ${
+                  className={`px-3 py-1.5 text-sm font-bold rounded-lg transition whitespace-nowrap cursor-pointer flex items-center space-x-1 ${
                     isActive
-                      ? 'bg-red-600 text-white font-bold shadow-xs'
+                      ? 'bg-red-600 text-white font-black shadow-xs'
                       : cat.id === 'trending'
-                      ? 'text-red-600 hover:bg-red-50 font-bold'
-                      : 'text-slate-700 hover:text-red-600 hover:bg-slate-100'
+                      ? 'text-red-700 bg-red-50/70 hover:bg-red-100 border border-red-200/60 font-bold'
+                      : 'text-slate-900 hover:text-red-600 hover:bg-slate-100'
                   }`}
                 >
-                  {cat.id === 'trending' && <Flame className="w-3.5 h-3.5 text-red-600 fill-red-600/30" />}
+                  {cat.id === 'trending' && <Flame className="w-3.5 h-3.5 text-red-600 fill-red-600" />}
                   <span>{catDisplayLabel}</span>
                 </button>
               );
@@ -1432,7 +1433,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          <div className="flex md:hidden items-center space-x-1.5 overflow-x-auto py-1.5 scrollbar-none w-full font-kd-meta">
+          <div className="flex md:hidden items-center space-x-1 overflow-x-auto py-1.5 scrollbar-none w-full font-kd-meta">
             {/* Mobile Homepage Button */}
             <button
               onClick={() => {
@@ -1440,13 +1441,13 @@ export const Header: React.FC<HeaderProps> = ({
                 onSearchChange('');
                 if (onBackToHome) onBackToHome();
               }}
-              className={`px-2.5 py-1 text-xs font-bold rounded-lg transition whitespace-nowrap flex items-center space-x-1 shrink-0 ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition whitespace-nowrap flex items-center space-x-1 shrink-0 cursor-pointer ${
                 currentCategory === 'all' && !searchQuery
-                  ? 'bg-red-600 text-white'
-                  : 'text-slate-300'
+                  ? 'bg-red-600 text-white shadow-xs'
+                  : 'text-slate-800 hover:text-red-600 hover:bg-slate-100 active:bg-slate-100'
               }`}
             >
-              <Home className="w-3 h-3" />
+              <Home className="w-3.5 h-3.5" />
               <span>होम</span>
             </button>
 
@@ -1456,10 +1457,10 @@ export const Header: React.FC<HeaderProps> = ({
               onOpenLiveFeed && (
               <button
                 onClick={onOpenLiveFeed}
-                className="px-2.5 py-1 text-xs font-bold rounded-lg transition whitespace-nowrap bg-red-600 text-white flex items-center space-x-1 shrink-0 shadow-xs"
+                className="px-3 py-1.5 text-xs font-bold rounded-lg transition whitespace-nowrap bg-red-600 hover:bg-red-700 text-white flex items-center space-x-1 shrink-0 shadow-xs cursor-pointer"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                <Radio className="w-3 h-3" />
+                <Radio className="w-3.5 h-3.5" />
                 <span>LIVE</span>
               </button>
             )}
@@ -1471,15 +1472,15 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   key={cat.id}
                   onClick={() => onSelectCategory(cat.id)}
-                  className={`px-2.5 py-1 text-xs font-medium rounded transition whitespace-nowrap flex items-center space-x-1 ${
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition whitespace-nowrap flex items-center space-x-1 shrink-0 cursor-pointer ${
                     isActive
-                      ? 'bg-red-600 text-white font-bold shadow-xs'
+                      ? 'bg-red-600 text-white shadow-xs'
                       : cat.id === 'trending'
-                      ? 'text-amber-400 font-semibold'
-                      : 'text-slate-300'
+                      ? 'text-red-600 hover:text-red-700 hover:bg-red-50 active:bg-red-50 font-bold'
+                      : 'text-slate-800 hover:text-red-600 hover:bg-slate-100 active:bg-slate-100'
                   }`}
                 >
-                  {cat.id === 'trending' && <Flame className="w-3 h-3 text-amber-400 fill-amber-400/30" />}
+                  {cat.id === 'trending' && <Flame className="w-3.5 h-3.5 text-red-600 fill-red-600" />}
                   <span>{catDisplayLabel}</span>
                 </button>
               );

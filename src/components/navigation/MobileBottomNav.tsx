@@ -289,12 +289,12 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               type="button"
               onClick={handleClick}
               className={`flex flex-col items-center justify-center py-1 transition cursor-pointer ${
-                isActive ? 'text-red-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+                isActive ? 'text-red-600 font-bold' : 'text-slate-700 hover:text-slate-950'
               }`}
             >
               {renderIcon()}
               {showLabels && (
-                <span className="text-[10px] mt-0.5 tracking-tight font-kd-meta truncate max-w-[64px]">
+                <span className={`text-[10px] mt-0.5 tracking-tight font-kd-meta truncate max-w-[64px] ${isActive ? 'font-black text-red-600' : 'font-bold text-slate-700'}`}>
                   {item.label}
                 </span>
               )}

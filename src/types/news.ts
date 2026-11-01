@@ -75,6 +75,7 @@ export interface NewsArticle {
   isPinned?: boolean;
   isEditorsPick?: boolean;
   isTrending?: boolean;
+  isSpotlight?: boolean;
   trendingRank?: number;
   status?: 'published' | 'draft' | 'pending_review' | 'scheduled' | 'archived';
   scheduledFor?: string;
@@ -800,6 +801,9 @@ export interface HeaderFooterSettings {
   headerLogoHeight?: number; // Custom height in px (e.g. 36px to 90px)
   headerTitleCustomPx?: number; // Custom font size for siteTitle text in px
   showSiteTitleText?: boolean; // Whether to display site title text alongside/below logo
+  primaryBrandColor?: string; // Hex color for primary brand identity (default: #dc2626)
+  secondaryBrandColor?: string; // Hex color for secondary brand accents
+  siteTitleHindi?: string; // Hindi/Devanagari localized site title
   footerLogoUrl?: string; // Dedicated logo URL for footer
   faviconUrl?: string;
   contactEmail: string;
@@ -811,6 +815,7 @@ export interface HeaderFooterSettings {
   // Comprehensive footer custom settings
   footerAboutHeading?: string;
   footerAboutText?: string;
+  aboutText?: string; // Short about summary for meta description
   footerBrandingPartnerName?: string;
   footerBrandingPartnerUrl?: string;
   footerBottomName?: string;

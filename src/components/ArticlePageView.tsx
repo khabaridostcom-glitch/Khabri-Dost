@@ -80,6 +80,7 @@ import { formatHindiTimeAgo, speakHindiText, stopHindiSpeech } from '../utils/hi
 import { renderArticleBlock, splitArticleContent } from '../utils/articleContentParser';
 import { AdBanner } from './AdBanner';
 import { ArticleCard } from './ArticleCard';
+import { SpotlightBriefTicker } from './SpotlightBriefTicker';
 import { OpinionPollWidget } from './OpinionPollWidget';
 import { GoldRateWidget } from './widgets/GoldRateWidget';
 import { RashifalWidget } from './widgets/RashifalWidget';
@@ -2208,98 +2209,21 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
             />
           )}
 
-          {/* 2. TRENDING STORIES (VERTICAL BOTTOM-TO-TOP SLIDER) */}
-          {sidebarWidgets.showTrendingNews !== false && trendingSidebarArticles.length > 0 && (
-            <div
-              onMouseEnter={() => setIsTrendingHovered(true)}
-              onMouseLeave={() => setIsTrendingHovered(false)}
-              className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 overflow-hidden animate-fadeIn"
-            >
-              <div className="border-b border-slate-100 pb-2 mb-2.5 space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold text-sm shrink-0 border border-red-200/50">
-                      <TrendingUp className="w-4 h-4 text-red-600" />
-                    </div>
-                    <h3 className="font-bold font-kd-headline text-slate-900 text-sm sm:text-base flex items-center gap-1.5 flex-wrap min-w-0">
-                      <span className="truncate">ट्रेंडिंग ख़बरें</span>
-                    </h3>
-                  </div>
-                </div>
-              </div>
-
-              {/* Slider Viewport: Smooth bottom-to-top continuous sliding marquee like homepage */}
-              {isTrendingSliderEnabled ? (
-                <div
-                  ref={trendingScrollRef}
-                  className="relative overflow-hidden min-h-[250px] max-h-[300px]"
-                >
-                {/* Top and bottom subtle fade overlays for smooth appearance */}
-                <div className="absolute top-0 inset-x-0 h-4 bg-gradient-to-b from-white to-transparent pointer-events-none z-10" />
-                <div className="absolute bottom-0 inset-x-0 h-6 bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
-
-                {/* The Animated Moving Track */}
-                <div
-                  className={`space-y-1.5 pt-0.5 pb-2 ${!isTrendingPaused && !isTrendingHovered ? 'animate-vertical-ticker' : ''}`}
-                  style={{
-                    animationPlayState: (isTrendingPaused || isTrendingHovered) ? 'paused' : 'running',
-                  }}
-                >
-                  {/* Render articles repeated for continuous upwards looping */}
-                  {trendingSidebarArticles.concat(trendingSidebarArticles).map((art, idx) => {
-                    const displayRank = (idx % trendingSidebarArticles.length) + 1;
-                    return (
-                      <div
-                        key={`${art.id}-${idx}`}
-                        onClick={() => onSelectArticle(art)}
-                        className="flex items-start gap-2 p-2 rounded-xl hover:bg-slate-50 transition cursor-pointer border border-transparent hover:border-slate-100 group min-h-[58px]"
-                      >
-                        <span className="text-sm font-black text-slate-300 group-hover:text-red-600 transition font-serif w-4 text-center shrink-0 mt-0.5">
-                          {displayRank}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-bold text-red-600 uppercase block mb-0.5 font-kd-meta">
-                            {art.category}
-                          </span>
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-red-700 transition leading-snug font-kd-headline line-clamp-2 [overflow-wrap:anywhere] [word-break:normal]">
-                            {art.title}
-                          </h4>
-                          <span className="text-[10px] text-slate-400 mt-0.5 block font-kd-meta">
-                            {formatHindiTimeAgo(art.createdAt)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              ) : (
-                /* Static List Mode fallback */
-                <div className="space-y-1.5">
-                  {trendingSidebarArticles.map((art, idx) => (
-                    <div
-                      key={art.id}
-                      onClick={() => onSelectArticle(art)}
-                      className="flex items-start gap-2 p-2 rounded-xl hover:bg-slate-50 transition cursor-pointer border border-transparent hover:border-slate-100 group"
-                    >
-                      <span className="text-sm font-black text-slate-300 group-hover:text-red-600 transition font-serif w-4 text-center shrink-0">
-                        {idx + 1}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[10px] font-bold text-red-600 uppercase block mb-0.5 font-kd-meta">
-                          {art.category}
-                        </span>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-red-700 transition leading-snug font-kd-headline [overflow-wrap:anywhere] [word-break:normal]">
-                          {art.title}
-                        </h4>
-                        <span className="text-[10px] text-slate-400 mt-0.5 block font-kd-meta">
-                          {formatHindiTimeAgo(art.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {/* 2. FAST-READ BRIEFS VERTICAL SLIDER (EXACT HOMEPAGE SPOTLIGHT BRIEF TICKER) */}
+          {sidebarWidgets.showTrendingNews !== false && (
+            <div className="h-[380px] sm:h-[420px] flex flex-col overflow-hidden animate-fadeIn">
+              <SpotlightBriefTicker
+                articles={trendingSidebarArticles.length > 0 ? trendingSidebarArticles : allArticles}
+                config={{
+                  title: portalSettings.spotlightLayout?.briefTicker?.title || 'बड़ी सुर्खियां • FAST BRIEFS',
+                  slideSpeed: portalSettings.spotlightLayout?.briefTicker?.slideSpeed || 'normal',
+                  pauseOnHover: true,
+                  showCategoryBadge: true,
+                }}
+                onSelectArticle={onSelectArticle}
+                onOpenSettings={isAdmin && onOpenAdminSettings ? () => onOpenAdminSettings('spotlight') : undefined}
+                onViewAllCategory={(cat) => onSelectArticle({ ...article, category: cat as any })}
+              />
             </div>
           )}
 

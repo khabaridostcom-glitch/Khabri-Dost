@@ -15,7 +15,7 @@ import { formatHindiTimeAgo } from '../utils/hindiHelpers';
 
 interface SpotlightBriefTickerProps {
   articles: NewsArticle[];
-  config?: SpotlightLayoutSettings['briefTicker'];
+  config?: Partial<SpotlightLayoutSettings['briefTicker']>;
   onSelectArticle: (article: NewsArticle) => void;
   onOpenSettings?: () => void;
   onViewAllCategory?: (category: string) => void;

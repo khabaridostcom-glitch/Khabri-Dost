@@ -26,6 +26,7 @@ import {
   Key,
   Newspaper,
   Image as ImageIcon,
+  Palette,
 } from 'lucide-react';
 import { NewsArticle, PortalSettings, NewsCategory, TrendingSectionConfig, MediaAsset } from '../types/news';
 import {
@@ -52,8 +53,10 @@ import { MobileSidebarSettingsTab } from './admin/MobileSidebarSettingsTab';
 import { EPaperSettingsTab } from './admin/EPaperSettingsTab';
 import { TypographySettingsTab } from './admin/TypographySettingsTab';
 import { MediaLibraryTab } from './admin/MediaLibraryTab';
+import { BrandCustomizerTab } from './admin/BrandCustomizerTab';
 
 export type AdminSettingsTab =
+  | 'brand_customizer'
   | 'api_config'
   | 'homepage_sections'
   | 'spotlight'
@@ -183,6 +186,13 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
     {
       group: 'BRANDING & TYPOGRAPHY',
       items: [
+        {
+          id: 'brand_customizer',
+          label: 'Brand Identity & Colors',
+          description: 'Brand title, custom logo, theme colors & favicon',
+          icon: Palette,
+          badge: 'WP CUSTOMIZER',
+        },
         {
           id: 'typography',
           label: 'Typography & Body Fonts',
@@ -627,6 +637,20 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({
                 onUpdateMedia={onUpdateMedia}
                 onDeleteMedia={onDeleteMedia || (() => {})}
                 articles={articles}
+              />
+            </div>
+          )}
+
+          {/* SECTION: BRAND IDENTITY & WORDPRESS-STYLE THEME CUSTOMIZER */}
+          {activeTab === 'brand_customizer' && (
+            <div className="max-w-5xl mx-auto space-y-5">
+              <BrandCustomizerTab
+                settings={current}
+                onUpdateSettings={(newPartial) => {
+                  const updated = { ...current, ...newPartial };
+                  setCurrent(updated);
+                  onSaveSettings(updated);
+                }}
               />
             </div>
           )}

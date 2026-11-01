@@ -468,6 +468,46 @@ function NewsPortalMain() {
     }
   }, [portalSettings.typography]);
 
+  // Dynamic Brand Customizer: Theme Colors, Document Title, Meta Tags & Favicon
+  useEffect(() => {
+    const root = document.documentElement;
+    const hf = portalSettings?.headerFooter;
+    const brandColor = hf?.primaryBrandColor || '#dc2626';
+    const secondaryColor = hf?.secondaryBrandColor || '#2563eb';
+
+    // Set CSS brand variables
+    root.style.setProperty('--brand-red', brandColor);
+    root.style.setProperty('--brand-primary', brandColor);
+    root.style.setProperty('--brand-secondary', secondaryColor);
+    root.style.setProperty('--brand-red-hover', `${brandColor}e6`);
+
+    // Dynamic Title & Description
+    if (hf?.siteTitle && currentView !== 'article') {
+      const siteTitle = hf.siteTitle;
+      const tagline = hf.siteTagline || '';
+      document.title = tagline ? `${siteTitle} - ${tagline}` : siteTitle;
+
+      const metaDesc = document.querySelector('meta[name="description"]');
+      const descContent = hf.aboutText || hf.footerAboutText || hf.siteTagline;
+      if (metaDesc && descContent) {
+        metaDesc.setAttribute('content', descContent);
+      }
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle) ogTitle.setAttribute('content', document.title);
+    }
+
+    // Dynamic Favicon
+    if (hf?.faviconUrl) {
+      let favicon = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!favicon) {
+        favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(favicon);
+      }
+      favicon.href = hf.faviconUrl;
+    }
+  }, [portalSettings?.headerFooter, currentView]);
+
   // Google Services injection
   useGoogleServices(portalSettings, {
     path:

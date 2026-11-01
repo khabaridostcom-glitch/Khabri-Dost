@@ -58,7 +58,9 @@ import {
   BarChart3,
   Calendar,
   Database,
+  Palette,
 } from 'lucide-react';
+import { BrandCustomizerTab } from './admin/BrandCustomizerTab';
 import { useAuth } from '../context/AuthContext';
 import {
   NewsArticle,
@@ -210,6 +212,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
     | 'notifications'
     | 'popups'
     | 'typography'
+    | 'brand_customizer'
     | 'seo_audit'
     | 'google_suite'
     | 'header_footer'
@@ -251,6 +254,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
       return 'media';
     }
     if (
+      tab === 'brand_customizer' ||
       tab === 'homepage_sections' ||
       tab === 'spotlight' ||
       tab === 'settings_header' ||
@@ -328,7 +332,9 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
         return {
           menuLabel: 'Appearance & Layout',
           tabLabel:
-            tab === 'homepage_sections'
+            tab === 'brand_customizer'
+              ? 'Brand Customizer & Colors'
+              : tab === 'homepage_sections'
               ? 'Homepage Sections'
               : tab === 'spotlight'
               ? 'Spotlight Hero'
@@ -842,6 +848,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
       icon: Layout,
       color: 'text-amber-600',
       items: [
+        { id: 'brand_customizer', label: 'Brand Customizer & Colors', icon: Palette, badge: 'NEW', badgeColor: 'bg-red-100 text-red-700' },
         { id: 'homepage_sections', label: 'Homepage Sections', icon: Layout },
         { id: 'spotlight', label: 'Spotlight Hero', icon: Layers },
         { id: 'settings_header', label: 'Header & Navigation', icon: Menu },
@@ -3127,6 +3134,19 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
               onOpenAdminReset={() => {
                 setResetScope('all');
                 setShowAdminResetModal(true);
+              }}
+            />
+          )}
+
+          {/* TAB: BRAND CUSTOMIZER & THEME SYSTEM */}
+          {activeTab === 'brand_customizer' && (
+            <BrandCustomizerTab
+              settings={localSettings}
+              onUpdateSettings={(newSettings) => {
+                setLocalSettings(newSettings);
+                onUpdateSettings(newSettings);
+                setSavedSuccessMsg('Brand customization and theme variables updated live!');
+                setTimeout(() => setSavedSuccessMsg(null), 2500);
               }}
             />
           )}

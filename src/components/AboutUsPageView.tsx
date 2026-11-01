@@ -421,7 +421,7 @@ export const AboutUsPageView: React.FC<AboutUsPageViewProps> = ({
 
                   <div className="flex items-center space-x-3.5">
                     <img
-                      src={member.photoURL}
+                      src={member.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
                       alt={member.name}
                       className="w-14 h-14 rounded-2xl object-cover border-2 border-red-100 shadow-sm shrink-0"
                     />

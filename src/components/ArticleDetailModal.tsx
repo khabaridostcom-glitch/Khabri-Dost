@@ -231,14 +231,22 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
           )}
 
           {/* Headline */}
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black font-['Rozha_One',serif] text-slate-900 leading-tight">
+          <h1
+            style={{ overflowWrap: 'anywhere', wordBreak: 'normal' }}
+            className="text-2xl sm:text-3xl md:text-4xl font-black font-['Rozha_One',serif] text-slate-900 leading-tight [overflow-wrap:anywhere] [word-break:normal] min-w-0"
+          >
             {article.title}
           </h1>
 
           {/* Subtitle / Summary */}
-          <div className="p-4 bg-slate-50 border-l-4 border-red-600 rounded-r-lg text-slate-700 font-medium text-sm sm:text-base italic leading-relaxed">
-            {article.summary}
-          </div>
+          {article.summary && (
+            <div
+              style={{ overflowWrap: 'anywhere', wordBreak: 'normal' }}
+              className="p-4 bg-slate-50 border-l-4 border-red-600 rounded-r-lg text-slate-700 font-medium text-sm sm:text-base italic leading-relaxed [overflow-wrap:anywhere] [word-break:normal] min-w-0"
+            >
+              {article.summary}
+            </div>
+          )}
 
           {/* Reporter Byline & Meta */}
           <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-y border-slate-100 text-xs text-slate-500">
@@ -286,7 +294,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
           <figure className="space-y-2">
             <div className="rounded-xl overflow-hidden shadow-sm bg-slate-100 aspect-[16/9] max-h-[460px]">
               <img
-                src={article.imageUrl}
+                src={article.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                 alt={article.title}
                 className="w-full h-full object-cover"
               />
@@ -299,9 +307,13 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
           </figure>
 
           {/* Article Full Body */}
-          <div className={`text-slate-800 font-normal space-y-4 font-['Mukta',sans-serif] ${fontSizeClass}`}>
+          <div className={`text-slate-800 font-normal space-y-4 font-['Mukta',sans-serif] min-w-0 max-w-full article-content-container ${fontSizeClass}`}>
             {article.content.split('\n\n').map((para, i) => (
-              <p key={i} className="text-justify leading-relaxed">
+              <p
+                key={i}
+                style={{ overflowWrap: 'anywhere', wordBreak: 'normal' }}
+                className="text-justify leading-relaxed [overflow-wrap:anywhere] [word-break:normal] min-w-0"
+              >
                 {para}
               </p>
             ))}
@@ -380,8 +392,8 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
               {user ? (
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2 text-xs text-slate-600">
-                    {user.photoURL ? (
-                      <img src={user.photoURL} alt="" className="w-5 h-5 rounded-full" />
+                    {user.photoURL && user.photoURL.trim() !== '' ? (
+                      <img src={user.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'} alt="" className="w-5 h-5 rounded-full" />
                     ) : (
                       <UserIcon className="w-4 h-4 text-slate-400" />
                     )}
@@ -440,9 +452,9 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                       className="p-3 bg-white rounded-lg border border-slate-100 shadow-sm flex items-start justify-between space-x-3"
                     >
                       <div className="flex items-start space-x-3 flex-1">
-                        {com.authorPhoto ? (
+                        {com.authorPhoto && com.authorPhoto.trim() !== '' ? (
                           <img
-                            src={com.authorPhoto}
+                            src={com.authorPhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
                             alt=""
                             className="w-7 h-7 rounded-full shrink-0 border border-slate-200 mt-0.5"
                           />

@@ -67,9 +67,9 @@ export const BookmarksModal: React.FC<BookmarksModalProps> = ({
                     }}
                     className="flex items-center space-x-3 flex-1 cursor-pointer min-w-0"
                   >
-                    {bm.articleImageUrl && (
+                    {bm.articleImageUrl && bm.articleImageUrl.trim() !== '' && (
                       <img
-                        src={bm.articleImageUrl}
+                        src={bm.articleImageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                         alt=""
                         className="w-14 h-12 rounded-lg object-cover shrink-0 bg-slate-200"
                       />

@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import { NewsArticle, PortalSettings } from '../types/news';
 import { getTodayHindiDate } from './hindiHelpers';
 
@@ -86,7 +86,7 @@ export async function generateArticlePdf(
           ? `
           <div style="margin-bottom: 16px; text-align: center;">
             <img 
-              src="${article.imageUrl}" 
+              src="${article.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}" 
               alt="${article.title}" 
               crossorigin="anonymous"
               style="width: 100%; max-height: 320px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0;"
@@ -148,6 +148,16 @@ export async function generateArticlePdf(
         imageTimeout: 3000,
         logging: false,
         backgroundColor: '#ffffff',
+        onclone: (clonedDoc: Document) => {
+          const style = clonedDoc.createElement('style');
+          style.textContent = `
+            * {
+              box-sizing: border-box !important;
+              color-scheme: light !important;
+            }
+          `;
+          clonedDoc.head?.appendChild(style);
+        },
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.92);
@@ -255,147 +265,31 @@ export async function generateArticlePdf(
 }
 
 /**
- * Downloads a complete multi-page daily newspaper edition PDF.
+ * Downloads a complete daily newspaper edition PDF directly from the stored/uploaded file.
  */
 export async function downloadDailyEPaperPdf(
   portalSettings?: PortalSettings,
-  articles?: NewsArticle[]
+  _articles?: NewsArticle[],
+  _pages?: any[],
+  editionTitle?: string,
+  dateString?: string,
+  explicitPdfUrl?: string
 ): Promise<boolean> {
+  const dateStr = dateString || new Date().toISOString().slice(0, 10);
+  const pdfUrl = explicitPdfUrl || portalSettings?.epaperSettings?.customPdfUrl || '/assets/aistudio/Dainik_Jagran_National_20261021.pdf';
+
   try {
-    const siteTitle = portalSettings?.headerFooter?.siteTitle || 'खबरी दोस्त';
-    const siteTagline = portalSettings?.headerFooter?.siteTagline || 'दैनिक राष्ट्रीय समाचार पत्र';
-    const todayHindi = getTodayHindiDate();
-
-    // If custom PDF URL is provided and valid, download directly
-    if (portalSettings?.epaperSettings?.mode === 'custom_pdf' && portalSettings?.epaperSettings?.customPdfUrl) {
-      const link = document.createElement('a');
-      link.href = portalSettings.epaperSettings.customPdfUrl;
-      link.download = `KhabriDost-EPaper-${new Date().toISOString().slice(0, 10)}.pdf`;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      return true;
-    }
-
-    // Dynamic Generation
-    const leadStory = articles?.[0] || {
-      title: 'गगनयान मिशन के क्रू मॉड्यूल का सफल परीक्षण, अंतरिक्ष में भारत की ऐतिहासिक छलांग',
-      category: 'मुख्य समाचार',
-      content: 'भारतीय अंतरिक्ष अनुसंधान संगठन (ISRO) ने महत्वाकांक्षी गगनयान मिशन के लिए बड़ा मील का पत्थर हासिल किया है...',
-      author: 'विशेष संवाददाता',
-      location: 'नई दिल्ली',
-      imageUrl: 'https://images.unsplash.com/photo-1517976487502-5f714249a5b4?w=1000&auto=format&fit=crop&q=80',
-      createdAt: new Date().toISOString(),
-    };
-
-    const container = document.createElement('div');
-    container.style.position = 'fixed';
-    container.style.top = '-99999px';
-    container.style.left = '-99999px';
-    container.style.width = '800px';
-    container.style.minHeight = '1130px';
-    container.style.backgroundColor = '#ffffff';
-    container.style.color = '#111827';
-    container.style.padding = '32px 36px';
-    container.style.fontFamily = "'Mukta', sans-serif, -apple-system";
-    container.style.boxSizing = 'border-box';
-
-    container.innerHTML = `
-      <!-- Masthead -->
-      <div style="border-bottom: 4px double #dc2626; padding-bottom: 12px; margin-bottom: 16px; text-align: center;">
-        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; font-size: 11px; color: #475569;">
-          <span>${todayHindi} • नई दिल्ली संस्करण</span>
-          <span style="color: #dc2626; font-weight: bold;">दैनिक ई-अखबार (Daily E-Paper)</span>
-          <span>वर्ष 1 • अंक 245 • 4 पृष्ठ</span>
-        </div>
-        <h1 style="font-size: 38px; font-weight: 900; margin: 10px 0 2px; color: #0f172a; font-family: 'Rozha One', serif;">
-          ${siteTitle}
-        </h1>
-        <p style="font-size: 12px; color: #dc2626; font-weight: 700; margin: 0; text-transform: uppercase;">
-          ${siteTagline}
-        </p>
-      </div>
-
-      <!-- Lead News -->
-      <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-        <span style="background-color: #dc2626; color: #ffffff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 3px;">
-          ${leadStory.category} • लीड स्टोरी
-        </span>
-        <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 8px 0 6px; line-height: 1.3; font-family: 'Rozha One', serif;">
-          ${leadStory.title}
-        </h2>
-        <p style="font-size: 12px; line-height: 1.6; color: #1e293b; margin: 0;">
-          <strong>${leadStory.location || 'नई दिल्ली'}।</strong> ${leadStory.content.substring(0, 320)}...
-        </p>
-      </div>
-
-      <!-- Newspaper Grid Columns -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
-        <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; background: #f8fafc;">
-          <h3 style="font-size: 14px; font-weight: bold; color: #1e3a8a; margin: 0 0 6px;">
-            देश एवं राजनीति (National Briefs)
-          </h3>
-          <p style="font-size: 11.5px; line-height: 1.5; color: #334155; margin: 0;">
-            संसद के बजट सत्र में जन-कल्याणकारी विधेयकों पर गहन बहस, बुनियादी ढांचे और डिजिटल सुरक्षा के लिए नए प्रावधानों को मंजूरी।
-          </p>
-        </div>
-
-        <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; background: #f8fafc;">
-          <h3 style="font-size: 14px; font-weight: bold; color: #047857; margin: 0 0 6px;">
-            व्यापार व शेयर बाजार (Markets)
-          </h3>
-          <p style="font-size: 11.5px; line-height: 1.5; color: #334155; margin: 0;">
-            सेंसेक्स में जोरदार उछाल, निफ्टी 24,850 के नए शिखर पर बंद। ऑटोमोबाइल एवं आईटी सेक्टर में मजबूत खरीदारी से बाजार चमका।
-          </p>
-        </div>
-      </div>
-
-      <!-- Newspaper Editorial Note -->
-      <div style="border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px; font-size: 11px; line-height: 1.6; color: #475569; margin-bottom: 16px;">
-        <strong style="color: #0f172a;">संपादकीय विचार:</strong> 
-        लोकतंत्र के चौथे स्तंभ के रूप में डिजिटल पत्रकारिता की विश्वसनीयता तथ्यों की निष्पक्ष पुष्टि में निहित है। खबरी दोस्त बिना किसी लाग-लपेट के जनसरोकार की आवाज उठाता रहेगा।
-      </div>
-
-      <!-- Footer Stamp -->
-      <div style="border-top: 2px solid #0f172a; padding-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b;">
-        <div>
-          <strong>${siteTitle} ई-संस्करण</strong> • अधिक खबरों के लिए विजिट करें: www.khabridost.com
-        </div>
-        <div style="font-weight: bold; color: #dc2626;">
-          दैनिक संस्करण PDF • आधिकारिक प्रतिलिपि
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(container);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    const canvas = await html2canvas(container, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-    });
-
-    document.body.removeChild(container);
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-    });
-
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-
-    pdf.save(`KhabriDost-Daily-EPaper-${new Date().toISOString().slice(0, 10)}.pdf`);
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = `KhabriDost-EPaper-${editionTitle ? editionTitle.replace(/\s+/g, '-') : 'National'}-${dateStr}.pdf`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     return true;
   } catch (err) {
-    console.error('EPaper PDF Error:', err);
-    window.print();
-    return false;
+    console.error('Error downloading EPaper PDF:', err);
+    window.open(pdfUrl, '_blank');
+    return true;
   }
 }

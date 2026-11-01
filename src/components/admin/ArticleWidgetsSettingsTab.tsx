@@ -21,6 +21,11 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
+  MapPin,
+  Tag,
+  Clock,
+  ArrowRight,
+  Image,
 } from 'lucide-react';
 import { ArticleSidebarWidgets } from '../../types/news';
 import { DEFAULT_ARTICLE_SIDEBAR_WIDGETS } from '../../data/portalDefaults';
@@ -143,20 +148,20 @@ export const ArticleWidgetsSettingsTab: React.FC<ArticleWidgetsSettingsTabProps>
   return (
     <div className="space-y-6 font-sans text-slate-800">
       {/* 1. HEADER BANNER */}
-      <div className="bg-gradient-to-r from-red-950 via-slate-900 to-slate-950 text-white p-5 rounded-2xl border border-red-900/60 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white text-slate-800 p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
-            <span className="p-1.5 rounded-lg bg-red-600/30 border border-red-500/40 text-red-300">
+            <span className="p-1.5 rounded-lg bg-red-50 border border-red-200 text-red-600">
               <Layout className="w-5 h-5" />
             </span>
-            <h3 className="font-bold text-base sm:text-lg tracking-tight text-white">
+            <h3 className="font-bold text-base sm:text-lg tracking-tight text-slate-900">
               Article Page & Sidebar Widgets Studio
             </h3>
-            <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase">
+            <span className="bg-amber-50 text-amber-800 border border-amber-300 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase">
               Admin Exclusive
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
             Customize which interactive widgets and content sections appear on the single article reader view and right-hand desktop sidebar.
           </p>
         </div>
@@ -164,9 +169,9 @@ export const ArticleWidgetsSettingsTab: React.FC<ArticleWidgetsSettingsTabProps>
         <button
           type="button"
           onClick={handleReset}
-          className="self-start sm:self-auto flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer shrink-0"
+          className="self-start sm:self-auto flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer shrink-0 shadow-2xs"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
+          <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
           <span>Reset Defaults</span>
         </button>
       </div>
@@ -280,19 +285,22 @@ export const ArticleWidgetsSettingsTab: React.FC<ArticleWidgetsSettingsTabProps>
               />
             </label>
 
-            {/* Related Stories Sliding Carousel */}
-            <div className="p-3 rounded-xl border border-slate-200 space-y-2.5">
+            {/* Related Stories & Cards Studio (Full Admin Customization) */}
+            <div className="p-4 rounded-xl border-2 border-purple-200/80 bg-purple-50/20 space-y-4">
               <label className="flex items-start justify-between cursor-pointer group">
                 <div className="flex items-start space-x-3">
-                  <div className="p-2 rounded-lg bg-purple-50 text-purple-600 group-hover:bg-purple-100 transition mt-0.5">
+                  <div className="p-2 rounded-lg bg-purple-100 text-purple-700 group-hover:bg-purple-200 transition mt-0.5">
                     <Layout className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-slate-900 block">
-                      Related Stories Carousel
+                    <span className="text-xs font-bold text-slate-900 block flex items-center gap-1.5">
+                      <span>Related Stories & Cards Section</span>
+                      <span className="text-[10px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.2 rounded">
+                        Full Customization
+                      </span>
                     </span>
                     <span className="text-[11px] text-slate-500 leading-tight block">
-                      Displays articles strictly from the same category as the active news story.
+                      Admin controls card category, location, dates, number of cards, and mobile layout.
                     </span>
                   </div>
                 </div>
@@ -300,29 +308,312 @@ export const ArticleWidgetsSettingsTab: React.FC<ArticleWidgetsSettingsTabProps>
                   type="checkbox"
                   checked={current.showRelatedStories !== false}
                   onChange={() => handleToggle('showRelatedStories')}
-                  className="w-4 h-4 mt-1 rounded text-red-600 focus:ring-red-500 accent-red-600 cursor-pointer"
+                  className="w-4 h-4 mt-1 rounded text-purple-600 focus:ring-purple-500 accent-purple-600 cursor-pointer"
                 />
               </label>
 
-              {/* Admin Option: Select 3, 4, or 6 Articles */}
               {current.showRelatedStories !== false && (
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-700">Display Count:</span>
-                  <div className="flex items-center space-x-1.5">
-                    {[3, 4, 6].map((num) => (
+                <div className="pt-3 border-t border-purple-200/70 space-y-4 text-xs">
+                  {/* Card Display Count (Increase / Decrease) */}
+                  <div className="space-y-1.5 bg-white p-3 rounded-xl border border-purple-100">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800 flex items-center gap-1">
+                        <Sliders className="w-3.5 h-3.5 text-purple-600" />
+                        <span>कार्ड्स की कुल संख्या (Cards Count):</span>
+                      </span>
+                      <span className="font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 text-xs">
+                        {current.relatedArticlesCount || 4} Cards
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      {[3, 4, 6, 8, 10, 12].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => onChange({ ...current, relatedArticlesCount: num })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            (current.relatedArticlesCount || 4) === num
+                              ? 'bg-purple-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {num}
+                        </button>
+                      ))}
+
+                      {/* Increment / Decrement Controls */}
+                      <div className="flex items-center space-x-1 ml-auto">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onChange({
+                              ...current,
+                              relatedArticlesCount: Math.max(1, (current.relatedArticlesCount || 4) - 1),
+                            })
+                          }
+                          className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center cursor-pointer"
+                          title="1 कार्ड कम करें"
+                        >
+                          -
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onChange({
+                              ...current,
+                              relatedArticlesCount: Math.min(24, (current.relatedArticlesCount || 4) + 1),
+                            })
+                          }
+                          className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center cursor-pointer"
+                          title="1 कार्ड बढ़ाएं"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section Heading Settings */}
+                  <div className="space-y-2 bg-white p-3 rounded-xl border border-purple-100">
+                    <span className="font-bold text-slate-800 block text-xs">
+                      सेक्शन शीर्षक एवं बैज (Heading & Subtitle):
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[11px] text-slate-500 font-medium block mb-1">
+                          मुख्य शीर्षक (Heading):
+                        </label>
+                        <input
+                          type="text"
+                          value={current.relatedHeadingTitle ?? 'यह भी पढ़ें'}
+                          onChange={(e) =>
+                            onChange({ ...current, relatedHeadingTitle: e.target.value })
+                          }
+                          placeholder="यह भी पढ़ें"
+                          className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-purple-500 focus:outline-hidden"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] text-slate-500 font-medium block mb-1">
+                          उप-शीर्षक (Subtitle):
+                        </label>
+                        <input
+                          type="text"
+                          value={current.relatedHeadingSubtitleText ?? 'अन्य ताज़ा ख़बरें'}
+                          onChange={(e) =>
+                            onChange({ ...current, relatedHeadingSubtitleText: e.target.value })
+                          }
+                          placeholder="अन्य ताज़ा ख़बरें"
+                          className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-purple-500 focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-4 pt-1">
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={current.showRelatedHeadingCategoryBadge === true}
+                          onChange={(e) =>
+                            onChange({
+                              ...current,
+                              showRelatedHeadingCategoryBadge: e.target.checked,
+                            })
+                          }
+                          className="w-3.5 h-3.5 rounded text-purple-600 accent-purple-600 cursor-pointer"
+                        />
+                        <span className="text-[11px] text-slate-700">
+                          शीर्षक में केटेगरी बैज दिखाएं (उदा. Business / Politics)
+                        </span>
+                      </label>
+
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={current.showRelatedHeadingSubtitle !== false}
+                          onChange={(e) =>
+                            onChange({
+                              ...current,
+                              showRelatedHeadingSubtitle: e.target.checked,
+                            })
+                          }
+                          className="w-3.5 h-3.5 rounded text-purple-600 accent-purple-600 cursor-pointer"
+                        />
+                        <span className="text-[11px] text-slate-700">
+                          उप-शीर्षक (Subtitle) दिखाएं
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Cards Data Elements Customizer (Category, Location, Date, Read More, Summary, Image) */}
+                  <div className="space-y-2 bg-white p-3 rounded-xl border border-purple-100">
+                    <span className="font-bold text-slate-800 block text-xs flex items-center justify-between">
+                      <span>कार्ड्स डेटा कस्टमाइज़ेशन (Cards Elements Visibility):</span>
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        Show / Hide Any Element
+                      </span>
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                      {/* 1. Category Badge on Cards */}
+                      <label className="flex items-center justify-between p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition cursor-pointer">
+                        <div className="flex items-center space-x-2">
+                          <Tag className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                          <span className="text-xs text-slate-800">
+                            कार्ड पर केटेगरी (Business, Sports, आदि)
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={current.relatedCardShowCategory === true}
+                          onChange={(e) =>
+                            onChange({ ...current, relatedCardShowCategory: e.target.checked })
+                          }
+                          className="w-4 h-4 rounded text-purple-600 accent-purple-600 cursor-pointer"
+                        />
+                      </label>
+
+                      {/* 2. Location Badge on Cards */}
+                      <label className="flex items-center justify-between p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition cursor-pointer">
+                        <div className="flex items-center space-x-2">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span className="text-xs text-slate-800">
+                            लोकेशन बैज (New Delhi, Melbourne, आदि)
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={current.relatedCardShowLocation === true}
+                          onChange={(e) =>
+                            onChange({ ...current, relatedCardShowLocation: e.target.checked })
+                          }
+                          className="w-4 h-4 rounded text-purple-600 accent-purple-600 cursor-pointer"
+                        />
+                      </label>
+
+                      {/* 3. Date / Time on Cards (23 दिन पहले) */}
+                      <label className="flex items-center justify-between p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition cursor-pointer">
+                        <div className="flex items-center space-x-2">
+                          <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          <span className="text-xs text-slate-800">
+                            समय / दिन (&apos;23 दिन पहले&apos;)
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={current.relatedCardShowDate !== false}
+                          onChange={(e) =>
+                            onChange({ ...current, relatedCardShowDate: e.target.checked })
+                          }
+                          className="w-4 h-4 rounded text-purple-600 accent-purple-600 cursor-pointer"
+                        />
+                      </label>
+
+                      {/* 4. Read More Button on Cards (पढ़ें ➔) */}
+                      <label className="flex items-center justify-between p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition cursor-pointer">
+                        <div className="flex items-center space-x-2">
+                          <ArrowRight className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                          <span className="text-xs text-slate-800">
+                            &apos;पढ़ें ➔&apos; बटन
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={current.relatedCardShowReadMore !== false}
+                          onChange={(e) =>
+                            onChange({ ...current, relatedCardShowReadMore: e.target.checked })
+                          }
+                          className="w-4 h-4 rounded text-purple-600 accent-purple-600 cursor-pointer"
+                        />
+                      </label>
+
+                      {/* 5. Summary / Excerpt on Cards */}
+                      <label className="flex items-center justify-between p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition cursor-pointer">
+                        <div className="flex items-center space-x-2">
+                          <Newspaper className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span className="text-xs text-slate-800">
+                            संक्षिप्त विवरण (Summary)
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={current.relatedCardShowSummary !== false}
+                          onChange={(e) =>
+                            onChange({ ...current, relatedCardShowSummary: e.target.checked })
+                          }
+                          className="w-4 h-4 rounded text-purple-600 accent-purple-600 cursor-pointer"
+                        />
+                      </label>
+
+                      {/* 6. Image on Cards */}
+                      <label className="flex items-center justify-between p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition cursor-pointer">
+                        <div className="flex items-center space-x-2">
+                          <Image className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                          <span className="text-xs text-slate-800">
+                            फ़ोटो / थंबनेल (Image)
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={current.relatedCardShowImage !== false}
+                          onChange={(e) =>
+                            onChange({ ...current, relatedCardShowImage: e.target.checked })
+                          }
+                          className="w-4 h-4 rounded text-purple-600 accent-purple-600 cursor-pointer"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Mobile Layout & Gap Setting */}
+                  <div className="space-y-1.5 bg-white p-3 rounded-xl border border-purple-100">
+                    <span className="font-bold text-slate-800 block text-xs flex items-center justify-between">
+                      <span>मोबाइल लेआउट एवं कार्ड्स गैप (Mobile Card Layout):</span>
+                    </span>
+                    <div className="grid grid-cols-3 gap-2 pt-1">
                       <button
-                        key={num}
                         type="button"
-                        onClick={() => onChange({ ...current, relatedArticlesCount: num })}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                          (current.relatedArticlesCount || 4) === num
-                            ? 'bg-red-600 text-white shadow-xs'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        onClick={() => onChange({ ...current, relatedMobileLayout: 'grid1' })}
+                        className={`p-2 rounded-lg border text-center transition cursor-pointer ${
+                          (current.relatedMobileLayout || 'grid1') === 'grid1'
+                            ? 'border-purple-600 bg-purple-50 text-purple-900 font-bold'
+                            : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                         }`}
                       >
-                        {num} Articles
+                        <span className="block text-[11px]">1-कॉलम कॉम्पैक्ट</span>
+                        <span className="block text-[9px] text-slate-400">संतुलित चौड़ाई & कम गैप</span>
                       </button>
-                    ))}
+
+                      <button
+                        type="button"
+                        onClick={() => onChange({ ...current, relatedMobileLayout: 'grid2' })}
+                        className={`p-2 rounded-lg border text-center transition cursor-pointer ${
+                          current.relatedMobileLayout === 'grid2'
+                            ? 'border-purple-600 bg-purple-50 text-purple-900 font-bold'
+                            : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="block text-[11px]">2-कॉलम ग्रिड</span>
+                        <span className="block text-[9px] text-slate-400">साइड-बाय-साइड</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onChange({ ...current, relatedMobileLayout: 'list' })}
+                        className={`p-2 rounded-lg border text-center transition cursor-pointer ${
+                          current.relatedMobileLayout === 'list'
+                            ? 'border-purple-600 bg-purple-50 text-purple-900 font-bold'
+                            : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="block text-[11px]">हॉरिजॉन्टल लिस्ट</span>
+                        <span className="block text-[9px] text-slate-400">थंबनेल बायीं तरफ</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

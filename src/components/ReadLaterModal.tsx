@@ -88,9 +88,9 @@ export const ReadLaterModal: React.FC<ReadLaterModalProps> = ({
           <div className="flex items-center space-x-3">
             {user ? (
               <>
-                {user.photoURL ? (
+                {user.photoURL && user.photoURL.trim() !== '' ? (
                   <img
-                    src={user.photoURL}
+                    src={user.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
                     alt=""
                     className="w-8 h-8 rounded-full border border-indigo-300 object-cover shadow-2xs"
                   />
@@ -256,9 +256,9 @@ export const ReadLaterModal: React.FC<ReadLaterModalProps> = ({
                     }}
                     className="flex items-start sm:items-center space-x-3 flex-1 cursor-pointer min-w-0"
                   >
-                    {item.articleImageUrl ? (
+                    {item.articleImageUrl && item.articleImageUrl.trim() !== '' ? (
                       <img
-                        src={item.articleImageUrl}
+                        src={item.articleImageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                         alt=""
                         className="w-16 h-16 sm:w-20 sm:h-16 rounded-lg object-cover shrink-0 bg-slate-100 border border-slate-200"
                         loading="lazy"

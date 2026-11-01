@@ -84,10 +84,10 @@ export const PortalPopup: React.FC<PortalPopupProps> = ({
         </button>
 
         {/* Featured Image */}
-        {config.imageUrl && (
+        {config.imageUrl && config.imageUrl.trim() !== '' && (
           <div className="relative h-44 sm:h-48 w-full bg-slate-900">
             <img
-              src={config.imageUrl}
+              src={config.imageUrl || 'https://images.unsplash.com/photo-1517976487502-5f714249a5b4?w=800&auto=format&fit=crop&q=80'}
               alt=""
               className="w-full h-full object-cover"
             />

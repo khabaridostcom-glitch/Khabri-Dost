@@ -97,20 +97,20 @@ export const AiSeoAssistantTab: React.FC<AiSeoAssistantTabProps> = ({
   return (
     <div className="space-y-6 max-w-6xl mx-auto font-sans text-slate-800">
       {/* 1. TOP HEADER BANNER */}
-      <div className="bg-gradient-to-r from-red-950 via-slate-900 to-slate-950 text-white p-5 rounded-2xl border border-red-900/60 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white text-slate-800 p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
-            <span className="p-1.5 rounded-lg bg-amber-500/30 border border-amber-500/40 text-amber-300">
+            <span className="p-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-600">
               <Sparkles className="w-5 h-5" />
             </span>
-            <h2 className="font-bold text-lg sm:text-xl tracking-tight text-white">
+            <h2 className="font-bold text-lg sm:text-xl tracking-tight text-slate-900">
               AI SEO Assistant & Press Note Converter
             </h2>
-            <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase">
+            <span className="bg-amber-50 text-amber-800 border border-amber-300 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase">
               SMART NEWSROOM
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
             Integrate Gemini, OpenAI (ChatGPT), or Anthropic Claude API keys. Paste raw press notes or bulletins to automatically generate Google News-optimized Hindi titles, English slugs, meta descriptions, highlights, and tags.
           </p>
         </div>

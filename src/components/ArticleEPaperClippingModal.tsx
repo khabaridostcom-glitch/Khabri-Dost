@@ -337,7 +337,7 @@ export const ArticleEPaperClippingModal: React.FC<ArticleEPaperClippingModalProp
               <div className="space-y-1.5">
                 <div className="border border-stone-400 p-1 bg-white shadow-xs">
                   <img
-                    src={article.imageUrl}
+                    src={article.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                     alt={article.title}
                     className="w-full max-h-80 sm:max-h-96 object-cover"
                   />

@@ -579,7 +579,7 @@ export const BulkSeoMetaEditor: React.FC<BulkSeoMetaEditorProps> = ({
                   {/* Left: Thumbnail & Info */}
                   <div className="md:col-span-2 flex md:flex-col items-center md:items-start gap-2">
                     <img
-                      src={art.imageUrl}
+                      src={art.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                       alt={state.imageAltText || art.title}
                       className="w-20 h-14 md:w-full md:h-20 object-cover rounded-xl border border-slate-200 shrink-0 bg-slate-100"
                     />
@@ -796,9 +796,9 @@ export const BulkSeoMetaEditor: React.FC<BulkSeoMetaEditorProps> = ({
                     <p className="text-xs text-slate-600 leading-relaxed flex-1 line-clamp-3">
                       {editStates[previewArticle.id]?.seoDescription || previewArticle.summary}
                     </p>
-                    {previewArticle.imageUrl && (
+                    {previewArticle.imageUrl && previewArticle.imageUrl.trim() !== '' && (
                       <img
-                        src={previewArticle.imageUrl}
+                        src={previewArticle.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                         alt=""
                         className="w-16 h-16 object-cover rounded-lg shrink-0 bg-slate-100"
                       />

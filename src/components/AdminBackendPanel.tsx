@@ -52,6 +52,12 @@ import {
   Camera,
   Inbox,
   RotateCcw,
+  ArrowUp,
+  ArrowDown,
+  Pin,
+  BarChart3,
+  Calendar,
+  Database,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -66,6 +72,7 @@ import {
   LiveBlogEvent,
   ContactInquiry,
   CitizenNewsSubmission,
+  TrendingSectionConfig,
 } from '../types/news';
 import { CATEGORIES } from '../data/seedNews';
 import {
@@ -73,7 +80,9 @@ import {
   INITIAL_LIVE_BLOGS,
   DEFAULT_SPOTLIGHT_LAYOUT,
   DEFAULT_ARTICLE_SIDEBAR_WIDGETS,
+  DEFAULT_ARTICLE_PAGE_CONFIG,
   DEFAULT_PORTAL_SETTINGS,
+  DEFAULT_TRENDING_CONFIG,
 } from '../data/portalDefaults';
 import { savePortalSettings } from '../services/newsService';
 import { RichPostEditorModal } from './RichPostEditorModal';
@@ -100,6 +109,10 @@ import { LiveTrendingKeywordsWidget, TrendingTopic } from './admin/LiveTrendingK
 import { AiSeoAssistantModule } from './admin/AiSeoAssistantModule';
 import { SidebarAdConfigTab } from './admin/SidebarAdConfigTab';
 import { TypographySettingsTab } from './admin/TypographySettingsTab';
+import { VideoManagerTab } from './admin/VideoManagerTab';
+import { ScheduledPipelineCalendarTab } from './admin/ScheduledPipelineCalendarTab';
+import { DatabaseBackupRestoreTab } from './admin/DatabaseBackupRestoreTab';
+import { SocialSharePreviewModal } from './admin/SocialSharePreviewModal';
 import { resetRootCssVariablesToDefault } from '../utils/cssDefaults';
 
 interface AdminBackendPanelProps {
@@ -177,6 +190,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
     | 'dashboard'
     | 'articles'
     | 'new_article'
+    | 'pipeline_calendar'
     | 'citizen_news'
     | 'ai_seo_assistant'
     | 'live'
@@ -202,6 +216,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
     | 'settings_general'
     | 'settings_header'
     | 'settings_footer'
+    | 'mobile_footer'
     | 'settings_contact'
     | 'settings_social'
     | 'settings_policies'
@@ -210,25 +225,27 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
     | 'speed_vitals'
     | 'inquiries'
     | 'api_config'
+    | 'backup_restore'
     | 'factory_reset'
   >((initialTab as any) || 'dashboard');
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [socialPreviewArticle, setSocialPreviewArticle] = useState<NewsArticle | null>(null);
 
-  type WpMenuSection = 'dashboard' | 'news' | 'media' | 'appearance' | 'settings';
+  type WpMenuSection = 'dashboard' | 'posts' | 'media' | 'appearance' | 'marketing' | 'users' | 'settings';
 
   const getMenuForTab = (tab: string): WpMenuSection => {
-    if (tab === 'dashboard' || tab === 'speed_vitals') return 'dashboard';
+    if (tab === 'dashboard' || tab === 'speed_vitals' || tab === 'seo_audit') return 'dashboard';
     if (
       tab === 'articles' ||
       tab === 'new_article' ||
+      tab === 'pipeline_calendar' ||
       tab === 'citizen_news' ||
       tab === 'live' ||
       tab === 'trending' ||
-      tab === 'epaper' ||
-      tab === 'ai_seo_assistant'
+      tab === 'epaper'
     ) {
-      return 'news';
+      return 'posts';
     }
     if (tab === 'media' || tab === 'video_gallery' || tab === 'photo_stories') {
       return 'media';
@@ -237,14 +254,28 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
       tab === 'homepage_sections' ||
       tab === 'spotlight' ||
       tab === 'settings_header' ||
+      tab === 'header_footer' ||
       tab === 'settings_footer' ||
+      tab === 'mobile_footer' ||
       tab === 'sidebar_widgets' ||
-      tab === 'sidebar_ads' ||
       tab === 'article_meta' ||
       tab === 'mobile_sidebar' ||
       tab === 'typography'
     ) {
       return 'appearance';
+    }
+    if (
+      tab === 'monetization' ||
+      tab === 'sidebar_ads' ||
+      tab === 'inquiries' ||
+      tab === 'subscribers' ||
+      tab === 'notifications' ||
+      tab === 'popups'
+    ) {
+      return 'marketing';
+    }
+    if (tab === 'users' || tab === 'admins') {
+      return 'users';
     }
     return 'settings';
   };
@@ -255,99 +286,116 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
       case 'dashboard':
         return {
           menuLabel: 'Dashboard',
-          tabLabel: tab === 'speed_vitals' ? 'Speed & Web Vitals' : 'Dashboard Overview',
-          color: 'text-red-600',
+          tabLabel:
+            tab === 'speed_vitals'
+              ? 'Speed & Web Vitals'
+              : tab === 'seo_audit'
+              ? 'SEO Audit & Sitemap'
+              : 'Overview & Performance',
+          color: 'text-blue-600',
         };
-      case 'news':
+      case 'posts':
         return {
-          menuLabel: 'News & Content',
+          menuLabel: 'Posts & Content',
           tabLabel:
             tab === 'articles'
-              ? 'All News Articles'
+              ? 'All Articles'
               : tab === 'new_article'
               ? 'Add New Article'
+              : tab === 'pipeline_calendar'
+              ? 'Content Pipeline & Calendar'
               : tab === 'citizen_news'
               ? 'Citizen News Desk'
               : tab === 'live'
-              ? 'Live Coverage'
+              ? 'Live Coverage Desk'
               : tab === 'trending'
-              ? 'Trending & Tickers'
-              : tab === 'epaper'
-              ? 'E-Paper Edition'
-              : 'AI SEO Assistant',
+              ? 'Trending Stories & Tickers'
+              : 'E-Paper Edition',
           color: 'text-red-600',
         };
       case 'media':
         return {
-          menuLabel: 'Media Library',
+          menuLabel: 'Media & DAM',
           tabLabel:
             tab === 'media'
-              ? 'Media Library & WebP'
+              ? 'Media Library & Assets'
               : tab === 'video_gallery'
-              ? 'Video Bulletin & Reels'
-              : 'Photo Stories & Gallery',
+              ? 'Video Bulletins & Reels'
+              : 'Photo Stories & Galleries',
           color: 'text-purple-600',
         };
       case 'appearance':
         return {
-          menuLabel: 'Appearance & Customization',
+          menuLabel: 'Appearance & Layout',
           tabLabel:
             tab === 'homepage_sections'
-              ? 'Homepage Sections & Grid'
+              ? 'Homepage Sections'
               : tab === 'spotlight'
-              ? 'Top Stories Spotlight'
-              : tab === 'settings_header'
+              ? 'Spotlight Hero'
+              : tab === 'settings_header' || tab === 'header_footer'
               ? 'Header & Navigation'
               : tab === 'settings_footer'
               ? 'Footer & About Section'
+              : tab === 'mobile_footer'
+              ? 'Mobile Bottom Navigation'
               : tab === 'sidebar_widgets'
-              ? 'Sidebar Widgets & Rashi'
-              : tab === 'sidebar_ads'
-              ? 'Sidebar Ad Slots'
+              ? 'Sidebar Widgets & Horoscope'
               : tab === 'article_meta'
-              ? 'Article Layout & Meta'
+              ? 'Article Single Layout'
               : tab === 'mobile_sidebar'
               ? 'Mobile Drawer Menu'
-              : 'Typography & Hindi Fonts',
-          color: 'text-blue-600',
+              : 'Typography & Fonts',
+          color: 'text-amber-600',
         };
-      case 'settings':
-      default:
+      case 'marketing':
         return {
-          menuLabel: 'Settings & SEO',
+          menuLabel: 'Marketing & Audience',
           tabLabel:
-            tab === 'factory_reset'
-              ? 'Factory Reset'
-              : tab === 'settings_general'
-              ? 'General & Site Identity'
-              : tab === 'seo_audit'
-              ? 'SEO Audit & XML Sitemap'
-              : tab === 'google_suite'
-              ? 'Google Suite & Analytics'
-              : tab === 'monetization'
+            tab === 'monetization'
               ? 'Monetization & AdSense'
+              : tab === 'sidebar_ads'
+              ? 'Sidebar Ad Slots'
               : tab === 'inquiries'
               ? 'Contact Inquiries'
-              : tab === 'settings_contact'
-              ? 'Contact Information'
-              : tab === 'settings_social'
-              ? 'Social & WhatsApp Broadcast'
-              : tab === 'settings_policies'
-              ? 'Policies & Legal Compliance'
-              : tab === 'users'
-              ? 'Editorial Staff Roles'
-              : tab === 'admins'
-              ? 'Administrator Access'
               : tab === 'subscribers'
               ? 'Subscribers & VIPs'
               : tab === 'notifications'
               ? 'Push Notifications'
-              : tab === 'popups'
-              ? 'Popups & Reader Alerts'
+              : 'Reader Alerts & Popups',
+          color: 'text-emerald-600',
+        };
+      case 'users':
+        return {
+          menuLabel: 'Users & Roles',
+          tabLabel:
+            tab === 'users'
+              ? 'Editorial Team Staff'
+              : 'Admin Security & Access',
+          color: 'text-indigo-600',
+        };
+      case 'settings':
+      default:
+        return {
+          menuLabel: 'System Settings',
+          tabLabel:
+            tab === 'settings_general'
+              ? 'General & Branding'
+              : tab === 'settings_social'
+              ? 'Social Media Channels'
+              : tab === 'settings_policies'
+              ? 'Legal Policies & Compliance'
+              : tab === 'settings_contact'
+              ? 'Newsroom Contact Desk'
+              : tab === 'google_suite'
+              ? 'Google Suite (GA4 & GSC)'
+              : tab === 'ai_seo_assistant'
+              ? 'AI SEO Assistant'
               : tab === 'api_config'
               ? 'API Keys & Cloud Providers'
-              : 'Settings',
-          color: 'text-emerald-600',
+              : tab === 'backup_restore'
+              ? 'Database Backup & Restore'
+              : 'Factory Reset & Defaults',
+          color: 'text-slate-700',
         };
     }
   };
@@ -355,10 +403,12 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(() => {
     const parent = getMenuForTab((initialTab as any) || 'dashboard');
     return {
-      dashboard: true,
-      news: parent === 'news' || parent === 'dashboard',
+      dashboard: parent === 'dashboard',
+      posts: parent === 'posts',
       media: parent === 'media',
       appearance: parent === 'appearance',
+      marketing: parent === 'marketing',
+      users: parent === 'users',
       settings: parent === 'settings',
     };
   });
@@ -534,10 +584,10 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
     setShowAdminResetModal(false);
     setSavedSuccessMsg(
       resetScope === 'typography'
-        ? '✓ फ़ॉन्ट सेटिंग्स मूल डिफ़ॉल्ट पर रीसेट कर दी गईं!'
+        ? '✓ Font settings reset to defaults!'
         : resetScope === 'layout'
-        ? '✓ होमपेज लेआउट व विजेट्स डिफ़ॉल्ट पर रीसेट कर दिए गए!'
-        : '✓ संपूर्ण पोर्टल सेटिंग्स फ़ैक्टरी डिफ़ॉल्ट पर रीसेट कर दी गईं!'
+        ? '✓ Homepage layout and widgets reset to defaults!'
+        : '✓ All portal settings reset to factory defaults!'
     );
     setTimeout(() => setSavedSuccessMsg(null), 4000);
   };
@@ -565,7 +615,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
     savePortalSettings(factorySettings).catch(() => {});
 
     setShowFactoryResetConfirmModal(false);
-    setSavedSuccessMsg('✓ फ़ैक्टरी रीसेट सफल: पोर्टल सेटिंग्स व टाइपोग्राफी मूल डिफ़ॉल्ट पर पुनर्स्थापित की गईं!');
+    setSavedSuccessMsg('✓ Factory reset successful: Portal settings and typography restored to original defaults!');
     setTimeout(() => setSavedSuccessMsg(null), 4500);
   };
 
@@ -615,6 +665,66 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
     onUpdateSettings(updated);
   };
 
+  // Trending & Hot Stories Manager State & Handlers
+  const [trendingArticleSearch, setTrendingArticleSearch] = useState('');
+
+  const currentTrendingConfig: TrendingSectionConfig = {
+    ...DEFAULT_TRENDING_CONFIG,
+    ...(localSettings.trendingConfig || {}),
+  };
+
+  const updateTrendingConfig = (partial: Partial<TrendingSectionConfig>) => {
+    const updatedConfig: TrendingSectionConfig = {
+      ...currentTrendingConfig,
+      ...partial,
+    };
+    const updatedSettings = {
+      ...localSettings,
+      trendingConfig: updatedConfig,
+    };
+    setLocalSettings(updatedSettings);
+    onUpdateSettings(updatedSettings);
+  };
+
+  const handlePinTrendingArticle = (articleId: string) => {
+    const currentPinned = localSettings.pinnedTrendingArticleIds || [];
+    if (!currentPinned.includes(articleId)) {
+      const updatedPinned = [...currentPinned, articleId];
+      const updatedSettings = {
+        ...localSettings,
+        pinnedTrendingArticleIds: updatedPinned,
+      };
+      setLocalSettings(updatedSettings);
+      onUpdateSettings(updatedSettings);
+    }
+  };
+
+  const handleUnpinTrendingArticle = (articleId: string) => {
+    const currentPinned = localSettings.pinnedTrendingArticleIds || [];
+    const updatedPinned = currentPinned.filter((id) => id !== articleId);
+    const updatedSettings = {
+      ...localSettings,
+      pinnedTrendingArticleIds: updatedPinned,
+    };
+    setLocalSettings(updatedSettings);
+    onUpdateSettings(updatedSettings);
+  };
+
+  const handleMovePinnedTrending = (index: number, direction: 'up' | 'down') => {
+    const currentPinned = [...(localSettings.pinnedTrendingArticleIds || [])];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= currentPinned.length) return;
+    const temp = currentPinned[index];
+    currentPinned[index] = currentPinned[targetIndex];
+    currentPinned[targetIndex] = temp;
+    const updatedSettings = {
+      ...localSettings,
+      pinnedTrendingArticleIds: currentPinned,
+    };
+    setLocalSettings(updatedSettings);
+    onUpdateSettings(updatedSettings);
+  };
+
   // Handler for newsletter broadcast
   const handleSendNewsletter = (e: React.FormEvent) => {
     e.preventDefault();
@@ -656,63 +766,51 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
     }, 800);
   };
 
-  // Server-Side RBAC Guard: If user has neither admin nor editorial permissions
-  if (!isAdmin && !isStaff) {
-    return (
-      <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 text-center animate-in fade-in zoom-in-95">
-          <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-5 border border-red-100 shadow-inner">
-            <Shield className="w-8 h-8" />
-          </div>
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-red-700 bg-red-50 border border-red-200 px-3 py-1 rounded-full">
-            सुरक्षा नियंत्रण (Restricted Access)
-          </span>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight mt-3">
-            प्रशासनिक नियंत्रण कक्ष
-          </h2>
-          <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-            खबरी दोस्त पोर्टल की सेटिंग्स, संपादकीय टीम और सिस्टम कॉन्फ़िगरेशन बदलने के लिए मुख्य व्यवस्थापक (Administrator) का प्रमाणीकरण अनिवार्य है।
-          </p>
-          <div className="mt-6 space-y-3">
-            <button
-              onClick={async () => {
-                await loginAsStaffWithGoogle();
-              }}
-              className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2 cursor-pointer"
-            >
-              <Key className="w-4 h-4" />
-              <span>Google द्वारा व्यवस्थापक लॉगिन</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition cursor-pointer text-sm"
-            >
-              पोर्टल पर वापस जाएं
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  // WordPress-Style Light Mode Admin Navigation: 7 Primary Categories with Submenus (100% English)
+  interface AdminMenuItem {
+    id: string;
+    label: string;
+    icon: any;
+    badge?: string;
+    badgeColor?: string;
   }
 
-  // WordPress-Style Light Mode Admin Navigation Categories & Submenus
-  const menuSections = [
+  interface AdminMenuGroup {
+    id: WpMenuSection;
+    title: string;
+    icon: any;
+    color: string;
+    badge?: string;
+    badgeColor?: string;
+    items: AdminMenuItem[];
+  }
+
+  const menuSections: AdminMenuGroup[] = [
     {
-      groupTitle: 'Dashboard',
+      id: 'dashboard',
+      title: 'Dashboard',
+      icon: LayoutDashboard,
+      color: 'text-blue-600',
       items: [
-        { id: 'dashboard', label: 'Dashboard Overview', labelHindi: 'डैशबोर्ड अवलोकन', icon: LayoutDashboard },
-        { id: 'speed_vitals', label: 'Speed & Web Vitals', labelHindi: 'स्पीड व परफॉरमेंस', icon: Zap, badge: '98/100', badgeColor: 'bg-emerald-100 text-emerald-800' },
+        { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+        { id: 'speed_vitals', label: 'Speed & Vitals', icon: Zap, badge: '98/100', badgeColor: 'bg-emerald-100 text-emerald-800' },
+        { id: 'seo_audit', label: 'SEO Audit & Sitemap', icon: Globe, badge: 'PRO', badgeColor: 'bg-emerald-100 text-emerald-800' },
       ],
     },
     {
-      groupTitle: 'Posts (लेख व समाचार)',
+      id: 'posts',
+      title: 'Posts & Content',
+      icon: FileText,
+      color: 'text-red-600',
+      badge: `${articles.length}`,
+      badgeColor: 'bg-blue-100 text-blue-800',
       items: [
-        { id: 'articles', label: 'All Articles', labelHindi: 'सभी समाचार लेख', icon: FileText, badge: `${articles.length}`, badgeColor: 'bg-blue-100 text-blue-800' },
-        { id: 'new_article', label: 'Add New Article', labelHindi: 'नया लेख लिखें', icon: Plus, badge: 'NEW', badgeColor: 'bg-red-100 text-red-700' },
+        { id: 'articles', label: 'All Articles', icon: FileText, badge: `${articles.length}`, badgeColor: 'bg-blue-100 text-blue-800' },
+        { id: 'new_article', label: 'Write New Article', icon: Plus, badge: 'NEW', badgeColor: 'bg-red-100 text-red-700' },
+        { id: 'pipeline_calendar', label: 'Pipeline & Calendar', icon: Calendar, badge: 'SCHEDULE', badgeColor: 'bg-indigo-100 text-indigo-800' },
         {
           id: 'citizen_news',
-          label: 'Citizen Desk',
-          labelHindi: 'नागरिक पत्रकारिता',
+          label: 'Citizen News Desk',
           icon: Inbox,
           badge:
             citizenSubmissions.filter((s) => s.status === 'pending').length > 0
@@ -720,59 +818,57 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
               : undefined,
           badgeColor: 'bg-amber-100 text-amber-800',
         },
-        { id: 'live', label: 'Live Coverage Desk', labelHindi: 'लाइव न्यूज़ फ़ीड', icon: Radio, badge: `${activeLiveBlogs.length}`, badgeColor: 'bg-red-100 text-red-700' },
-        { id: 'trending', label: 'Trending & Tickers', labelHindi: 'सुर्खियां व हैशटैग', icon: Flame },
-        { id: 'epaper', label: 'E-Paper Edition', labelHindi: 'डिजिटल ई-पेपर', icon: Newspaper, badge: 'PDF', badgeColor: 'bg-amber-100 text-amber-800' },
+        { id: 'live', label: 'Live Coverage Desk', icon: Radio, badge: `${activeLiveBlogs.length}`, badgeColor: 'bg-red-100 text-red-700' },
+        { id: 'trending', label: 'Trending & Tickers', icon: Flame },
+        { id: 'epaper', label: 'E-Paper Edition', icon: Newspaper, badge: 'PDF', badgeColor: 'bg-amber-100 text-amber-800' },
       ],
     },
     {
-      groupTitle: 'Media (मीडिया)',
+      id: 'media',
+      title: 'Media & Assets',
+      icon: ImageIcon,
+      color: 'text-purple-600',
+      badge: `${mediaAssets.length}`,
+      badgeColor: 'bg-purple-100 text-purple-800',
       items: [
-        { id: 'media', label: 'Media Library', labelHindi: 'मीडिया गैलरी', icon: ImageIcon, badge: `${mediaAssets.length}`, badgeColor: 'bg-purple-100 text-purple-800' },
-        { id: 'video_gallery', label: 'Video Bulletins', labelHindi: 'वीडियो बुलेटिन', icon: Tv },
-        { id: 'photo_stories', label: 'Photo Stories', labelHindi: 'फ़ोटो स्टोरीज़', icon: Camera },
+        { id: 'media', label: 'Media Library', icon: ImageIcon, badge: `${mediaAssets.length}`, badgeColor: 'bg-purple-100 text-purple-800' },
+        { id: 'video_gallery', label: 'Video Bulletins & Reels', icon: Tv },
+        { id: 'photo_stories', label: 'Photo Stories & Gallery', icon: Camera },
       ],
     },
     {
-      groupTitle: 'Appearance (प्रकटन)',
+      id: 'appearance',
+      title: 'Appearance & Layout',
+      icon: Layout,
+      color: 'text-amber-600',
       items: [
-        { id: 'homepage_sections', label: 'Homepage Sections', labelHindi: 'होमपेज ग्रिड', icon: Layout },
-        { id: 'spotlight', label: 'Spotlight Hero', labelHindi: 'टॉप स्पॉटलाइट', icon: Layers },
-        { id: 'settings_header', label: 'Header & Navigation', labelHindi: 'हेडर व नेविगेशन', icon: Menu },
-        { id: 'settings_footer', label: 'Footer & About', labelHindi: 'फुटर व संपर्क', icon: FileText },
-        { id: 'sidebar_widgets', label: 'Sidebar & Rashifal', labelHindi: 'विजेट्स व राशिफल', icon: Sliders },
-        { id: 'sidebar_ads', label: 'Sidebar Ad Slots', labelHindi: 'विज्ञापन स्लॉट्स', icon: DollarSign },
-        { id: 'mobile_sidebar', label: 'Mobile Drawer', labelHindi: 'मोबाइल साइडबार', icon: Smartphone },
-        { id: 'article_meta', label: 'Article Single View', labelHindi: 'लेख लेआउट व मेटा', icon: FileText },
+        { id: 'homepage_sections', label: 'Homepage Sections', icon: Layout },
+        { id: 'spotlight', label: 'Spotlight Hero', icon: Layers },
+        { id: 'settings_header', label: 'Header & Navigation', icon: Menu },
+        { id: 'typography', label: 'Typography & Fonts', icon: Type, badge: 'FONTS', badgeColor: 'bg-rose-100 text-rose-800' },
+        { id: 'article_meta', label: 'Article Single View', icon: FileText },
+        { id: 'sidebar_widgets', label: 'Sidebar & Rashifal', icon: Sliders },
+        { id: 'mobile_sidebar', label: 'Mobile Drawer Menu', icon: Smartphone },
+        { id: 'settings_footer', label: 'Footer & About Section', icon: FileText },
+        { id: 'mobile_footer', label: 'Mobile Bottom Nav', icon: Smartphone, badge: 'BAR', badgeColor: 'bg-amber-100 text-amber-800' },
       ],
     },
     {
-      groupTitle: 'Typography (फ़ॉन्ट व लिखावट)',
+      id: 'marketing',
+      title: 'Marketing & Audience',
+      icon: TrendingUp,
+      color: 'text-emerald-600',
+      badge:
+        (inquiries || []).filter((i) => i.status === 'new').length > 0
+          ? `${(inquiries || []).filter((i) => i.status === 'new').length} NEW`
+          : undefined,
+      badgeColor: 'bg-rose-100 text-rose-800',
       items: [
-        { id: 'typography', label: 'Typography & Fonts', labelHindi: 'फ़ॉन्ट व टेक्स्ट आकार', icon: Type, badge: 'FONTS', badgeColor: 'bg-rose-100 text-rose-800' },
-      ],
-    },
-    {
-      groupTitle: 'Monetization (कमाई)',
-      items: [
-        { id: 'monetization', label: 'AdSense & Banners', labelHindi: 'विज्ञापन व कमाई', icon: DollarSign },
-      ],
-    },
-    {
-      groupTitle: 'SEO & Tools (एसईओ)',
-      items: [
-        { id: 'seo_audit', label: 'SEO Audit & Sitemap', labelHindi: 'एसईओ व साइटमैप', icon: Globe, badge: 'PRO', badgeColor: 'bg-emerald-100 text-emerald-800' },
-        { id: 'google_suite', label: 'Google Suite (GA4/GSC)', labelHindi: 'गूगल एनालिटिक्स', icon: Globe },
-        { id: 'ai_seo_assistant', label: 'AI SEO Assistant', labelHindi: 'एआई सहायक', icon: Sparkles, badge: 'AI', badgeColor: 'bg-indigo-100 text-indigo-800' },
-      ],
-    },
-    {
-      groupTitle: 'Audience & Inbox',
-      items: [
+        { id: 'monetization', label: 'AdSense & Monetization', icon: DollarSign },
+        { id: 'sidebar_ads', label: 'Sidebar Ad Slots', icon: DollarSign },
         {
           id: 'inquiries',
           label: 'Contact Inquiries',
-          labelHindi: 'पाठक संदेश',
           icon: Mail,
           badge:
             (inquiries || []).filter((i) => i.status === 'new').length > 0
@@ -780,27 +876,38 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
               : undefined,
           badgeColor: 'bg-rose-100 text-rose-800',
         },
-        { id: 'subscribers', label: 'Subscribers & VIPs', labelHindi: 'सब्सक्राइबर्स', icon: Users, badge: `${activeSubscribersCount}`, badgeColor: 'bg-blue-100 text-blue-800' },
-        { id: 'notifications', label: 'Push Notifications', labelHindi: 'पुश नोटिफिकेशन', icon: Bell },
-        { id: 'popups', label: 'Reader Alerts & Popups', labelHindi: 'पॉपअप अलर्ट्स', icon: AlertTriangle },
+        { id: 'subscribers', label: 'Subscribers & VIPs', icon: Users, badge: `${activeSubscribersCount}`, badgeColor: 'bg-blue-100 text-blue-800' },
+        { id: 'notifications', label: 'Push Notifications', icon: Bell },
+        { id: 'popups', label: 'Reader Alerts & Popups', icon: AlertTriangle },
       ],
     },
     {
-      groupTitle: 'Users (उपयोगकर्ता व टीम)',
+      id: 'users',
+      title: 'Users & Roles',
+      icon: Users,
+      color: 'text-indigo-600',
+      badge: `${editorialUsers.length}`,
+      badgeColor: 'bg-purple-100 text-purple-800',
       items: [
-        { id: 'users', label: 'Editorial Team', labelHindi: 'संपादकीय टीम', icon: Users, badge: `${editorialUsers.length}`, badgeColor: 'bg-purple-100 text-purple-800' },
-        { id: 'admins', label: 'Admin Access', labelHindi: 'मुख्य एडमिन', icon: Lock },
+        { id: 'users', label: 'Editorial Team', icon: Users, badge: `${editorialUsers.length}`, badgeColor: 'bg-purple-100 text-purple-800' },
+        { id: 'admins', label: 'Admin Security & Access', icon: Lock },
       ],
     },
     {
-      groupTitle: 'Settings (सिस्टम सेटिंग्स)',
+      id: 'settings',
+      title: 'System Settings',
+      icon: Settings,
+      color: 'text-slate-700',
       items: [
-        { id: 'settings_general', label: 'General & Branding', labelHindi: 'सामान्य सेटिंग्स', icon: Sliders },
-        { id: 'settings_social', label: 'Social Channels', labelHindi: 'सोशल मीडिया लिंक्स', icon: Globe },
-        { id: 'settings_policies', label: 'Legal Policies', labelHindi: 'नीतियां व नियम', icon: Shield },
-        { id: 'settings_contact', label: 'Newsroom Desk', labelHindi: 'न्यूज़रूम संपर्क', icon: Mail },
-        { id: 'api_config', label: 'API Keys & Cloud', labelHindi: 'एपीआई कॉन्फ़िग', icon: Key, badge: 'KEYS', badgeColor: 'bg-amber-100 text-amber-800' },
-        { id: 'factory_reset', label: 'Factory Reset', labelHindi: 'फ़ैक्टरी रीसेट', icon: RotateCcw, badge: 'RESET', badgeColor: 'bg-red-100 text-red-700' },
+        { id: 'settings_general', label: 'General & Branding', icon: Sliders },
+        { id: 'settings_social', label: 'Social Channels & Links', icon: Globe },
+        { id: 'settings_policies', label: 'Legal Policies & Compliance', icon: Shield },
+        { id: 'settings_contact', label: 'Newsroom Contact Desk', icon: Mail },
+        { id: 'google_suite', label: 'Google Suite (GA4 & GSC)', icon: Globe },
+        { id: 'ai_seo_assistant', label: 'AI SEO Assistant', icon: Sparkles, badge: 'AI', badgeColor: 'bg-indigo-100 text-indigo-800' },
+        { id: 'api_config', label: 'API Keys & Cloud Providers', icon: Key, badge: 'KEYS', badgeColor: 'bg-amber-100 text-amber-800' },
+        { id: 'backup_restore', label: 'Database Backup & Restore', icon: Database, badge: 'BACKUP', badgeColor: 'bg-blue-100 text-blue-800' },
+        { id: 'factory_reset', label: 'Factory Reset', icon: RotateCcw, badge: 'RESET', badgeColor: 'bg-red-100 text-red-700' },
       ],
     },
   ];
@@ -814,12 +921,50 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
         items: sec.items.filter(
           (item) =>
             item.label.toLowerCase().includes(q) ||
-            (item.labelHindi && item.labelHindi.toLowerCase().includes(q)) ||
-            sec.groupTitle.toLowerCase().includes(q)
+            sec.title.toLowerCase().includes(q)
         ),
       }))
       .filter((sec) => sec.items.length > 0);
   }, [sidebarSearch, articles.length, citizenSubmissions, activeLiveBlogs.length, mediaAssets.length, inquiries, activeSubscribersCount, editorialUsers.length]);
+
+  // Server-Side RBAC Guard: If user has neither admin nor editorial permissions
+  if (!isAdmin && !isStaff) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 text-center animate-in fade-in zoom-in-95">
+          <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-5 border border-red-100 shadow-inner">
+            <Shield className="w-8 h-8" />
+          </div>
+          <span className="text-xs font-mono font-bold uppercase tracking-wider text-red-700 bg-red-50 border border-red-200 px-3 py-1 rounded-full">
+            Restricted Access Control
+          </span>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight mt-3">
+            Administrative Control Panel
+          </h2>
+          <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+            Administrative authentication is required to modify portal settings, editorial staff permissions, and system configurations.
+          </p>
+          <div className="mt-6 space-y-3">
+            <button
+              onClick={async () => {
+                await loginAsStaffWithGoogle();
+              }}
+              className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2 cursor-pointer"
+            >
+              <Key className="w-4 h-4" />
+              <span>Sign in as Administrator with Google</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition cursor-pointer text-sm"
+            >
+              Return to Public Portal
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex flex-col text-slate-800 font-sans">
@@ -853,10 +998,10 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
             type="button"
             onClick={onClose}
             className="hidden sm:flex items-center space-x-1.5 text-xs text-slate-600 hover:text-blue-700 px-2.5 py-1 rounded-lg hover:bg-slate-100 transition cursor-pointer border border-transparent hover:border-slate-200"
-            title="मुख्य पोर्टल देखें"
+            title="View live public portal"
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            <span>वेबसाइट देखें (Visit Site)</span>
+            <span>Visit Live Portal</span>
           </button>
         </div>
 
@@ -878,18 +1023,17 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 localStorage.removeItem('kd_reader_font_size');
                 localStorage.removeItem('kd_reader_font_family');
               } catch {}
-              setSavedSuccessMsg('✓ सभी फ़ॉन्ट व आकार डिफ़ॉल्ट पर रीसेट कर दिए गए!');
+              setSavedSuccessMsg('✓ All fonts & typography restored to editorial defaults!');
               setTimeout(() => setSavedSuccessMsg(null), 3500);
             }}
             className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-slate-200 hover:border-amber-300 rounded-lg text-xs font-semibold transition cursor-pointer shadow-2xs"
-            title="वेबसाइट के सभी फ़ॉन्ट और टेक्स्ट आकार डिफ़ॉल्ट पर रीसेट करें"
+            title="Restore all fonts and typography sizes to editorial defaults"
           >
             <RotateCcw className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <span className="hidden md:inline">डिफ़ॉल्ट फ़ॉन्ट रीसेट (Reset Fonts)</span>
-            <span className="md:hidden">फ़ॉन्ट रीसेट</span>
+            <span>Reset Fonts</span>
           </button>
 
-          {/* Save Live Changes - Primary WordPress Action */}
+          {/* Save Live Changes - Primary Action */}
           {isAdmin && (
             <button
               onClick={handleSaveAllSettings}
@@ -958,7 +1102,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 type="text"
                 value={sidebarSearch}
                 onChange={(e) => setSidebarSearch(e.target.value)}
-                placeholder="मेनू खोजें (Filter tabs...)"
+                placeholder="Search admin menu..."
                 className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs transition"
               />
               {sidebarSearch && (
@@ -973,71 +1117,152 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
             </div>
           </div>
 
-          {/* WordPress Menu Navigation List */}
-          <div className="p-2 space-y-3 overflow-y-auto flex-1 font-sans scrollbar-thin">
-            {filteredMenuSections.map((group) => (
-              <div key={group.groupTitle} className="space-y-0.5">
-                <div className="px-2.5 pt-1.5 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                  <span>{group.groupTitle}</span>
-                </div>
-                <div className="space-y-0.5">
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => {
-                          if (item.id === 'new_article') {
-                            setEditingArticle(null);
-                          }
-                          setActiveTab(item.id as any);
-                          setIsMobileMenuOpen(false);
-                        }}
-                        className={`w-full group flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer text-left ${
-                          isActive
-                            ? 'bg-white text-blue-700 font-bold border-l-4 border-blue-600 shadow-xs border-y border-r border-slate-200/80'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90 font-medium'
+          {/* WordPress Menu Header with Expand/Collapse All */}
+          <div className="px-3 pt-2 pb-1 border-b border-slate-200/60 bg-slate-50 flex items-center justify-between text-[11px]">
+            <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400">
+              Admin Menu ({filteredMenuSections.length})
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const allOpen = Object.values(openCategories).every(Boolean);
+                setOpenCategories({
+                  dashboard: !allOpen,
+                  posts: !allOpen,
+                  media: !allOpen,
+                  appearance: !allOpen,
+                  marketing: !allOpen,
+                  users: !allOpen,
+                  settings: !allOpen,
+                });
+              }}
+              className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer transition hover:underline"
+            >
+              {Object.values(openCategories).every(Boolean) ? 'Collapse All' : 'Expand All'}
+            </button>
+          </div>
+
+          {/* WordPress Collapsible Menu Navigation List */}
+          <div className="p-2 space-y-1.5 overflow-y-auto flex-1 font-sans scrollbar-thin">
+            {filteredMenuSections.map((group) => {
+              const GroupIcon = group.icon;
+              const isGroupOpen = Boolean(openCategories[group.id]) || Boolean(sidebarSearch.trim());
+              const isGroupActive = getMenuForTab(activeTab) === group.id;
+
+              return (
+                <div key={group.id} className="space-y-0.5">
+                  {/* Parent Menu Item */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toggleCategory(group.id);
+                      if (!isGroupOpen && !isGroupActive && group.items.length > 0) {
+                        setActiveTab(group.items[0].id as any);
+                      }
+                    }}
+                    className={`w-full group flex items-center justify-between px-2.5 py-2 rounded-xl text-xs transition cursor-pointer text-left ${
+                      isGroupActive
+                        ? 'bg-blue-50/80 text-blue-900 border border-blue-200/90 shadow-2xs font-bold border-l-4 border-l-blue-600'
+                        : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/90 font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5 truncate">
+                      <div
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition ${
+                          isGroupActive
+                            ? 'bg-blue-600 text-white shadow-2xs'
+                            : 'bg-white border border-slate-200/80 text-slate-500 group-hover:text-slate-800'
                         }`}
                       >
-                        <div className="flex items-center space-x-2.5 truncate">
-                          <Icon
-                            className={`w-4 h-4 shrink-0 transition ${
-                              isActive
-                                ? 'text-blue-600'
-                                : 'text-slate-400 group-hover:text-slate-600'
-                            }`}
-                          />
-                          <div className="truncate flex flex-col">
-                            <span className="truncate leading-tight">{item.label}</span>
-                            {item.labelHindi && (
-                              <span className="text-[10px] text-slate-400 font-normal leading-none group-hover:text-slate-500">
-                                {item.labelHindi}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                        <GroupIcon className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="truncate font-bold text-slate-900 text-xs">{group.title}</span>
+                    </div>
 
-                        {item.badge && (
-                          <span
-                            className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full shrink-0 ml-1.5 ${
-                              item.badgeColor || 'bg-slate-200 text-slate-700'
+                    <div className="flex items-center space-x-1.5 shrink-0 ml-1">
+                      {group.badge && (
+                        <span
+                          className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
+                            group.badgeColor || 'bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {group.badge}
+                        </span>
+                      )}
+                      <div className="text-slate-400 group-hover:text-slate-600 p-0.5">
+                        {isGroupOpen ? (
+                          <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        )}
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Collapsible Submenu Tree */}
+                  {isGroupOpen && (
+                    <div className="ml-3 pl-2.5 my-1 border-l-2 border-slate-200/90 space-y-0.5 animate-in fade-in duration-150">
+                      {group.items.map((item) => {
+                        const SubIcon = item.icon;
+                        const isItemActive = activeTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              if (item.id === 'new_article') {
+                                setEditingArticle(null);
+                              }
+                              setActiveTab(item.id as any);
+                              setIsMobileMenuOpen(false);
+                            }}
+                            className={`w-full group flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer text-left ${
+                              isItemActive
+                                ? 'bg-blue-600 text-white font-bold shadow-xs'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90 font-medium'
                             }`}
                           >
-                            {item.badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+                            <div className="flex items-center space-x-2 truncate">
+                              <SubIcon
+                                className={`w-3.5 h-3.5 shrink-0 transition ${
+                                  isItemActive
+                                    ? 'text-white'
+                                    : 'text-slate-400 group-hover:text-slate-600'
+                                }`}
+                              />
+                              <span className="truncate text-xs">{item.label}</span>
+                            </div>
+
+                            {item.badge && (
+                              <span
+                                className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full shrink-0 ml-1.5 ${
+                                  isItemActive
+                                    ? 'bg-white/25 text-white'
+                                    : item.badgeColor || 'bg-slate-200 text-slate-700'
+                                }`}
+                              >
+                                {item.badge}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {filteredMenuSections.length === 0 && (
-              <div className="p-4 text-center text-xs text-slate-400">
-                कोई मेनू नहीं मिला।
+              <div className="p-4 text-center text-xs text-slate-400 space-y-2">
+                <p>No menu items matched your search.</p>
+                <button
+                  type="button"
+                  onClick={() => setSidebarSearch('')}
+                  className="text-xs text-blue-600 hover:underline font-bold"
+                >
+                  Clear Search
+                </button>
               </div>
             )}
           </div>
@@ -1110,11 +1335,11 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                     setShowAdminResetModal(true);
                   }}
                   className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-slate-600 hover:text-amber-800 transition cursor-pointer shadow-2xs"
-                  title="रीसेट विकल्प खोलें"
+                  title="Open configuration reset options"
                 >
                   <RotateCcw className="w-3 h-3 text-amber-600" />
                   <span>
-                    {activeTab === 'typography' ? 'फ़ॉन्ट रीसेट करें (Reset Fonts)' : 'सेटिंग्स रीसेट (Reset Settings)'}
+                    {activeTab === 'typography' ? 'Reset Fonts' : 'Reset Settings'}
                   </span>
                 </button>
               )}
@@ -1326,7 +1551,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                     >
                       <div className="flex items-center space-x-3 min-w-0">
                         <img
-                          src={art.imageUrl}
+                          src={art.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                           alt=""
                           className="w-10 h-10 rounded-lg object-cover bg-slate-100 border border-slate-200 shrink-0"
                         />
@@ -1375,6 +1600,25 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
               onDeleteArticle={onDeleteArticle}
               onOpenEditor={(art) => {
                 setEditingArticle(art || null);
+                setActiveTab('new_article');
+              }}
+              onSelectArticleToView={(art) => {
+                onClose();
+                onSelectArticleToView(art);
+              }}
+              onPreviewSocialShare={(art) => {
+                setSocialPreviewArticle(art);
+              }}
+            />
+          )}
+
+          {/* TAB: EDITORIAL PIPELINE & CALENDAR */}
+          {activeTab === 'pipeline_calendar' && (
+            <ScheduledPipelineCalendarTab
+              articles={articles}
+              onSaveArticle={onSaveArticle}
+              onEditArticle={(art) => {
+                setEditingArticle(art);
                 setActiveTab('new_article');
               }}
               onSelectArticleToView={(art) => {
@@ -1431,6 +1675,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 mediaLibrary={mediaAssets}
                 onOpenMediaLibrary={() => setActiveTab('media')}
                 apiConfig={localSettings.apiConfig}
+                onAddMedia={onAddMedia}
               />
             </div>
           )}
@@ -1453,6 +1698,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
               onAddMedia={onAddMedia}
               onUpdateMedia={onUpdateMedia}
               onDeleteMedia={onDeleteMedia}
+              articles={articles}
             />
           )}
 
@@ -1505,16 +1751,600 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
           {/* TAB 8: TRENDING & TICKER */}
           {activeTab === 'trending' && (
             <div className="space-y-6 max-w-5xl mx-auto">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                  Trending Topics & Breaking News Manager
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-500">
-                  Select curated articles to pin to the trending feed, control ticker speed, and manage hashtags.
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center space-x-2">
+                    <Flame className="w-6 h-6 text-red-600 animate-pulse" />
+                    <span>Trending Stories & Hot Topics Studio</span>
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-500">
+                    होमपेज ट्रेंडिंग कार्ड/डिवीज़न, लेआउट स्टाइल, मैन्युअल पिनिंग, ऑटो-ट्रेंडिंग सीमा और लाइव टिकर सेटिंग्स को पूरी तरह से कस्टमाइज़ करें।
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2 shrink-0">
+                  <span
+                    className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center space-x-1.5 ${
+                      currentTrendingConfig.enabled !== false
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-slate-100 text-slate-600 border-slate-300'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        currentTrendingConfig.enabled !== false
+                          ? 'bg-emerald-500 animate-ping'
+                          : 'bg-slate-400'
+                      }`}
+                    />
+                    <span>
+                      {currentTrendingConfig.enabled !== false
+                        ? 'Homepage Division: Active'
+                        : 'Homepage Division: Disabled'}
+                    </span>
+                  </span>
+                </div>
               </div>
 
-              {/* Ticker Speed Settings */}
+              {/* SECTION 1: HOMEPAGE TRENDING DIVISION MASTER CONFIG */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-5">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-red-600 flex items-center justify-center text-white shadow-xs">
+                      <Layout className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">
+                        Homepage Trending News Division (होमपेज ट्रेंडिंग सेक्शन)
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        होमपेज पर ट्रेंडिंग खबरों का मुख्य ब्लॉक दिखाएं या छुपाएं
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={currentTrendingConfig.enabled !== false}
+                      onChange={(e) => updateTrendingConfig({ enabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                    <span className="ml-2 text-xs font-bold text-slate-700">
+                      {currentTrendingConfig.enabled !== false ? 'सक्रिय (Enabled)' : 'निष्क्रिय (Disabled)'}
+                    </span>
+                  </label>
+                </div>
+
+                {currentTrendingConfig.enabled !== false && (
+                  <div className="space-y-4 pt-1">
+                    {/* Titles */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          मुख्य शीर्षक (Section Title)
+                        </label>
+                        <input
+                          type="text"
+                          value={currentTrendingConfig.title}
+                          onChange={(e) => updateTrendingConfig({ title: e.target.value })}
+                          className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 font-medium"
+                          placeholder="ट्रेंडिंग न्यूज़ • सबसे ज्यादा पढ़ी जा रही सुर्खियां"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          उप-शीर्षक (Sub-title)
+                        </label>
+                        <input
+                          type="text"
+                          value={currentTrendingConfig.subTitle}
+                          onChange={(e) => updateTrendingConfig({ subTitle: e.target.value })}
+                          className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                          placeholder="24 घंटे में पाठकों द्वारा सबसे ज्यादा पढ़ी, शेयर और पसंद की गई प्रमुख खबरें"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Badge Text with Quick Presets */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        बैज टेक्स्ट (Badge Text)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={currentTrendingConfig.badgeText || ''}
+                          onChange={(e) => updateTrendingConfig({ badgeText: e.target.value })}
+                          className="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 font-bold"
+                          placeholder="e.g. 🔥 ट्रेंडिंग नाउ"
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        <span className="text-[11px] text-slate-400 font-medium">त्वरित प्रीसेट:</span>
+                        {[
+                          '🔥 ट्रेंडिंग नाउ',
+                          '⚡ वायरल सुर्खियां',
+                          '📈 टॉप ट्रेंडिंग',
+                          '🌟 रीडर्स चॉइस',
+                          '💥 सबसे चर्चित',
+                        ].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => updateTrendingConfig({ badgeText: preset })}
+                            className="text-[11px] px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition cursor-pointer"
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Display Style Selector */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        लेआउट व डिस्प्ले स्टाइल (Homepage Card Layout Style)
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {[
+                          {
+                            id: 'hero_grid',
+                            label: 'Hero 1+4 Showcase',
+                            hindi: '1 बड़ा कार्ड + 4 साइड कार्ड्स',
+                            desc: 'मैगजीन स्टाइल बड़ा #1 ट्रेंडिंग कार्ड और साथ में 4 सेकेंडरी कार्ड्स (अनुशंसित)',
+                            icon: '🌟',
+                          },
+                          {
+                            id: 'grid',
+                            label: '4-Column Card Grid',
+                            hindi: '4-कॉलम रेस्पॉन्सिव ग्रिड',
+                            desc: 'बराबर आकार के कार्ड्स का क्लीन ग्रिड जिसमें #1-#8 तक रैंक व व्यूज दिखेंगे',
+                            icon: '▦',
+                          },
+                          {
+                            id: 'ranked_list',
+                            label: 'Ranked Leaderboard',
+                            hindi: 'नंबर्ड 01-08 लीडरबोर्ड',
+                            desc: 'बड़े अंकों 01, 02, 03 के साथ कॉम्पैक्ट वायरल लिस्ट',
+                            icon: '🔢',
+                          },
+                          {
+                            id: 'carousel',
+                            label: 'Horizontal Slider',
+                            hindi: 'हॉरिजॉन्टल स्वाइप स्लाइडर',
+                            desc: 'बाएं-दाएं स्लाइड होने वाले टच कार्ड्स',
+                            icon: '↔️',
+                          },
+                        ].map((layout) => {
+                          const isSelected = currentTrendingConfig.displayStyle === layout.id;
+                          return (
+                            <button
+                              key={layout.id}
+                              type="button"
+                              onClick={() =>
+                                updateTrendingConfig({
+                                  displayStyle: layout.id as any,
+                                })
+                              }
+                              className={`p-3.5 rounded-xl border text-left transition cursor-pointer relative flex flex-col justify-between ${
+                                isSelected
+                                  ? 'bg-red-50/70 border-red-500 shadow-xs ring-1 ring-red-400'
+                                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-lg">{layout.icon}</span>
+                                  {isSelected && (
+                                    <span className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-xs">
+                                      <Check className="w-3 h-3 stroke-[3]" />
+                                    </span>
+                                  )}
+                                </div>
+                                <h4 className="text-xs font-bold text-slate-900">{layout.label}</h4>
+                                <span className="text-[11px] font-semibold text-red-600 block">
+                                  {layout.hindi}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-500 mt-2 line-clamp-2">
+                                {layout.desc}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Item Count & Feature Toggles */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          प्रदर्शित खबरों की संख्या (Number of Items)
+                        </label>
+                        <div className="flex gap-1.5">
+                          {[4, 6, 8, 10, 12].map((num) => (
+                            <button
+                              key={num}
+                              type="button"
+                              onClick={() => updateTrendingConfig({ itemCount: num })}
+                              className={`flex-1 py-1.5 rounded-lg border text-xs font-bold transition cursor-pointer ${
+                                (currentTrendingConfig.itemCount || 8) === num
+                                  ? 'bg-red-600 text-white border-red-600 shadow-xs'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {num}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          ऑटो-ट्रेंडिंग व्यूज सीमा (Minimum Views Threshold)
+                        </label>
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="range"
+                            min="100"
+                            max="2000"
+                            step="50"
+                            value={currentTrendingConfig.autoTrendingViewsThreshold || 500}
+                            onChange={(e) =>
+                              updateTrendingConfig({
+                                autoTrendingViewsThreshold: Number(e.target.value),
+                              })
+                            }
+                            className="flex-1 h-2 bg-slate-200 rounded-lg cursor-pointer accent-red-600"
+                          />
+                          <span className="font-mono text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded shrink-0">
+                            {currentTrendingConfig.autoTrendingViewsThreshold || 500} Views
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          इस सीमा से अधिक व्यूज वाले समाचार स्वतः ट्रेंडिंग पूल में शामिल हो जाते हैं।
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Display Checkboxes */}
+                    <div className="pt-2 border-t border-slate-100">
+                      <label className="block text-xs font-bold text-slate-700 mb-2">
+                        कार्ड डिस्प्ले फीचर्स (Show / Hide Elements)
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        {[
+                          {
+                            key: 'showRankBadges',
+                            label: 'रैंक बैज (#1, #2...)',
+                            val: currentTrendingConfig.showRankBadges !== false,
+                          },
+                          {
+                            key: 'showViewCounts',
+                            label: 'पाठक व्यूज संख्या (Views)',
+                            val: currentTrendingConfig.showViewCounts !== false,
+                          },
+                          {
+                            key: 'showFireBadge',
+                            label: 'फ्लेम / फायर आइकन (🔥)',
+                            val: currentTrendingConfig.showFireBadge !== false,
+                          },
+                          {
+                            key: 'showCategoryTag',
+                            label: 'कैटेगरी टैग (Category)',
+                            val: currentTrendingConfig.showCategoryTag !== false,
+                          },
+                          {
+                            key: 'showReadTime',
+                            label: 'पढ़ने का समय (Read Time)',
+                            val: currentTrendingConfig.showReadTime !== false,
+                          },
+                          {
+                            key: 'showHashtagsBar',
+                            label: 'हॉट टॉपिक्स हैशटैग पट्टी',
+                            val: currentTrendingConfig.showHashtagsBar !== false,
+                          },
+                        ].map((opt) => (
+                          <label
+                            key={opt.key}
+                            className="flex items-center space-x-2 text-xs text-slate-700 cursor-pointer p-2 rounded-lg bg-slate-50 border border-slate-200/80 hover:bg-slate-100 select-none"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={opt.val}
+                              onChange={(e) =>
+                                updateTrendingConfig({ [opt.key]: e.target.checked } as any)
+                              }
+                              className="rounded text-red-600 focus:ring-red-500 accent-red-600"
+                            />
+                            <span className="font-medium">{opt.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION 2: CURATED / PINNED TRENDING ARTICLES (MANUAL SELECTION) */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center space-x-1.5">
+                      <Pin className="w-4 h-4 text-red-600" />
+                      <span>Curated & Pinned Trending Stories (मैन्युअल ट्रेंडिंग खबरें)</span>
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      अपनी पसंद की किसी भी खबर को ट्रेंडिंग में शीर्ष रैंक (#1, #2, #3...) पर पिन करें या क्रम बदलें।
+                    </p>
+                  </div>
+                  {(localSettings.pinnedTrendingArticleIds || []).length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = { ...localSettings, pinnedTrendingArticleIds: [] };
+                        setLocalSettings(updated);
+                        onUpdateSettings(updated);
+                      }}
+                      className="text-xs text-red-600 hover:text-red-700 font-bold hover:underline cursor-pointer flex items-center space-x-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>सभी पिन हटाएं (Clear All)</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Currently Pinned List */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    वर्तमान में पिन की गई खबरें ({ (localSettings.pinnedTrendingArticleIds || []).length }):
+                  </h4>
+
+                  {(localSettings.pinnedTrendingArticleIds || []).length === 0 ? (
+                    <div className="p-4 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-center text-xs text-slate-500 space-y-1">
+                      <p className="font-semibold text-slate-700">
+                        फिलहाल कोई खबर मैन्युअल रूप से पिन नहीं है।
+                      </p>
+                      <p className="text-[11px]">
+                        सिस्टम सर्वाधिक पढ़े गए (Views) समाचारों को स्वचालित रूप से शीर्ष पर दिखा रहा है। नीचे से किसी भी खबर को पिन करें।
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {(localSettings.pinnedTrendingArticleIds || []).map((id, index) => {
+                        const art = articles.find((a) => a.id === id);
+                        if (!art) return null;
+                        const isFirst = index === 0;
+                        const isLast =
+                          index === (localSettings.pinnedTrendingArticleIds || []).length - 1;
+
+                        return (
+                          <div
+                            key={id}
+                            className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-white hover:border-red-300 shadow-2xs gap-3 transition"
+                          >
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <span className="w-6 h-6 rounded-full bg-gradient-to-r from-amber-500 to-red-600 text-white font-mono text-xs font-black flex items-center justify-center shrink-0">
+                                #{index + 1}
+                              </span>
+                              <div className="w-12 h-10 rounded-lg overflow-hidden bg-slate-100 shrink-0">
+                                <img
+                                  src={art.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
+                                  alt={art.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="min-w-0">
+                                <h5 className="text-xs font-bold text-slate-900 truncate">
+                                  {art.title}
+                                </h5>
+                                <div className="flex items-center space-x-2 text-[10px] text-slate-400 font-kd-meta">
+                                  <span className="text-red-600 font-bold uppercase">
+                                    {art.category}
+                                  </span>
+                                  <span>•</span>
+                                  <span>{art.viewsCount?.toLocaleString() || 0} व्यूज</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-1 shrink-0">
+                              <button
+                                type="button"
+                                disabled={isFirst}
+                                onClick={() => handleMovePinnedTrending(index, 'up')}
+                                className="p-1 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                                title="Move Rank Up"
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isLast}
+                                onClick={() => handleMovePinnedTrending(index, 'down')}
+                                className="p-1 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                                title="Move Rank Down"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleUnpinTrendingArticle(id)}
+                                className="p-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50 cursor-pointer ml-1"
+                                title="हटाएं (Unpin)"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Article Search & Pin More */}
+                <div className="pt-3 border-t border-slate-100 space-y-2">
+                  <h4 className="text-xs font-bold text-slate-700">
+                    ट्रेंडिंग में नई खबर जोड़ें (Pin More Articles):
+                  </h4>
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="खबर खोजें (शीर्षक, श्रेणी या लेखक द्वारा)..."
+                      value={trendingArticleSearch}
+                      onChange={(e) => setTrendingArticleSearch(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+
+                  <div className="max-h-56 overflow-y-auto space-y-1.5 scrollbar-thin">
+                    {articles
+                      .filter((a) => !(localSettings.pinnedTrendingArticleIds || []).includes(a.id))
+                      .filter((a) => {
+                        if (!trendingArticleSearch.trim()) return true;
+                        const q = trendingArticleSearch.toLowerCase();
+                        return (
+                          a.title.toLowerCase().includes(q) ||
+                          a.category.toLowerCase().includes(q) ||
+                          a.authorName.toLowerCase().includes(q)
+                        );
+                      })
+                      .slice(0, 10)
+                      .map((art) => (
+                        <div
+                          key={art.id}
+                          className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition text-xs gap-2"
+                        >
+                          <div className="flex items-center space-x-2.5 min-w-0">
+                            <div className="w-10 h-8 rounded-md overflow-hidden bg-slate-200 shrink-0">
+                              <img
+                                src={art.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
+                                alt={art.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-900 truncate">{art.title}</p>
+                              <span className="text-[10px] text-slate-500 uppercase">
+                                {art.category} • {art.viewsCount?.toLocaleString() || 0} व्यूज
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handlePinTrendingArticle(art.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold text-[11px] px-3 py-1 rounded-lg transition shrink-0 cursor-pointer shadow-2xs flex items-center space-x-1"
+                          >
+                            <Pin className="w-3 h-3" />
+                            <span>पिन करें</span>
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 3: TRENDING HASHTAGS MANAGER */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+                <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                  <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+                    #
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Trending Hashtags & Hot Topics Manager
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      हेडर पट्टी और ट्रेंडिंग सेक्शन में दिखने वाले हैशटैग्स जोड़ें या हटाएं
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Add trending hashtag (e.g. #NationalMission)..."
+                    value={newHashtag}
+                    onChange={(e) => setNewHashtag(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddHashtag();
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                  <button
+                    onClick={handleAddHashtag}
+                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer shadow-xs"
+                  >
+                    Add Tag
+                  </button>
+                </div>
+
+                {/* Popular Hashtags Quick Add */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[11px] text-slate-400 font-medium">सुझाए गए टैग्स:</span>
+                  {[
+                    '#Budget2026',
+                    '#Election2026',
+                    '#Cricket',
+                    '#Bollywood',
+                    '#GoldRate',
+                    '#TechNews',
+                    '#AI',
+                  ].map((sug) => {
+                    const alreadyExists = localSettings.trendingTopics.includes(sug);
+                    return (
+                      <button
+                        key={sug}
+                        type="button"
+                        disabled={alreadyExists}
+                        onClick={() => {
+                          if (!alreadyExists) {
+                            const updated = {
+                              ...localSettings,
+                              trendingTopics: [...localSettings.trendingTopics, sug],
+                            };
+                            setLocalSettings(updated);
+                            onUpdateSettings(updated);
+                          }
+                        }}
+                        className={`text-[11px] px-2 py-0.5 rounded-lg border transition ${
+                          alreadyExists
+                            ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-default'
+                            : 'bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 border-slate-200 cursor-pointer shadow-2xs'
+                        }`}
+                      >
+                        {sug} {alreadyExists ? '✓' : '+'}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {localSettings.trendingTopics.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center space-x-1.5 bg-slate-100 border border-slate-200 text-slate-800 text-xs px-3 py-1.5 rounded-xl font-medium"
+                    >
+                      <span>{tag}</span>
+                      <button
+                        onClick={() => handleRemoveHashtag(tag)}
+                        className="text-slate-400 hover:text-red-600 cursor-pointer font-bold ml-1"
+                        title="हटाएं"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* SECTION 4: TICKER SPEED SETTINGS */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -1591,7 +2421,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 )}
               </div>
 
-              {/* Homepage Live Video Section Manager */}
+              {/* SECTION 5: HOMEPAGE LIVE VIDEO SECTION MANAGER */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center space-x-2">
@@ -1668,49 +2498,6 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                       className="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
                   </div>
-                </div>
-              </div>
-
-              {/* Hashtag Manager */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-                <h3 className="text-sm font-bold text-slate-900">Trending Hashtags Manager</h3>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Add trending hashtag (e.g. #NationalMission)..."
-                    value={newHashtag}
-                    onChange={(e) => setNewHashtag(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddHashtag();
-                      }
-                    }}
-                    className="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
-                  <button
-                    onClick={handleAddHashtag}
-                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer shadow-xs"
-                  >
-                    Add Tag
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {localSettings.trendingTopics.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center space-x-1.5 bg-slate-100 border border-slate-200 text-slate-800 text-xs px-3 py-1.5 rounded-xl font-medium"
-                    >
-                      <span>{tag}</span>
-                      <button
-                        onClick={() => handleRemoveHashtag(tag)}
-                        className="text-slate-400 hover:text-red-600 cursor-pointer font-bold"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))}
                 </div>
               </div>
             </div>
@@ -2142,9 +2929,9 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                       Live Popup Preview
                     </span>
                     <div className="bg-white text-slate-900 rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-                      {localSettings.popupConfig?.imageUrl && (
+                      {localSettings.popupConfig?.imageUrl && localSettings.popupConfig.imageUrl.trim() !== '' && (
                         <img
-                          src={localSettings.popupConfig.imageUrl}
+                          src={localSettings.popupConfig.imageUrl || 'https://images.unsplash.com/photo-1517976487502-5f714249a5b4?w=800&auto=format&fit=crop&q=80'}
                           alt=""
                           className="w-full h-36 object-cover"
                         />
@@ -2216,10 +3003,10 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs">
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-sans">
-                    Article Meta & 1-Line Action Bar Studio
+                    Single Article & Content View Studio
                   </h2>
                   <p className="text-xs sm:text-sm text-slate-500">
-                    Manage reader views count, author credentials, timestamps, and the single-line compact sharing bar.
+                    Manage article layout, typography, byline visibility, disclaimer box, and related cards.
                   </p>
                 </div>
                 <button
@@ -2234,6 +3021,9 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
 
               <ArticleMetaSettingsTab
                 settings={localSettings.articleMetaSettings}
+                articlePageConfig={localSettings.articlePageConfig || DEFAULT_ARTICLE_PAGE_CONFIG}
+                sidebarWidgets={localSettings.sidebarWidgets || DEFAULT_ARTICLE_SIDEBAR_WIDGETS}
+                portalSettings={localSettings}
                 onChange={(updated) => {
                   const newSettings = {
                     ...localSettings,
@@ -2242,6 +3032,33 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                   setLocalSettings(newSettings);
                   onUpdateSettings(newSettings);
                   setSavedSuccessMsg('Article meta settings updated live!');
+                  setTimeout(() => setSavedSuccessMsg(null), 2500);
+                }}
+                onUpdateArticlePageConfig={(updated) => {
+                  const newSettings = {
+                    ...localSettings,
+                    articlePageConfig: updated,
+                    mobileStickyBar: updated.mobileStickyBar || localSettings.mobileStickyBar,
+                  };
+                  setLocalSettings(newSettings);
+                  onUpdateSettings(newSettings);
+                  setSavedSuccessMsg('Article page layout & controls updated live!');
+                  setTimeout(() => setSavedSuccessMsg(null), 2500);
+                }}
+                onUpdateSidebarWidgets={(updated) => {
+                  const newSettings = {
+                    ...localSettings,
+                    sidebarWidgets: updated,
+                  };
+                  setLocalSettings(newSettings);
+                  onUpdateSettings(newSettings);
+                  setSavedSuccessMsg('Sidebar & card settings updated live!');
+                  setTimeout(() => setSavedSuccessMsg(null), 2500);
+                }}
+                onUpdateSettings={(updated) => {
+                  setLocalSettings(updated);
+                  onUpdateSettings(updated);
+                  setSavedSuccessMsg('Article settings updated live!');
                   setTimeout(() => setSavedSuccessMsg(null), 2500);
                 }}
               />
@@ -2329,21 +3146,38 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
             </div>
           )}
 
+          {/* TAB: VIDEO BULLETINS & MEDIA STUDIO */}
+          {activeTab === 'video_gallery' && (
+            <div className="space-y-6 max-w-6xl mx-auto">
+              <VideoManagerTab
+                settings={localSettings}
+                onUpdateSettings={(newSettings) => {
+                  setLocalSettings(newSettings);
+                  onUpdateSettings(newSettings);
+                  setSavedSuccessMsg('वीडियो मीडिया लाइब्रेरी सफलतापूर्वक अपडेट की गई!');
+                  setTimeout(() => setSavedSuccessMsg(null), 2500);
+                }}
+              />
+            </div>
+          )}
+
           {/* TAB 14: WEBSITE SETTINGS (WORDPRESS-STYLE CATEGORIZED SECTIONS) */}
           {(activeTab === 'header_footer' ||
             activeTab === 'settings_general' ||
             activeTab === 'settings_header' ||
             activeTab === 'settings_footer' ||
+            activeTab === 'mobile_footer' ||
             activeTab === 'settings_contact' ||
             activeTab === 'settings_social' ||
             activeTab === 'settings_policies' ||
-            activeTab === 'video_gallery' ||
             activeTab === 'photo_stories') && (
             <div className="space-y-6 max-w-6xl mx-auto">
               <HeaderFooterSettingsTab
                 settings={localSettings}
                 defaultSection={
-                  activeTab === 'settings_general'
+                  activeTab === 'mobile_footer'
+                    ? 'mobile_footer'
+                    : activeTab === 'settings_general'
                     ? 'branding'
                     : activeTab === 'settings_header'
                     ? 'navigation'
@@ -2355,7 +3189,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                     ? 'social'
                     : activeTab === 'settings_policies'
                     ? 'policies'
-                    : activeTab === 'video_gallery' || activeTab === 'photo_stories'
+                    : activeTab === 'photo_stories'
                     ? 'multimedia'
                     : 'branding'
                 }
@@ -2484,9 +3318,27 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
             </div>
           )}
 
+          {/* TAB: DATABASE BACKUP & RESTORE */}
+          {activeTab === 'backup_restore' && (
+            <DatabaseBackupRestoreTab
+              articles={articles}
+              portalSettings={localSettings}
+              mediaAssets={mediaAssets}
+              liveBlogs={activeLiveBlogs}
+              inquiries={inquiries}
+              subscribers={subscribers}
+              citizenSubmissions={citizenSubmissions}
+              onUpdateSettings={(newSettings) => {
+                setLocalSettings(newSettings);
+                onUpdateSettings(newSettings);
+              }}
+              onSaveArticle={onSaveArticle}
+            />
+          )}
+
           {/* TAB 19: FACTORY RESET (PORTAL SETTINGS & TYPOGRAPHY RESTORE) */}
           {activeTab === 'factory_reset' && (
-            <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn font-kd-meta">
+            <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn font-sans">
               {/* Header Banner */}
               <div className="bg-gradient-to-r from-red-950 via-slate-900 to-amber-950 text-white p-6 sm:p-7 rounded-3xl border border-red-900/60 shadow-xl space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -2496,15 +3348,15 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                     </div>
                     <div>
                       <div className="flex items-center space-x-2 flex-wrap">
-                        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-kd-headline">
-                          Factory Reset (फ़ैक्टरी रीसेट)
+                        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                          Factory Reset
                         </h2>
                         <span className="bg-red-500/20 text-red-300 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-red-500/40">
                           SYSTEM RESTORE
                         </span>
                       </div>
                       <p className="text-xs sm:text-sm text-slate-300 mt-1">
-                        पोर्टल सेटिंग्स व टाइपोग्राफी कस्टमाइज़ेशन को मूल फ़ैक्टरी डिफ़ॉल्ट पर रीसेट करें।
+                        Restore portal configurations, widgets, and typography to factory defaults.
                       </p>
                     </div>
                   </div>
@@ -2515,7 +3367,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                     className="bg-red-600 hover:bg-red-700 active:scale-95 text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl transition shadow-lg flex items-center justify-center space-x-2 cursor-pointer shrink-0"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    <span>फ़ैक्टरी रीसेट लागू करें</span>
+                    <span>Initiate Factory Reset</span>
                   </button>
                 </div>
               </div>
@@ -2529,33 +3381,33 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                       <Type className="w-4 h-4" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold">1. Typography Customizations (टाइपोग्राफी)</h3>
-                      <p className="text-[11px] text-slate-500">फ़ॉन्ट फ़ैमिली, पिक्सल साइज़ व CSS वैरिएबल्स</p>
+                      <h3 className="text-sm font-bold">1. Editorial Typography Defaults</h3>
+                      <p className="text-[11px] text-slate-500">Font families, scale sizes, and :root CSS variables</p>
                     </div>
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-700 space-y-1.5 font-kd-meta">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-700 space-y-1.5 font-sans">
                     <div className="flex justify-between py-0.5 border-b border-slate-200/50">
-                      <span className="text-slate-500">हेडलाइन फ़ॉन्ट:</span>
+                      <span className="text-slate-500">Headline Font:</span>
                       <span className="font-semibold text-slate-900 font-mono">Rozha One, serif</span>
                     </div>
                     <div className="flex justify-between py-0.5 border-b border-slate-200/50">
-                      <span className="text-slate-500">बॉडी टेक्स्ट फ़ॉन्ट:</span>
+                      <span className="text-slate-500">Body Font:</span>
                       <span className="font-semibold text-slate-900 font-mono">Mukta, sans-serif</span>
                     </div>
                     <div className="flex justify-between py-0.5 border-b border-slate-200/50">
-                      <span className="text-slate-500">डेस्कटॉप लेख शीर्षक:</span>
+                      <span className="text-slate-500">Desktop Article Title:</span>
                       <span className="font-semibold text-slate-900 font-mono">38px</span>
                     </div>
                     <div className="flex justify-between py-0.5 border-b border-slate-200/50">
-                      <span className="text-slate-500">मोबाइल लेख शीर्षक:</span>
+                      <span className="text-slate-500">Mobile Article Title:</span>
                       <span className="font-semibold text-slate-900 font-mono">28px</span>
                     </div>
                     <div className="flex justify-between py-0.5 border-b border-slate-200/50">
-                      <span className="text-slate-500">बॉडी टेक्स्ट आकार:</span>
-                      <span className="font-semibold text-slate-900 font-mono">17px (लाइन-हाइट 1.75x)</span>
+                      <span className="text-slate-500">Body Line Height:</span>
+                      <span className="font-semibold text-slate-900 font-mono">1.75x leading</span>
                     </div>
                     <div className="flex justify-between py-0.5">
-                      <span className="text-slate-500">:root CSS वैरिएबल्स:</span>
+                      <span className="text-slate-500">:root CSS Variables:</span>
                       <span className="font-bold text-emerald-700">index.css Defaults</span>
                     </div>
                   </div>
@@ -2568,33 +3420,33 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                       <Sliders className="w-4 h-4" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold">2. Portal Settings & Layout (पोर्टल सेटिंग्स)</h3>
-                      <p className="text-[11px] text-slate-500">होमपेज, विजेट्स, टिकर व डिस्प्ले ऑप्शन्स</p>
+                      <h3 className="text-sm font-bold">2. Portal Settings & Layouts</h3>
+                      <p className="text-[11px] text-slate-500">Homepage, widgets, tickers, and display options</p>
                     </div>
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-700 space-y-1.5 font-kd-meta">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-700 space-y-1.5 font-sans">
                     <div className="flex justify-between py-0.5 border-b border-slate-200/50">
-                      <span className="text-slate-500">स्पॉटलाइट लेआउट:</span>
+                      <span className="text-slate-500">Spotlight Hero:</span>
                       <span className="font-semibold text-slate-900">3-Card Classic Grid</span>
                     </div>
                     <div className="flex justify-between py-0.5 border-b border-slate-200/50">
-                      <span className="text-slate-500">ट्रेंडिंग टिकर स्पीड:</span>
-                      <span className="font-semibold text-slate-900">Slow (90 सेकंड्स)</span>
+                      <span className="text-slate-500">Ticker Speed:</span>
+                      <span className="font-semibold text-slate-900">Slow (90 Seconds)</span>
                     </div>
                     <div className="flex justify-between py-0.5 border-b border-slate-200/50">
-                      <span className="text-slate-500">साइडबार विजेट्स:</span>
+                      <span className="text-slate-500">Sidebar Widgets:</span>
                       <span className="font-semibold text-slate-900">Trending, Polls, Bio</span>
                     </div>
                     <div className="flex justify-between py-0.5 border-b border-slate-200/50">
-                      <span className="text-slate-500">सोशल शेयर्स:</span>
-                      <span className="font-semibold text-slate-900">WhatsApp, X, FB Active</span>
+                      <span className="text-slate-500">Social Channels:</span>
+                      <span className="font-semibold text-slate-900">WhatsApp, X, Facebook</span>
                     </div>
                     <div className="flex justify-between py-0.5 border-b border-slate-200/50">
-                      <span className="text-slate-500">विज्ञापन स्लॉट्स:</span>
-                      <span className="font-semibold text-slate-900">AdSense & Private Defaults</span>
+                      <span className="text-slate-500">Ad Slots:</span>
+                      <span className="font-semibold text-slate-900">AdSense & Direct Defaults</span>
                     </div>
                     <div className="flex justify-between py-0.5">
-                      <span className="text-slate-500">डेटाबेस सिंक:</span>
+                      <span className="text-slate-500">Database Sync:</span>
                       <span className="font-bold text-emerald-700">Firestore Real-Time Sync</span>
                     </div>
                   </div>
@@ -2605,7 +3457,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
                 <div className="flex items-center space-x-2 text-slate-900">
                   <Shield className="w-5 h-5 text-emerald-600" />
-                  <h3 className="text-sm font-bold">सुरक्षा व क्रेडेंशियल सुरक्षा (Safety & Credential Protection)</h3>
+                  <h3 className="text-sm font-bold">Safety & Credential Protection</h3>
                 </div>
 
                 <div className="space-y-3">
@@ -2618,10 +3470,10 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                     />
                     <div>
                       <span className="text-xs font-bold text-emerald-950 block">
-                        API कुंजियां व क्लाउड प्रोवाइडर क्रेडेंशियल्स सुरक्षित रखें (Retain Configured API Keys)
+                        Retain Configured API Keys & Cloud Credentials
                       </span>
                       <p className="text-[11px] text-emerald-800 mt-0.5 leading-relaxed">
-                        अनुशंसित। आपकी Gemini, OpenAI, Google Suite व अन्य AI/क्लाउड कुंजियां सुरक्षित रहेंगी ताकि सेवा बाधित न हो।
+                        Recommended. Your Gemini, OpenAI, Google Suite, and cloud provider keys will remain safe to prevent service disruptions.
                       </p>
                     </div>
                   </label>
@@ -2629,7 +3481,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                   <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/80 text-xs text-amber-900 flex items-start space-x-2.5">
                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                     <p className="leading-relaxed text-[11px]">
-                      <strong>सूचना:</strong> इस प्रक्रिया से आपके प्रकाशित समाचार लेख, मीडिया लाइब्रेरी छवियां, व संवाददाता खाते <strong>हटाए नहीं जाएंगे</strong>। केवल वेबसाइट का डिज़ाइन, फ़ॉन्ट, व लेआउट कॉन्फ़िगरेशन मूल डिफ़ॉल्ट पर रीसेट होगा।
+                      <strong>Note:</strong> Articles, media library photos, and reporter accounts will <strong>NOT</strong> be deleted. Only theme layouts, typography sizes, and navigation toggles are restored to default.
                     </p>
                   </div>
                 </div>
@@ -2641,7 +3493,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                     className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition shadow-md flex items-center space-x-2 cursor-pointer"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    <span>फ़ैक्टरी रीसेट शुरू करें (Initiate Factory Reset)</span>
+                    <span>Initiate Factory Reset</span>
                   </button>
                 </div>
               </div>
@@ -2782,7 +3634,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
         </div>
       )}
 
-      {/* FACTORY RESET CONFIRMATION MODAL */}
+      {/* FACTORY RESET CONFIRMATION MODAL (100% English) */}
       {showFactoryResetConfirmModal && (
         <div className="fixed inset-0 z-[66] bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-red-200 animate-in fade-in zoom-in-95 space-y-4">
@@ -2792,24 +3644,24 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
               </div>
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                  फ़ैक्टरी रीसेट की पुष्टि करें
+                  Confirm Factory Reset
                 </h3>
                 <p className="text-xs text-slate-500 font-mono">
-                  Confirm Factory Reset
+                  Permanent Configuration Restore
                 </p>
               </div>
             </div>
 
             <div className="p-3.5 bg-red-50 rounded-2xl border border-red-200/80 text-xs text-red-900 space-y-2 leading-relaxed">
               <p className="font-bold">
-                ⚠️ क्या आप वाकई पोर्टल सेटिंग्स और टाइपोग्राफी कस्टमाइज़ेशन दोनों को मूल फ़ैक्टरी डिफ़ॉल्ट पर रीसेट करना चाहते हैं?
+                ⚠️ Are you sure you want to reset portal theme settings and typography customizations to original factory defaults?
               </p>
               <div className="space-y-1 text-[11px] text-red-800">
-                <div>• टाइपोग्राफी: Rozha One (हेडलाइन), Mukta (बॉडी), 38px/17px</div>
-                <div>• :root CSS वैरिएबल्स: index.css मूल मान</div>
-                <div>• पोर्टल सेटिंग्स: 3-कार्ड स्पॉटलाइट, स्टैंडर्ड टिकर, विजेट्स</div>
+                <div>• Typography: Rozha One (headline), Mukta (body), 38px/17px</div>
+                <div>• :root CSS variables: index.css original values</div>
+                <div>• Portal settings: 3-card spotlight, standard ticker, sidebar widgets</div>
                 <div className="text-emerald-800 font-bold">
-                  • API Keys: {factoryResetKeepApiKeys ? '✓ सुरक्षित रहेंगी' : '⚠️ साफ़ कर दी जाएंगी'}
+                  • API Keys: {factoryResetKeepApiKeys ? '✓ Preserved & Protected' : '⚠️ Cleared'}
                 </div>
               </div>
             </div>
@@ -2822,7 +3674,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 className="w-4 h-4 text-emerald-600 rounded accent-emerald-600 cursor-pointer"
               />
               <span className="text-xs text-slate-700 font-semibold">
-                API कुंजियां सुरक्षित रखें (Retain API Keys)
+                Retain Configured API Keys & Cloud Providers
               </span>
             </label>
 
@@ -2832,7 +3684,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 onClick={() => setShowFactoryResetConfirmModal(false)}
                 className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
               >
-                रद्द करें (Cancel)
+                Cancel
               </button>
               <button
                 type="button"
@@ -2840,14 +3692,14 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-md flex items-center space-x-1.5 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>हाँ, फ़ैक्टरी रीसेट करें</span>
+                <span>Yes, Execute Factory Reset</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ADMIN & FONT SETTINGS RESET MODAL */}
+      {/* ADMIN & FONT SETTINGS RESET MODAL (100% English) */}
       {showAdminResetModal && (
         <div className="fixed inset-0 z-[65] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-5">
@@ -2859,7 +3711,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                    एडमिन व फ़ॉन्ट सेटिंग्स रीसेट
+                    Reset Editorial & Theme Settings
                   </h3>
                   <p className="text-xs text-slate-500">
                     Reset Editorial Typography & Admin Configuration
@@ -2878,7 +3730,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
             {/* Scope Selection Cards */}
             <div className="space-y-2.5">
               <label className="text-xs font-bold text-slate-700 block uppercase tracking-wider">
-                रीसेट का दायरा चुनें (Select Reset Scope):
+                Select Reset Scope:
               </label>
 
               {/* Option 1: Typography Only */}
@@ -2902,14 +3754,14 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-900">
-                      फ़ॉन्ट सेटिंग्स केवल (Reset Fonts & Typography Only)
+                      Typography & Fonts Only
                     </span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                      अनुशंसित
+                      Recommended
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
-                    हेडलाइन (Rozha One), बॉडी (Mukta), लाइन-हाइट (1.75x) व सभी डेस्कटॉप/मोबाइल पिक्सल साइज़ को संपादकीय डिफ़ॉल्ट पर रीसेट करें। आपके लेख व अन्य डेटा सुरक्षित रहेंगे।
+                    Reset headline font (Rozha One), body font (Mukta), line-height (1.75x), and desktop/mobile sizes to editorial defaults. All published articles remain safe.
                   </p>
                 </div>
               </div>
@@ -2934,10 +3786,10 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 </div>
                 <div className="flex-1">
                   <span className="text-xs font-bold text-slate-900 block">
-                    होमपेज लेआउट व विजेट्स (Reset Layout & Widgets)
+                    Homepage Layout & Widgets
                   </span>
                   <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
-                    स्पॉटलाइट लेआउट, 3-कार्ड ग्रिड व सिंगल-पेज साइडबार विजेट्स को मूल न्यूज़पेपर ग्रिड डिफ़ॉल्ट पर पुनर्स्थापित करें।
+                    Reset spotlight layout, 3-card grid, and single-article sidebar widgets to classic newspaper defaults.
                   </p>
                 </div>
               </div>
@@ -2963,14 +3815,14 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-900">
-                      संपूर्ण एडमिन सेटिंग्स (Reset All Admin Settings)
+                      All Portal Theme & Layout Settings
                     </span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                      फ़ैक्टरी
+                      Factory
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
-                    सभी पोर्टल सेटिंग्स (टाइपोग्राफी, टिकर, सोशल शेयर्स, डिस्प्ले ऑप्शन्स) को फ़ैक्टरी डिफ़ॉल्ट पर रीसेट करें। आपकी API कुंजियां सुरक्षित रहेंगी।
+                    Reset all portal configurations (typography, ticker speed, social channels, and display options) to factory defaults. Your API keys remain safe.
                   </p>
                 </div>
               </div>
@@ -2980,30 +3832,30 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 text-[11px] text-slate-600 space-y-1">
               <div className="font-bold text-slate-800 flex items-center gap-1.5">
                 <Check className="w-3.5 h-3.5 text-emerald-600" />
-                <span>रीसेट के बाद लागू होने वाले मान:</span>
+                <span>Values Applied After Reset:</span>
               </div>
               {resetScope === 'typography' && (
                 <div className="grid grid-cols-2 gap-1 pt-1 text-[10px]">
-                  <div>• हेडलाइन फ़ॉन्ट: <strong>Rozha One, serif</strong></div>
-                  <div>• बॉडी फ़ॉन्ट: <strong>Mukta, sans-serif</strong></div>
-                  <div>• मुख्य शीर्षक: <strong>38px Desktop / 28px Mobile</strong></div>
-                  <div>• बॉडी टेक्स्ट: <strong>17px (लाइन-हाइट 1.75x)</strong></div>
+                  <div>• Headline Font: <strong>Rozha One, serif</strong></div>
+                  <div>• Body Font: <strong>Mukta, sans-serif</strong></div>
+                  <div>• Main Title: <strong>38px Desktop / 28px Mobile</strong></div>
+                  <div>• Body Text: <strong>17px (1.75x leading)</strong></div>
                 </div>
               )}
               {resetScope === 'layout' && (
                 <div className="grid grid-cols-2 gap-1 pt-1 text-[10px]">
-                  <div>• हीरो स्पॉटलाइट: <strong>3-कॉलम क्लासिक ग्रिड</strong></div>
-                  <div>• ट्रेंडिंग टिकर: <strong>90 सेकंड्स (Slow)</strong></div>
-                  <div>• साइडबार विजेट्स: <strong>ट्रेंडिंग, पोल, लेखक बायो</strong></div>
-                  <div>• मोबाइल लेआउट: <strong>कॉम्पैक्ट कार्ड्स</strong></div>
+                  <div>• Hero Spotlight: <strong>3-Column Classic Grid</strong></div>
+                  <div>• Trending Ticker: <strong>90 Seconds (Slow)</strong></div>
+                  <div>• Sidebar Widgets: <strong>Trending, Polls, Bio</strong></div>
+                  <div>• Mobile Layout: <strong>Compact Cards</strong></div>
                 </div>
               )}
               {resetScope === 'all' && (
                 <div className="grid grid-cols-2 gap-1 pt-1 text-[10px]">
-                  <div>• टाइपोग्राफी: <strong>पूर्ण संपादकीय डिफ़ॉल्ट</strong></div>
-                  <div>• लेआउट व टिकर: <strong>मानक अख़बार ग्रिड</strong></div>
-                  <div>• सोशल लिंक्स: <strong>डिफ़ॉल्ट प्लेटफॉर्म्स</strong></div>
-                  <div className="text-emerald-700 font-bold">• API Keys: <strong>सुरक्षित (बदलाव नहीं)</strong></div>
+                  <div>• Typography: <strong>Full Editorial Defaults</strong></div>
+                  <div>• Layout & Ticker: <strong>Standard Newspaper Grid</strong></div>
+                  <div>• Social Links: <strong>Default Channels</strong></div>
+                  <div className="text-emerald-700 font-bold">• API Keys: <strong>Protected & Unchanged</strong></div>
                 </div>
               )}
             </div>
@@ -3015,7 +3867,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 onClick={() => setShowAdminResetModal(false)}
                 className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
               >
-                रद्द करें (Cancel)
+                Cancel
               </button>
               <button
                 type="button"
@@ -3025,10 +3877,10 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 <RotateCcw className="w-4 h-4" />
                 <span>
                   {resetScope === 'typography'
-                    ? 'हाँ, फ़ॉन्ट रीसेट करें (Reset Fonts)'
+                    ? 'Yes, Reset Typography'
                     : resetScope === 'layout'
-                    ? 'हाँ, लेआउट रीसेट करें (Reset Layout)'
-                    : 'हाँ, संपूर्ण सेटिंग्स रीसेट करें (Reset All)'}
+                    ? 'Yes, Reset Layout'
+                    : 'Yes, Reset All Settings'}
                 </span>
               </button>
             </div>
@@ -3036,7 +3888,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
         </div>
       )}
 
-      {/* FORCED RE-AUTHENTICATION GATE FOR STALE ADMINISTRATOR SESSIONS */}
+      {/* FORCED RE-AUTHENTICATION GATE FOR STALE ADMINISTRATOR SESSIONS (100% English) */}
       {isSessionStale && (
         <div className="fixed inset-0 z-[70] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-amber-200 text-center animate-in fade-in zoom-in-95">
@@ -3044,13 +3896,13 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
               <AlertTriangle className="w-8 h-8" />
             </div>
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full">
-              सत्र समय सीमा समाप्त (Session Timeout)
+              Session Timeout
             </span>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight mt-3">
-              व्यवस्थापक पुनः प्रमाणीकरण आवश्यक
+              Administrator Re-authentication Required
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
-              प्रशासनिक सुरक्षा मानकों के तहत आपके व्यवस्थापक सत्र को पुनः प्रमाणित करना आवश्यक है। संवेदनशील पोर्टल डेटा व प्रकाशन अधिकारों की सुरक्षा हेतु कृपया अपनी पहचान सत्यापित करें।
+              For administrative security and newsroom data integrity, your administrator session requires re-authentication. Please verify your credentials to continue managing sensitive portal settings.
             </p>
             {reauthError && (
               <div className="mt-3 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl text-left">
@@ -3064,7 +3916,7 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${isReauthenticating ? 'animate-spin' : ''}`} />
-                <span>{isReauthenticating ? 'सत्यापन जारी...' : 'Google द्वारा पुनः प्रमाणित करें (Re-authenticate)'}</span>
+                <span>{isReauthenticating ? 'Verifying credentials...' : 'Re-authenticate with Google'}</span>
               </button>
               <button
                 onClick={() => {
@@ -3073,12 +3925,19 @@ export const AdminBackendPanel: React.FC<AdminBackendPanelProps> = ({
                 }}
                 className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition cursor-pointer text-sm"
               >
-                सत्र बंद करें एवं बाहर जाएं (Sign Out)
+                Sign Out & Exit
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* SOCIAL SHARE & OPENGRAPH LIVE PREVIEW MODAL */}
+      <SocialSharePreviewModal
+        isOpen={Boolean(socialPreviewArticle)}
+        onClose={() => setSocialPreviewArticle(null)}
+        article={socialPreviewArticle}
+      />
     </div>
   );
 };

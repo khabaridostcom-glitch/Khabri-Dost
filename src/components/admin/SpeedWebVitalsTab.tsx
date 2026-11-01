@@ -78,21 +78,21 @@ export const SpeedWebVitalsTab: React.FC<SpeedWebVitalsTabProps> = ({
   return (
     <form onSubmit={handleSave} className="space-y-6 max-w-4xl">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-emerald-900 via-teal-950 to-slate-950 text-white p-5 rounded-2xl border border-emerald-800/40 shadow-md">
+      <div className="bg-white text-slate-800 p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md">
-            <Zap className="w-5 h-5 text-amber-300" />
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-2xs">
+            <Zap className="w-5 h-5 text-emerald-600" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="text-base sm:text-lg font-bold font-sans">
+              <h2 className="text-base sm:text-lg font-bold font-sans text-slate-900">
                 Speed & Core Web Vitals Performance
               </h2>
-              <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-emerald-500/40">
+              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-emerald-300">
                 SCORE: {speed.currentScore}/100
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-xs text-slate-600 mt-0.5">
               Equip portal with high-speed caching, native lazy loading, and mobile optimization for Google PageSpeed Insights and Core Web Vitals (LCP, FID/INP, CLS).
             </p>
           </div>

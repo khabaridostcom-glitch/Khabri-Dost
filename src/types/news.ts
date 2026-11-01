@@ -8,7 +8,24 @@ export type NewsCategory =
   | 'tech'
   | 'entertainment'
   | 'lifestyle'
-  | 'state';
+  | 'state'
+  | 'trending';
+
+export interface TrendingSectionConfig {
+  enabled: boolean;
+  title: string;
+  subTitle: string;
+  badgeText?: string;
+  displayStyle: 'hero_grid' | 'grid' | 'ranked_list' | 'carousel';
+  itemCount: number;
+  showRankBadges: boolean;
+  showViewCounts: boolean;
+  showFireBadge: boolean;
+  showCategoryTag?: boolean;
+  showReadTime?: boolean;
+  showHashtagsBar?: boolean;
+  autoTrendingViewsThreshold: number;
+}
 
 export interface CategoryItem {
   id: NewsCategory;
@@ -17,42 +34,59 @@ export interface CategoryItem {
   icon?: string;
 }
 
-export type ReactionType = 'like' | 'love' | 'insightful' | 'funny';
+export type ReactionType = 'like' | 'love' | 'funny' | 'surprised' | 'insightful';
 
 export interface ArticleReactions {
   like: number;
   love: number;
-  insightful: number;
   funny: number;
+  surprised?: number;
+  insightful?: number;
+  [key: string]: number | undefined;
 }
 
 export interface NewsArticle {
   id: string;
   title: string;
+  subtitle?: string;
   summary: string;
   content: string;
   category: NewsCategory;
+  subcategory?: string;
   imageUrl: string;
+  galleryImages?: string[];
+  galleryCaptions?: string[];
   imageCaption?: string;
   imageAltText?: string;
+  imageCredit?: string;
   authorName: string;
   authorEmail?: string;
   authorUid: string;
   authorRole?: string;
   authorPhotoUrl?: string;
+  authorBio?: string;
+  editorName?: string;
+  editorRole?: string;
+  reviewerName?: string;
   location: string;
+  sourceAttribution?: string;
   isBreaking?: boolean;
   isTopStory?: boolean;
   isPinned?: boolean;
   isEditorsPick?: boolean;
-  status?: 'published' | 'draft' | 'scheduled' | 'archived';
+  isTrending?: boolean;
+  trendingRank?: number;
+  status?: 'published' | 'draft' | 'pending_review' | 'scheduled' | 'archived';
   scheduledFor?: string;
   seoTitle?: string;
   seoDescription?: string;
   focusKeywords?: string;
+  secondaryKeywords?: string;
   canonicalUrl?: string;
   urlSlug?: string;
   highlights?: string[];
+  ogTitle?: string;
+  ogDescription?: string;
   ogImage?: string;
   viewsCount: number;
   likesCount: number;
@@ -60,6 +94,27 @@ export interface NewsArticle {
   readTimeMinutes?: number;
   tags?: string[];
   videoUrl?: string;
+  headlineHighlight?: string;
+  highlightColor?: string;
+  notifySubscribers?: boolean;
+  relatedArticleIds?: string[];
+  corrections?: Array<{
+    date: string;
+    text: string;
+  }>;
+  revisions?: Array<{
+    id: string;
+    savedAt: string;
+    savedBy: string;
+    title: string;
+    summary: string;
+    content: string;
+  }>;
+  alternateLanguageLinks?: {
+    en?: string;
+    pa?: string;
+    [key: string]: string | undefined;
+  };
   createdAt: string;
   updatedAt?: string;
 }
@@ -80,6 +135,26 @@ export interface MediaAsset {
   focusKeywords?: string;
   loadingStrategy?: 'lazy' | 'eager';
   aspectRatio?: string;
+  tags?: string[];
+  usageCount?: number;
+  watermarkApplied?: boolean;
+  filterStyle?: 'normal' | 'grayscale' | 'contrast' | 'warm' | 'vivid';
+  cropPreset?: '16:9' | '4:3' | '1:1' | '3:2' | '21:9' | 'original';
+  originalUrl?: string;
+  folder?: string; // Hierarchical folder path, e.g. "Hero", "Gallery", "Author Icons", "Hero/Breaking"
+  customCategory?: string;
+}
+
+export interface MediaFolder {
+  id: string;
+  name: string;
+  path: string; // e.g. "hero", "hero/breaking", "gallery", "author-icons"
+  parentId?: string | null;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isSystem?: boolean;
+  createdAt?: string;
 }
 
 export type StaffRole =
@@ -192,6 +267,86 @@ export interface VideoNewsItem {
   duration: string;
   category: string;
   isLive?: boolean;
+  description?: string;
+  caption?: string;
+  credit?: string;
+  thumbnailAltText?: string;
+  videoUrl?: string;
+}
+
+export interface DesktopStickyAdConfig {
+  enabled: boolean;
+  type: 'image' | 'script' | 'adsense';
+  imageUrl?: string;
+  targetUrl?: string;
+  scriptCode?: string;
+  title?: string;
+  subTitle?: string;
+  altText?: string;
+  dismissible?: boolean;
+  widthPx?: number;
+  maxHeightPx?: number;
+}
+
+export type BottomNavItemType =
+  | 'home'
+  | 'latest'
+  | 'trending'
+  | 'states'
+  | 'epaper'
+  | 'videos'
+  | 'photos'
+  | 'games'
+  | 'submit_news'
+  | 'archive'
+  | 'contact'
+  | 'about'
+  | 'legal'
+  | 'complaint'
+  | 'category'
+  | 'custom_link';
+
+export interface BottomNavItemConfig {
+  id: string;
+  type: BottomNavItemType;
+  label: string;
+  icon?: string;
+  targetCategory?: string;
+  targetUrl?: string;
+  openInNewTab?: boolean;
+}
+
+export interface MobileBottomNavConfig {
+  enabled: boolean;
+  activePreset?: string;
+  items?: BottomNavItemConfig[];
+  fifthItem?: 'epaper' | 'videos' | 'photos' | 'games' | 'submit_news' | 'archive' | 'contact' | 'about' | 'legal' | 'complaint' | 'category' | 'custom_link' | string;
+  customLabel?: string;
+  customIcon?: string;
+  customCategory?: string;
+  customUrl?: string;
+  openInNewTab?: boolean;
+  showLabels?: boolean;
+  homeLabel?: string;
+  latestLabel?: string;
+  trendingLabel?: string;
+  statesLabel?: string;
+}
+
+export interface HeadlineStylingConfig {
+  enabled: boolean;
+  defaultColor: string; // e.g. '#dc2626'
+  applyToHero: boolean;
+  applyToFeatured: boolean;
+  applyToCompact: boolean;
+}
+
+export interface LinkStylingConfig {
+  bodyLinkColor: string; // e.g. '#1e3a8a'
+  hoverColor: string; // e.g. '#dc2626'
+  underlineBehavior: 'always' | 'hover' | 'none';
+  distinctExternal: boolean;
+  externalLinkColor?: string; // e.g. '#b91c1c'
 }
 
 export interface PhotoStoryItem {
@@ -205,7 +360,48 @@ export interface PhotoStoryItem {
   seoAltText?: string;
 }
 
+export interface TypographySectionOverride {
+  enabled?: boolean; // false = inherits from global
+  fontFamily?: string;
+  fontWeight?: number;
+  desktopFontSizePx?: number;
+  mobileFontSizePx?: number;
+  lineHeight?: number;
+  letterSpacingPx?: number;
+  textTransform?: 'none' | 'uppercase' | 'capitalize' | 'lowercase';
+}
+
+export interface TypographySectionsConfig {
+  header?: TypographySectionOverride;
+  navigation?: TypographySectionOverride;
+  homepage?: TypographySectionOverride;
+  homepageHeadings?: TypographySectionOverride;
+  newsCards?: TypographySectionOverride;
+  categoryPages?: TypographySectionOverride;
+  singleArticle?: TypographySectionOverride;
+  articleHeadline?: TypographySectionOverride;
+  articleBody?: TypographySectionOverride;
+  articleSubheadings?: TypographySectionOverride;
+  articleDescription?: TypographySectionOverride;
+  authorProfiles?: TypographySectionOverride;
+  imageCaptions?: TypographySectionOverride;
+  sidebar?: TypographySectionOverride;
+  widgetHeadings?: TypographySectionOverride;
+  footer?: TypographySectionOverride;
+  legalPages?: TypographySectionOverride;
+  adminEditor?: TypographySectionOverride;
+}
+
 export interface TypographySettings {
+  // Global Typography Defaults
+  defaultFontFamily?: string;
+  defaultFontWeight?: number;
+  globalLineHeight?: number;
+  globalLetterSpacing?: number;
+  globalDesktopFontSize?: number;
+  globalMobileFontSize?: number;
+  sections?: TypographySectionsConfig;
+
   headerFont: string;
   footerFont?: string;
   headlineFont: string;
@@ -232,6 +428,20 @@ export interface TypographySettings {
   articleBodyLineHeight?: number;
   articleExcerptSize?: 'sm' | 'normal' | 'large' | 'xlarge';
   metaDescriptionSize?: 'sm' | 'normal' | 'large' | 'xlarge';
+  // CSS Variables Custom Scaling (index.css mapped)
+  customScaleFont?: number; // Maps to --scale-font (root base scale)
+  sizeHeadingScale?: number; // Maps to --size-heading-scale
+  sizeTitleScale?: number; // Maps to --size-title-scale
+  sizeContentScale?: number; // Maps to --size-content-scale
+  sizeArchiveScale?: number; // Maps to --size-archive-scale
+  sizeMetaScale?: number; // Maps to --size-meta-scale
+  sizeHeaderScale?: number; // Maps to --size-header-scale
+  sizeFooterScale?: number; // Maps to --size-footer-scale
+  sizeHomepageTitleScale?: number; // Maps to --size-homepage-title-scale
+  sizeArticleTitleScale?: number; // Maps to --size-article-title-scale
+  sizeExcerptScale?: number; // Maps to --size-excerpt-scale
+  sizeMetaDescScale?: number; // Maps to --size-meta-desc-scale
+  mobileSidebarFontScale?: number; // Scale font size of entire mobile sidebar drawer container
   headerLogoHeightPx?: number;
   headerTitleCustomPx?: number;
   navLinkFontSizePx?: number;
@@ -338,9 +548,12 @@ export interface ArticleMetaSettings {
   showAuthorAvatar: boolean;
   showAuthorName: boolean;
   showAuthorRole: boolean;
+  showAuthorBox?: boolean; // Control whether bottom author biographical card is shown after article content
   showPublishDate: boolean;
   showRelativeTime: boolean;
   showViewsCount: boolean;
+  showFontSizeControl?: boolean;
+  showDesktopLocationTime?: boolean;
   showListenButton?: boolean;
   showPdfButton?: boolean;
   showLocationBadge?: boolean;
@@ -358,6 +571,81 @@ export interface ArticleMetaSettings {
   };
 }
 
+export interface ArticlePageConfig {
+  // Container & Layout
+  containerMaxWidth: 'normal' | 'wide' | 'full'; // max-w-6xl vs max-w-7xl vs full
+  contentContainerWidthPx?: number; // 600px to 900px adjustable desktop reading width (e.g., 780)
+  contentColumnWidth: 'compact' | 'standard' | 'wide'; // 7-col vs 8-col vs 9-col
+  // Typography
+  h1FontSize: 'normal' | 'large' | 'xlarge';
+  h1FontFamily: 'Rozha One' | 'Mukta' | 'Hind';
+  bodyLineHeight: 'normal' | 'relaxed' | 'loose';
+  // Identity & Byline Visibility
+  showCategoryBadge: boolean;
+  showLocationTag: boolean;
+  showAuthorByline: boolean;
+  showEditorByline: boolean;
+  showAuthorBioBox?: boolean; // Toggle for author biographical card at bottom of article
+  showPublishedDate: boolean;
+  showRelativeTime: boolean;
+  showReadingTime: boolean;
+  showViewCount: boolean;
+  showKeyHighlights?: boolean; // Toggle for 5 Key Highlights card
+  showImageCaption?: boolean; // Toggle for featured image caption
+  showTags?: boolean; // Toggle for article tags / keywords
+  // Action Bar Toggles
+  showAudioListen: boolean;
+  showFontSizeControls: boolean;
+  showPrintPdf: boolean;
+  showClippingModal: boolean;
+  showCopyLink: boolean;
+  showSocialShare: boolean;
+  showReactionsBar: boolean;
+  showCommentsSection: boolean;
+  showQuickActionsStrip?: boolean; // Toggle for Google News, PDF, WhatsApp, Telegram strip
+  // Disclaimer Box
+  showDisclaimerBox: boolean;
+  disclaimerText: string;
+  disclaimerFontSize: '12px' | '13px' | '14px' | '16px';
+  // Related Stories Section & Cards
+  showRelatedStories: boolean;
+  relatedHeadingTitle: string;
+  showRelatedHeadingCategoryBadge: boolean;
+  showRelatedHeadingSubtitle: boolean;
+  relatedHeadingSubtitleText: string;
+  relatedArticlesCount: number;
+  relatedCardShowCategory: boolean;
+  relatedCardShowLocation: boolean;
+  relatedCardShowDate: boolean;
+  relatedCardShowReadMore: boolean;
+  relatedMobileLayout: 'compact_list' | 'grid_2col';
+  // Mobile Sticky Bottom Bar & Advertisement
+  mobileStickyBar?: MobileStickyBarConfig;
+}
+
+export interface MobileStickyBarConfig {
+  enabled: boolean; // Enable or hide the mobile sticky bottom bar entirely
+  mode: 'share' | 'ad' | 'both'; // 'share' = social share buttons, 'ad' = sticky advertisement, 'both' = dual
+  sharePlatforms?: {
+    whatsapp?: boolean;
+    twitter?: boolean;
+    facebook?: boolean;
+    telegram?: boolean;
+    copyLink?: boolean;
+    nativeShare?: boolean;
+  };
+  showShareLabel?: boolean; // Show 'Share:' text or icon-only
+  // Mobile Sticky Advertisement options
+  adType?: 'image' | 'script'; // 'image' = banner image + link, 'script' = custom HTML/AdSense
+  adImageUrl?: string; // 320x50 or responsive image URL
+  adTargetUrl?: string; // click destination URL
+  adAltText?: string; // alt text / sponsor title
+  adScriptCode?: string; // HTML / AdSense script
+  adHeightPx?: number; // default 50
+  dismissible?: boolean; // allow mobile user to dismiss/close with (X) button
+  autoHideOnFooter?: boolean; // whether to automatically collapse or clear space when viewing footer
+}
+
 export interface ArticleSidebarWidgets {
   showReadingProgressBar: boolean;
   showSidebarAd: boolean;
@@ -372,8 +660,20 @@ export interface ArticleSidebarWidgets {
   showCommentsSection: boolean;
   showRelatedStories: boolean;
   showFollowUsChannels: boolean;
-  relatedArticlesCount?: number; // 3, 4, 6 or more (admin configurable)
+  relatedArticlesCount?: number; // 3, 4, 6, 8, 10, 12 or more (admin configurable)
   sidebarSliderMode?: boolean; // Interactive slider / carousel for sidebar widgets
+  // Related Stories Section & Cards Customization (Admin control)
+  relatedHeadingTitle?: string;
+  showRelatedHeadingCategoryBadge?: boolean;
+  showRelatedHeadingSubtitle?: boolean;
+  relatedHeadingSubtitleText?: string;
+  relatedCardShowCategory?: boolean;
+  relatedCardShowLocation?: boolean;
+  relatedCardShowDate?: boolean;
+  relatedCardShowReadMore?: boolean;
+  relatedCardShowSummary?: boolean;
+  relatedCardShowImage?: boolean;
+  relatedMobileLayout?: 'grid1' | 'grid2' | 'list';
   // Trending Stories vertical slider options (bottom-to-top auto-sliding)
   trendingSliderEnabled?: boolean;
   trendingStoriesCount?: number; // 3, 5, 8, 10, or all
@@ -455,6 +755,7 @@ export interface CitizenNewsSubmission {
   isAnonymous: boolean;
   submittedAt: string;
   status: 'pending' | 'verified' | 'rejected' | 'published';
+  editorialNotes?: string;
 }
 
 export interface CustomSocialChannel {
@@ -464,9 +765,37 @@ export interface CustomSocialChannel {
   enabled: boolean;
 }
 
+export interface NetworkEdition {
+  id: string;
+  name: string; // e.g. "English Edition", "ਪੰਜਾਬੀ (Punjabi)"
+  langCode: string; // e.g. "en", "pa", "hi"
+  icon?: string; // e.g. "🌐", "🌾", "🇮🇳"
+  url: string; // e.g. "https://en.khabridost.com"
+  openInNewTab?: boolean;
+  enabled: boolean;
+  isCurrent?: boolean; // marks current active portal
+}
+
+export interface FooterBannerAdConfig {
+  enabled: boolean; // Enable testing banner ad on footer
+  type: 'image' | 'script' | 'adsense';
+  desktopImageUrl?: string; // 728x90 or 970x90 banner image
+  mobileImageUrl?: string; // 320x50 or 300x100 mobile banner image
+  targetUrl?: string; // Click destination URL
+  title?: string; // Ad title
+  subTitle?: string; // Ad subtitle
+  altText?: string; // Alt text or sponsor name
+  scriptCode?: string; // Custom HTML/script code
+  adSlotId?: string; // AdSense slot ID
+}
+
 export interface HeaderFooterSettings {
   siteTitle: string;
   siteTagline: string;
+  showTagline?: boolean; // Master toggle to show/hide portal tagline across header & mobile menu (default false/hidden)
+  showTaglineDesktop?: boolean; // Control tagline visibility on desktop screens (default true)
+  showTaglineMobile?: boolean; // Control tagline visibility on mobile screens (default false, zero empty space)
+  footerBannerAd?: FooterBannerAdConfig; // Testing banner ad on footer (desktop & mobile)
   logoUrl?: string;
   headerLogoHeight?: number; // Custom height in px (e.g. 36px to 90px)
   headerTitleCustomPx?: number; // Custom font size for siteTitle text in px
@@ -478,7 +807,7 @@ export interface HeaderFooterSettings {
   contactPhone?: string;
   rniNumber: string;
   showRniNumber?: boolean;
-  footerTheme?: 'dark_red' | 'light' | 'dark_slate';
+  footerTheme?: 'light' | 'light_slate' | 'light_red';
   // Comprehensive footer custom settings
   footerAboutHeading?: string;
   footerAboutText?: string;
@@ -497,6 +826,9 @@ export interface HeaderFooterSettings {
   headerShowSearch?: boolean;
   headerShowAdminButton?: boolean;
   headerShowLiveCoverage?: boolean;
+  // Multi-Language & Brand Network Editions
+  headerShowLanguageEditions?: boolean;
+  languageEditions?: NetworkEdition[];
   socialLinks: {
     whatsappChannel: string;
     telegramChannel: string;
@@ -504,6 +836,7 @@ export interface HeaderFooterSettings {
     twitter: string;
     youtube: string;
     instagram?: string;
+    googleNews?: string;
   };
   customSocialChannels?: CustomSocialChannel[];
   // Desktop & mobile navigation category ordering and enable/disable
@@ -523,6 +856,7 @@ export interface HeaderFooterSettings {
     disclaimer?: string;
     correctionPolicy?: string;
     dmcaNotice?: string;
+    cookiePolicy?: string;
   };
 }
 
@@ -536,6 +870,7 @@ export interface HomepageSectionsConfig {
   webStories: boolean;
   photoGallery: boolean;
   categoryBlocks: boolean;
+  morningCapsule?: boolean; // ⚡ सुबह का 60-सेकंड कैप्सूल (Morning Brief / 60-Second News Capsule)
 }
 
 export interface GoogleServicesConfig {
@@ -643,6 +978,9 @@ export interface PortalSettings {
     showDate: boolean;
     showViews: boolean;
     showLocation: boolean;
+    showBookmark?: boolean;
+    showShare?: boolean;
+    showReadLater?: boolean;
     cardStyle: 'compact' | 'standard';
   };
   articleMetaSettings?: ArticleMetaSettings;
@@ -683,23 +1021,41 @@ export interface PortalSettings {
     };
   };
   customPhotoStories?: PhotoStoryItem[];
+  articlePageConfig?: ArticlePageConfig;
+  mobileStickyBar?: MobileStickyBarConfig;
   sidebarAdsConfig?: SidebarAdsConfig;
   popupConfig?: PortalPopupConfig;
   mobileSidebarMenu?: MobileSidebarMenuConfig;
   epaperSettings?: EPaperSettings;
+  footerBannerAd?: FooterBannerAdConfig;
+  desktopStickyAd?: DesktopStickyAdConfig;
+  mobileBottomNav?: MobileBottomNavConfig;
+  headlineStyling?: HeadlineStylingConfig;
+  linkStyling?: LinkStylingConfig;
+  videoMediaList?: VideoNewsItem[];
+  trendingConfig?: TrendingSectionConfig;
 }
 
+import { EPaperEditionRecord } from './epaper';
+
 export interface EPaperSettings {
-  mode: 'dynamic' | 'custom_pdf'; // 'dynamic' auto-generated from portal news OR 'custom_pdf' uploaded edition
-  customPdfUrl?: string; // Direct URL to uploaded daily PDF
-  customPdfTitle?: string; // e.g. 'खबरी दोस्त दैनिक समाचार पत्र'
+  customPdfUrl?: string; // Direct URL to latest uploaded daily PDF
+  customPdfTitle?: string; // e.g. 'खबरी दोस्त • दैनिक राष्ट्रीय समाचार पत्र'
   customPdfEdition?: string; // e.g. 'राष्ट्रीय संस्करण (नई दिल्ली)'
   customPdfDate?: string; // publication date
   customPdfThumbnail?: string; // attractive front page cover thumbnail
-  customPdfPageCount?: number; // total pages e.g. 8 or 12
-  featuredHeadline?: string; // front-page banner headline
+  customPdfPageCount?: number; // total pages e.g. 15
+  customPdfPages?: string[]; // Array of page images if cached
+  featuredHeadline?: string; // front-page headline
   allowDownload?: boolean; // allow reader PDF download
   allowShare?: boolean; // allow social sharing
+  allowPrint?: boolean; // allow browser printing
+  price?: string; // e.g. '₹ 4.50'
+  issueNumber?: string; // e.g. 'वर्ष 1 • अंक 245'
+  editionsList?: EPaperEditionRecord[];
+  activeEditionCode?: string;
+  activeEditionDate?: string;
+  mode?: string; // legacy compatibility
 }
 
 export interface MobileSidebarCustomLink {

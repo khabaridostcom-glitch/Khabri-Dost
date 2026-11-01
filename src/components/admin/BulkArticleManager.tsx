@@ -19,6 +19,7 @@ import {
   LayoutGrid,
   List as ListIcon,
   Table as TableIcon,
+  Share2,
 } from 'lucide-react';
 import { NewsArticle, NewsCategory } from '../../types/news';
 import { CATEGORIES } from '../../data/seedNews';
@@ -29,6 +30,7 @@ interface BulkArticleManagerProps {
   onDeleteArticle: (id: string) => Promise<void>;
   onOpenEditor: (article?: Partial<NewsArticle>) => void;
   onSelectArticleToView: (article: NewsArticle) => void;
+  onPreviewSocialShare?: (article: NewsArticle) => void;
 }
 
 export const BulkArticleManager: React.FC<BulkArticleManagerProps> = ({
@@ -37,6 +39,7 @@ export const BulkArticleManager: React.FC<BulkArticleManagerProps> = ({
   onDeleteArticle,
   onOpenEditor,
   onSelectArticleToView,
+  onPreviewSocialShare,
 }) => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -427,7 +430,7 @@ export const BulkArticleManager: React.FC<BulkArticleManagerProps> = ({
                       </td>
                       <td className="py-3 px-4 flex items-start space-x-3 max-w-md">
                         <img
-                          src={art.imageUrl}
+                          src={art.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                           alt=""
                           className="w-12 h-12 rounded-lg object-cover shrink-0 bg-slate-100 border border-slate-200"
                         />
@@ -511,6 +514,15 @@ export const BulkArticleManager: React.FC<BulkArticleManagerProps> = ({
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
+                        {onPreviewSocialShare && (
+                          <button
+                            onClick={() => onPreviewSocialShare(art)}
+                            className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition cursor-pointer"
+                            title="Preview WhatsApp, X, FB & Telegram Social Cards"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
                           onClick={() => onOpenEditor(art)}
                           className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition cursor-pointer"

@@ -54,59 +54,59 @@ const PRESET_AVATARS = [
 
 export const ROLE_LABELS: Record<StaffRole, { label: string; badge: string; desc: string }> = {
   super_admin: {
-    label: 'Super Admin (मुख्य व्यवस्थापक)',
+    label: 'Super Admin',
     badge: 'bg-red-50 text-red-700 border-red-200',
-    desc: 'संपूर्ण पोर्टल का पूर्ण नियंत्रण: उपयोगकर्ता प्रबंधन, सेटिंग्स, विज्ञापन, और सुरक्षा।',
+    desc: 'Unrestricted portal control: user management, global settings, monetization, and security overrides.',
   },
   editor_in_chief: {
-    label: 'Editor-in-Chief (प्रधान संपादक)',
+    label: 'Editor-in-Chief',
     badge: 'bg-purple-50 text-purple-700 border-purple-200',
-    desc: 'संपादकीय सर्वोच्च अधिकार: सभी ड्राफ्ट मंज़ूरी, लीड व ब्रेकिंग न्यूज़ निर्धारण।',
+    desc: 'Highest editorial authority: approve all drafts, assign lead stories, and control breaking news.',
   },
   editor: {
-    label: 'Editor (संपादक)',
+    label: 'Editor',
     badge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    desc: 'संपादकीय डेस्क समीक्षा, लाइव न्यूज़ पब्लिशिंग, और मुखपृष्ठ कस्टमाइज़ेशन।',
+    desc: 'Editorial desk review, live news publishing, and homepage layout customization.',
   },
   sub_editor: {
-    label: 'Sub-Editor (उप-संपादक)',
+    label: 'Sub-Editor',
     badge: 'bg-amber-50 text-amber-700 border-amber-200',
-    desc: 'प्रतिबंधित संपादकीय डेस्क: रिपोर्टर्स की ख़बरें संपादित करना, श्रेणी मॉडरेशन।',
+    desc: 'Desk editor: copy-edit reporter submissions, moderate categories, and proofread content.',
   },
   senior_editor: {
-    label: 'Senior Editor (वरिष्ठ संपादक)',
+    label: 'Senior Editor',
     badge: 'bg-blue-50 text-blue-700 border-blue-200',
-    desc: 'वरिष्ठ समीक्षा, श्रेणियों का प्रत्यक्ष नियंत्रण, और विशेष रिपोर्टिंग।',
+    desc: 'Senior editorial review, direct category governance, and special investigations.',
   },
   reporter: {
-    label: 'Reporter (संवाददाता / रिपोर्टर)',
+    label: 'Reporter',
     badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    desc: 'फ़ील्ड रिपोर्टिंग: नई ख़बरें लिखना, ग्राउंड फ़ोटो व वीडियो अपलोड, समीक्षा हेतु भेजना।',
+    desc: 'Field reporting: compose new articles, upload ground photos/videos, and submit drafts for editorial review.',
   },
   journalist: {
-    label: 'Journalist (ब्यूरो पत्रकार)',
+    label: 'Journalist',
     badge: 'bg-teal-50 text-teal-700 border-teal-200',
-    desc: 'ब्यूरो रिपोर्टिंग, आलेख निर्माण, और ग्राउंड कवरेज।',
+    desc: 'Bureau reporting, feature writing, and ground news coverage.',
   },
   contributor: {
-    label: 'Contributor (अतिथि लेखक / स्तंभकार)',
+    label: 'Contributor / Columnist',
     badge: 'bg-slate-100 text-slate-700 border-slate-200',
-    desc: 'संपादकीय विचार एवं लेख समीक्षा हेतु सबमिट करना। प्रत्यक्ष प्रकाशन प्रतिबंधित।',
+    desc: 'Submit guest columns and opinion essays for editorial review. Direct live publishing restricted.',
   },
   seo_manager: {
-    label: 'SEO Manager (एसईओ प्रबंधक)',
+    label: 'SEO Manager',
     badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    desc: 'मेटा टैग्स, साइटमैप, Google Search Console, और सर्च रैंकिंग अनुकूलन।',
+    desc: 'Meta tags, XML sitemap pinging, Google Search Console, and search ranking optimization.',
   },
   analyst: {
-    label: 'Analyst (डेटा विश्लेषक)',
+    label: 'Data Analyst',
     badge: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    desc: 'पाठक संख्या, Core Web Vitals, और रीच एनालिटिक्स।',
+    desc: 'Audience readership analytics, Core Web Vitals, and portal performance reporting.',
   },
   fact_checker: {
-    label: 'Fact Checker (तथ्य परीक्षक)',
+    label: 'Fact Checker',
     badge: 'bg-rose-50 text-rose-700 border-rose-200',
-    desc: 'वायरल दावों का सत्यापन, फ़ोटो-ऑडियो फ़ैक्ट चेक, और फ़ेक न्यूज़ फ़्लैग।',
+    desc: 'Verification of viral claims, photo/video forensics, and misinformation flagging.',
   },
 };
 
@@ -1433,8 +1433,8 @@ export const UserManagementTab: React.FC<UserManagementTabProps> = ({
                 <label className="block text-xs font-bold text-slate-800">Profile Photo</label>
                 <div className="flex items-center space-x-3">
                   <img
-                    src={editPhotoURL}
-                    alt={editName}
+                    src={editPhotoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'}
+                    alt={editName || 'Staff Member'}
                     className="w-12 h-12 rounded-xl object-cover border border-slate-300 shrink-0 bg-white"
                   />
                   <div className="space-y-1.5 flex-1 min-w-0">

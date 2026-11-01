@@ -28,17 +28,17 @@ interface TypographyCustomizerModalProps {
 
 const FONT_FAMILIES = [
   {
+    id: "'Noto Sans Devanagari', 'Noto Sans', sans-serif",
+    name: 'Noto Sans Devanagari & Latin',
+    labelHindi: 'नोटो सैन्स (आधुनिक, स्पष्ट, 100 Thin से 900 Black)',
+    category: 'Sans-Serif / Recommended',
+    preview: 'खबरी दोस्त निष्पक्ष पत्रकारिता • Khabri Dost',
+  },
+  {
     id: "'Rozha One', 'Noto Serif Devanagari', serif",
     name: 'Rozha One',
     labelHindi: 'रोज़ा वन (पारंपरिक संपादकीय अख़बार)',
     category: 'Serif / Editorial',
-    preview: 'खबरी दोस्त निष्पक्ष पत्रकारिता',
-  },
-  {
-    id: "'Noto Sans Devanagari', sans-serif",
-    name: 'Noto Sans Devanagari',
-    labelHindi: 'नोटो सैन्स (आधुनिक, स्पष्ट व पठनीय)',
-    category: 'Sans-Serif',
     preview: 'खबरी दोस्त निष्पक्ष पत्रकारिता',
   },
   {
@@ -175,6 +175,7 @@ export const TypographyCustomizerModal: React.FC<TypographyCustomizerModalProps>
   onResetTypography,
 }) => {
   const [activeTab, setActiveTab] = useState<'fonts' | 'sizes' | 'presets'>('sizes');
+  const [resetSuccessToast, setResetSuccessToast] = useState(false);
 
   if (!isOpen) return null;
 
@@ -186,8 +187,6 @@ export const TypographyCustomizerModal: React.FC<TypographyCustomizerModalProps>
   const handleApplyPreset = (preset: (typeof PRESETS)[0]) => {
     onUpdateTypography(preset.settings);
   };
-
-  const [resetSuccessToast, setResetSuccessToast] = useState(false);
 
   const handleResetTypography = () => {
     // 1. Reset CSS variables in :root to their default values defined in index.css

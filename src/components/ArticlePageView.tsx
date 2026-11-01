@@ -21,6 +21,7 @@ import {
   TrendingUp,
   Newspaper,
   ExternalLink,
+  Globe,
   Link2,
   Sliders,
   Mail,
@@ -37,16 +38,33 @@ import {
   ChevronDown,
   Play,
   Pause,
+  Loader2,
+  Info,
+  Tag,
+  X,
+  Megaphone,
+  Smartphone,
+  Camera,
 } from 'lucide-react';
-import { NewsArticle, NewsComment, PortalSettings, ReactionType, ArticleReactions } from '../types/news';
+import {
+  NewsArticle,
+  NewsComment,
+  PortalSettings,
+  ReactionType,
+  ArticleReactions,
+  MobileStickyBarConfig,
+} from '../types/news';
 import { getAuthorPhoto, CATEGORIES } from '../data/seedNews';
 import {
   DEFAULT_PORTAL_SETTINGS,
   DEFAULT_ARTICLE_META_SETTINGS,
   DEFAULT_ARTICLE_SIDEBAR_WIDGETS,
+  DEFAULT_ARTICLE_PAGE_CONFIG,
   DEFAULT_SIDEBAR_ADS_CONFIG,
+  DEFAULT_MOBILE_STICKY_BAR_CONFIG,
   FONT_OPTIONS,
 } from '../data/portalDefaults';
+import { renderStyledHeadline } from '../utils/headlineHelper';
 import { ArticleEPaperClippingModal } from './ArticleEPaperClippingModal';
 import { generateArticlePdf } from '../utils/pdfGenerator';
 import { useAuth } from '../context/AuthContext';
@@ -59,7 +77,7 @@ import {
   updateArticle,
 } from '../services/newsService';
 import { formatHindiTimeAgo, speakHindiText, stopHindiSpeech } from '../utils/hindiHelpers';
-import { renderArticleBlock } from '../utils/articleContentParser';
+import { renderArticleBlock, splitArticleContent } from '../utils/articleContentParser';
 import { AdBanner } from './AdBanner';
 import { ArticleCard } from './ArticleCard';
 import { OpinionPollWidget } from './OpinionPollWidget';
@@ -68,6 +86,7 @@ import { RashifalWidget } from './widgets/RashifalWidget';
 import { SudokuGameWidget } from './widgets/SudokuGameWidget';
 import { AudioNewsPlayer } from './AudioNewsPlayer';
 import { ArticleKeyHighlights } from './ArticleKeyHighlights';
+import { Reactions } from './Reactions';
 
 export const getEnglishArticleSlug = (art: NewsArticle): string => {
   if (art.urlSlug && art.urlSlug.trim()) {
@@ -124,15 +143,18 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
   const [comments, setComments] = useState<NewsComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [commentNotice, setCommentNotice] = useState<{ text: string; isError?: boolean } | null>(null);
   const [likes, setLikes] = useState(article.likesCount);
   const [hasLiked, setHasLiked] = useState(false);
 
-  // EMOJI REACTIONS (Like, Love, Insightful, Funny)
+  // EMOJI REACTIONS (👍, ❤️, 😂, 😲)
   const [reactions, setReactions] = useState<ArticleReactions>(() => ({
     like: article.reactions?.like ?? (article.likesCount || 0),
     love: article.reactions?.love ?? Math.max(0, Math.floor((article.viewsCount || 8) * 0.14)),
-    insightful: article.reactions?.insightful ?? Math.max(0, Math.floor((article.viewsCount || 8) * 0.09)),
     funny: article.reactions?.funny ?? Math.max(0, Math.floor((article.viewsCount || 8) * 0.05)),
+    surprised: article.reactions?.surprised ?? Math.max(0, Math.floor((article.viewsCount || 8) * 0.03)),
+    insightful: article.reactions?.insightful ?? 0,
   }));
 
   const [userReaction, setUserReaction] = useState<ReactionType | null>(() => {
@@ -151,8 +173,9 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
     const nextReactions: ArticleReactions = {
       like: article.reactions?.like ?? (article.likesCount || 0),
       love: article.reactions?.love ?? Math.max(0, Math.floor((article.viewsCount || 8) * 0.14)),
-      insightful: article.reactions?.insightful ?? Math.max(0, Math.floor((article.viewsCount || 8) * 0.09)),
       funny: article.reactions?.funny ?? Math.max(0, Math.floor((article.viewsCount || 8) * 0.05)),
+      surprised: article.reactions?.surprised ?? Math.max(0, Math.floor((article.viewsCount || 8) * 0.03)),
+      insightful: article.reactions?.insightful ?? 0,
     };
     setReactions(nextReactions);
     setLikes(nextReactions.like);
@@ -166,11 +189,48 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
       setHasLiked(false);
     }
   }, [article.id, article.reactions, article.likesCount, article.viewsCount]);
+
+  // Synchronize document Title & SEO Meta Tags with Admin Published Article data
+  useEffect(() => {
+    const originalTitle = document.title;
+    const pageTitle = `${article.seoTitle || article.title} - Khabri Dost`;
+    document.title = pageTitle;
+
+    const metaDesc = document.querySelector('meta[name="description"]');
+    const oldDesc = metaDesc ? metaDesc.getAttribute('content') : '';
+    if (metaDesc) {
+      metaDesc.setAttribute('content', article.seoDescription || article.summary || article.title);
+    }
+
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', article.seoTitle || article.title);
+
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', article.seoDescription || article.summary || article.title);
+
+    const ogImage = document.querySelector('meta[property="og:image"]');
+    if (ogImage) ogImage.setAttribute('content', article.ogImage || article.imageUrl);
+
+    return () => {
+      document.title = originalTitle;
+      if (metaDesc && oldDesc) metaDesc.setAttribute('content', oldDesc);
+    };
+  }, [article.id, article.title, article.seoTitle, article.seoDescription, article.summary, article.imageUrl, article.ogImage]);
+
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showAudioPlayer, setShowAudioPlayer] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
+  const [isScrolledPastHero, setIsScrolledPastHero] = useState(false);
   const [showClippingModal, setShowClippingModal] = useState(false);
+  const [swipeGestureFeedback, setSwipeGestureFeedback] = useState<string | null>(null);
+  const touchStartXRef = React.useRef<number | null>(null);
+  const touchStartYRef = React.useRef<number | null>(null);
+
+  // Derive previous and next articles for one-tap navigation & mobile swipe
+  const currentIndex = allArticles.findIndex((a) => a.id === article.id);
+  const prevArticle = currentIndex > 0 ? allArticles[currentIndex - 1] : null;
+  const nextArticle = currentIndex >= 0 && currentIndex < allArticles.length - 1 ? allArticles[currentIndex + 1] : null;
 
   // Admin-configurable Related Articles count (admin can choose 3, 4, 6 or more)
   const [adminRelatedCount, setAdminRelatedCount] = useState<number>(() => {
@@ -296,15 +356,152 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
     ...(portalSettings.sidebarWidgets || {}),
   };
 
+  // Extract master single article page config (configured by Admin)
+  const articlePageConfig = {
+    ...DEFAULT_ARTICLE_PAGE_CONFIG,
+    ...(portalSettings.articlePageConfig || {}),
+  };
+
+  // Author Biographical Section Visibility (Admin toggleable after showing content)
+  const isAuthorBoxVisible =
+    articlePageConfig.showAuthorBioBox !== false && metaSettings.showAuthorBox !== false;
+
+  const handleToggleAuthorBox = () => {
+    if (!onUpdateSettings) return;
+    const nextState = !isAuthorBoxVisible;
+    onUpdateSettings({
+      ...portalSettings,
+      articlePageConfig: {
+        ...articlePageConfig,
+        showAuthorBioBox: nextState,
+      },
+      articleMetaSettings: {
+        ...metaSettings,
+        showAuthorBox: nextState,
+      },
+    });
+  };
+
+  const stickyBarConfig: MobileStickyBarConfig = {
+    ...DEFAULT_MOBILE_STICKY_BAR_CONFIG,
+    ...(articlePageConfig.mobileStickyBar || portalSettings.mobileStickyBar || {}),
+  };
+
+  const [isMobileStickyDismissed, setIsMobileStickyDismissed] = useState(false);
+  const [isFooterNear, setIsFooterNear] = useState(false);
+
+  useEffect(() => {
+    if (stickyBarConfig.autoHideOnFooter === false) return;
+
+    const footerMarker =
+      document.getElementById('site-footer-bottom-marker') || document.querySelector('footer');
+    if (!footerMarker) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setIsFooterNear(entry.isIntersecting);
+      },
+      { threshold: 0.05 }
+    );
+
+    observer.observe(footerMarker);
+    return () => observer.disconnect();
+  }, [stickyBarConfig.autoHideOnFooter]);
+
+  const containerMaxWidthClass = {
+    normal: 'max-w-6xl',
+    wide: 'max-w-7xl',
+    full: 'max-w-[96rem]',
+  }[articlePageConfig.containerMaxWidth || 'wide'] || 'max-w-7xl';
+
+  const contentColumnClass = {
+    compact: 'lg:col-span-7',
+    standard: 'lg:col-span-8',
+    wide: 'lg:col-span-9',
+  }[articlePageConfig.contentColumnWidth || 'standard'] || 'lg:col-span-8';
+
+  const sidebarColumnClass = {
+    compact: 'lg:col-span-5',
+    standard: 'lg:col-span-4',
+    wide: 'lg:col-span-3',
+  }[articlePageConfig.contentColumnWidth || 'standard'] || 'lg:col-span-4';
+
+  const sectionH1 = portalSettings?.typography?.sections?.articleHeadline;
+  const h1FontFamily =
+    sectionH1?.enabled && sectionH1.fontFamily
+      ? sectionH1.fontFamily
+      : articlePageConfig.h1FontFamily
+      ? (articlePageConfig.h1FontFamily === 'Mukta'
+          ? "'Mukta', sans-serif"
+          : articlePageConfig.h1FontFamily === 'Hind'
+          ? "'Hind', sans-serif"
+          : articlePageConfig.h1FontFamily === 'Rozha One'
+          ? "'Rozha One', serif"
+          : articlePageConfig.h1FontFamily)
+      : portalSettings?.typography?.headlineFont || "var(--font-article-headline, 'Noto Sans Devanagari', 'Noto Sans', sans-serif)";
+
+  const h1FontWeight =
+    sectionH1?.enabled && sectionH1.fontWeight
+      ? sectionH1.fontWeight
+      : portalSettings?.typography?.headlineWeight || 700;
+
+  // Desktop content reading container width in pixels (600px to 900px, default 780px)
+  const contentContainerWidthPx = articlePageConfig.contentContainerWidthPx || 780;
+
+  // Dynamic estimated reading time calculation (~180 words/minute)
+  const estimatedReadTimeMinutes = React.useMemo(() => {
+    const raw = `${article.title || ''} ${article.summary || ''} ${article.content || ''}`;
+    const words = raw.trim().split(/\s+/).filter(Boolean).length;
+    return Math.max(1, Math.ceil(words / 180));
+  }, [article.title, article.summary, article.content]);
+
+  // Multi-image slider for featured images
+  const [activeFeatureImageIdx, setActiveFeatureImageIdx] = useState<number>(0);
+  const featureImageTouchStartXRef = React.useRef<number | null>(null);
+
+  const allFeatureImages = React.useMemo(() => {
+    const list: string[] = [];
+    if (article.imageUrl) list.push(article.imageUrl);
+    if (article.galleryImages && Array.isArray(article.galleryImages)) {
+      article.galleryImages.forEach((img) => {
+        if (img && !list.includes(img)) list.push(img);
+      });
+    }
+    return list.length > 0 ? list : ['https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'];
+  }, [article.imageUrl, article.galleryImages]);
+
+  // Reset active image index on article change
+  useEffect(() => {
+    setActiveFeatureImageIdx(0);
+  }, [article.id]);
+
+  const handleNextFeatureImage = () => {
+    setActiveFeatureImageIdx((prev) => (prev + 1) % allFeatureImages.length);
+  };
+
+  const handlePrevFeatureImage = () => {
+    setActiveFeatureImageIdx((prev) => (prev - 1 + allFeatureImages.length) % allFeatureImages.length);
+  };
+
+  const currentFeatureCaption = React.useMemo(() => {
+    if (article.galleryCaptions && article.galleryCaptions[activeFeatureImageIdx]) {
+      return article.galleryCaptions[activeFeatureImageIdx];
+    }
+    return article.imageCaption || '';
+  }, [article.galleryCaptions, article.imageCaption, activeFeatureImageIdx]);
+
   // Extract modular sidebar advertising configuration
   const sidebarAds = portalSettings.sidebarAdsConfig || DEFAULT_SIDEBAR_ADS_CONFIG;
 
-  // Scroll listener for reading progress bar
+  // Scroll listener for reading progress bar and sticky mini header
   useEffect(() => {
     const handleScroll = () => {
+      const currentScroll = window.scrollY;
+      setIsScrolledPastHero(currentScroll > 320);
+
       const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
       if (totalHeight > 0) {
-        const currentScroll = window.scrollY;
         const progress = Math.min(100, Math.max(0, Math.round((currentScroll / totalHeight) * 100)));
         setReadingProgress(progress);
       }
@@ -313,6 +510,41 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Mobile Touch Swipe Navigation (Swipe Left = Next Article, Swipe Right = Previous Article)
+  const handleArticleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartXRef.current = e.touches[0].clientX;
+      touchStartYRef.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleArticleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null || e.changedTouches.length === 0) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartYRef.current;
+
+    // Horizontal swipe threshold: > 65px horizontal delta and at least 1.35x vertical motion
+    if (Math.abs(deltaX) > 65 && Math.abs(deltaX) > Math.abs(deltaY) * 1.35) {
+      if (deltaX < 0 && nextArticle) {
+        // Swiped left -> next article
+        setSwipeGestureFeedback(`अगली खबर: ${nextArticle.title.slice(0, 32)}...`);
+        setTimeout(() => {
+          onSelectArticle(nextArticle);
+          setSwipeGestureFeedback(null);
+        }, 200);
+      } else if (deltaX > 0 && prevArticle) {
+        // Swiped right -> previous article
+        setSwipeGestureFeedback(`पिछली खबर: ${prevArticle.title.slice(0, 32)}...`);
+        setTimeout(() => {
+          onSelectArticle(prevArticle);
+          setSwipeGestureFeedback(null);
+        }, 200);
+      }
+    }
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -390,29 +622,32 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      alert('Please sign in with Google to post a comment.');
-      signInWithGoogle();
-      return;
-    }
     if (!newComment.trim()) return;
 
+    const authorDisplayName = user?.displayName || guestName.trim() || 'पाठक';
+    const authorUid = user?.uid || `reader_${Date.now()}`;
+
     setIsSubmittingComment(true);
+    setCommentNotice(null);
     try {
       const added = await postComment(
         article.id,
         newComment.trim(),
         {
-          uid: user.uid,
-          name: user.displayName || 'Reader',
-          email: user.email || undefined,
-          photoURL: user.photoURL || undefined,
+          uid: authorUid,
+          name: authorDisplayName,
+          email: user?.email || undefined,
+          photoURL: user?.photoURL || undefined,
         }
       );
       setComments([added, ...comments]);
       setNewComment('');
+      setGuestName('');
+      setCommentNotice({ text: 'आपका कमेंट सफलतापूर्वक दर्ज हो गया है!', isError: false });
+      setTimeout(() => setCommentNotice(null), 4000);
     } catch (err) {
-      alert('Failed to post comment. Please try again.');
+      console.error('Failed to post comment:', err);
+      setCommentNotice({ text: 'कमेंट पोस्ट करने में समस्या हुई। कृपया पुनः प्रयास करें।', isError: true });
     } finally {
       setIsSubmittingComment(false);
     }
@@ -576,7 +811,7 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
     }
   };
 
-  const paragraphs = article.content.split('\n\n').filter(Boolean);
+  const paragraphs = splitArticleContent(article.content);
   const midPoint = Math.max(1, Math.floor(paragraphs.length / 2));
 
   // Helper to render rich markdown and embeds (YouTube, Twitter/X, Images, Fact Check, Callouts) in paragraphs
@@ -587,99 +822,116 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
   /* ICON-ONLY SOCIAL SHARING BAR AS REQUESTED BY USER:
      "social share wale button sirf social icons use karo"
   */
-  const renderSocialIconButtons = () => (
-    <div className="flex items-center space-x-2 py-1.5 flex-wrap gap-y-2">
-      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider font-kd-meta mr-1">
-        Share:
-      </span>
+  /* ICON-ONLY SOCIAL SHARING BAR AS REQUESTED BY USER:
+     "social share wale button sirf social icons use karo"
+  */
+  const renderSocialIconButtons = () => {
+    const showWhatsapp = portalSettings.sharePlatforms?.whatsapp ?? true;
+    const showTelegram = portalSettings.sharePlatforms?.telegram ?? true;
+    const showTwitter = portalSettings.sharePlatforms?.twitter ?? true;
+    const showFacebook = portalSettings.sharePlatforms?.facebook ?? true;
+    const showCopyLink = portalSettings.sharePlatforms?.copyLink ?? true;
 
-      {/* Mobile Single Share Button */}
-      <button
-        onClick={handleNativeShare}
-        className="sm:hidden flex items-center space-x-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-xs transition cursor-pointer"
-        title="Share Article"
-      >
-        <Share2 className="w-3.5 h-3.5" />
-        <span>Share</span>
-      </button>
+    return (
+      <div className="flex items-center space-x-2 py-1.5 flex-wrap gap-y-2">
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider font-kd-meta mr-1">
+          Share:
+        </span>
 
-      {/* WhatsApp Icon */}
-      {portalSettings.sharePlatforms.whatsapp && (
-        <a
-          href={`https://api.whatsapp.com/send?text=${shareTitle}%20${shareUrl}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Share on WhatsApp"
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#25D366] hover:bg-[#20ba59] text-white flex items-center justify-center shadow-xs hover:scale-110 transition duration-200"
-        >
-          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.888 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-          </svg>
-        </a>
-      )}
-
-      {/* Telegram Icon */}
-      {portalSettings.sharePlatforms.telegram && (
-        <a
-          href={`https://t.me/share/url?url=${shareUrl}&text=${shareTitle}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Share on Telegram"
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#0088cc] hover:bg-[#0077b5] text-white flex items-center justify-center shadow-xs hover:scale-110 transition duration-200"
-        >
-          <svg className="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24">
-            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-          </svg>
-        </a>
-      )}
-
-      {/* X / Twitter Icon */}
-      {portalSettings.sharePlatforms.twitter && (
-        <a
-          href={`https://twitter.com/intent/tweet?text=${shareTitle}&url=${shareUrl}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Share on X"
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black hover:bg-neutral-800 text-white flex items-center justify-center shadow-xs hover:scale-110 transition duration-200"
-        >
-          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-          </svg>
-        </a>
-      )}
-
-      {/* Facebook Icon */}
-      {portalSettings.sharePlatforms.facebook && (
-        <a
-          href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Share on Facebook"
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#1877F2] hover:bg-[#166fe5] text-white flex items-center justify-center shadow-xs hover:scale-110 transition duration-200"
-        >
-          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-          </svg>
-        </a>
-      )}
-
-      {/* Copy Link Icon */}
-      {portalSettings.sharePlatforms.copyLink && (
+        {/* Mobile Single Share Button */}
         <button
-          onClick={handleCopyLink}
-          title={copiedLink ? 'Link Copied!' : 'Copy Link'}
-          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shadow-xs hover:scale-110 transition duration-200 ${
-            copiedLink ? 'bg-emerald-600 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-          }`}
+          onClick={handleNativeShare}
+          className="sm:hidden flex items-center space-x-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-xs transition cursor-pointer"
+          title="Share Article"
         >
-          {copiedLink ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+          <Share2 className="w-3.5 h-3.5" />
+          <span>Share</span>
         </button>
-      )}
-    </div>
-  );
+
+        {/* WhatsApp Icon */}
+        {showWhatsapp && (
+          <a
+            href={`https://api.whatsapp.com/send?text=${shareTitle}%20${shareUrl}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Share on WhatsApp"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#25D366] hover:bg-[#20ba59] active:scale-90 text-white flex items-center justify-center shadow-xs hover:scale-110 transition duration-200"
+          >
+            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.888 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+            </svg>
+          </a>
+        )}
+
+        {/* Telegram Icon */}
+        {showTelegram && (
+          <a
+            href={`https://t.me/share/url?url=${shareUrl}&text=${shareTitle}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Share on Telegram"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#0088cc] hover:bg-[#0077b5] active:scale-90 text-white flex items-center justify-center shadow-xs hover:scale-110 transition duration-200"
+          >
+            <svg className="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24">
+              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+            </svg>
+          </a>
+        )}
+
+        {/* X / Twitter Icon */}
+        {showTwitter && (
+          <a
+            href={`https://twitter.com/intent/tweet?text=${shareTitle}&url=${shareUrl}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Share on X"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black hover:bg-neutral-800 active:scale-90 text-white flex items-center justify-center shadow-xs hover:scale-110 transition duration-200"
+          >
+            <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+          </a>
+        )}
+
+        {/* Facebook Icon */}
+        {showFacebook && (
+          <a
+            href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Share on Facebook"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#1877F2] hover:bg-[#166fe5] active:scale-90 text-white flex items-center justify-center shadow-xs hover:scale-110 transition duration-200"
+          >
+            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+          </a>
+        )}
+
+        {/* Copy Link Icon */}
+        {showCopyLink && (
+          <button
+            onClick={handleCopyLink}
+            title={copiedLink ? 'Link Copied!' : 'Copy Link'}
+            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shadow-xs hover:scale-110 active:scale-90 transition duration-200 cursor-pointer ${
+              copiedLink ? 'bg-emerald-600 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+            }`}
+          >
+            {copiedLink ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+
 
   return (
-    <article className="min-h-screen bg-slate-50/70 pb-16 relative">
+    <article
+      onTouchStart={handleArticleTouchStart}
+      onTouchEnd={handleArticleTouchEnd}
+      className="min-h-screen bg-slate-50/70 pb-28 sm:pb-16 relative"
+    >
       {/* 0. DYNAMIC TOP READING PROGRESS BAR (Controlled by Admin) */}
       {sidebarWidgets.showReadingProgressBar !== false && (
         <div className="fixed top-0 left-0 right-0 h-1.5 bg-slate-200/60 z-50 pointer-events-none">
@@ -690,51 +942,172 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
         </div>
       )}
 
-      {/* 1. TOP BREADCRUMB */}
-      <div className="bg-white border-b border-slate-200 py-2.5 shadow-2xs sticky top-[102px] z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-xs sm:text-sm text-slate-600 font-kd-meta">
+      {/* 0.1 DESKTOP STICKY MINI READING HEADER (Visible on Desktop when Scrolled Down) */}
+      {isScrolledPastHero && (
+        <div className="hidden md:flex fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-md px-4 lg:px-8 py-2 items-center justify-between transition-all duration-200 animate-in fade-in slide-in-from-top-2 font-kd-body">
+          {/* Left: Home Return + Category Pill + Truncated Article Title */}
+          <div className="flex items-center space-x-3 min-w-0 flex-1 mr-4">
             <button
               onClick={onBackToHome}
-              className="flex items-center space-x-1 font-bold text-red-600 hover:text-red-700 hover:underline cursor-pointer"
+              className="flex items-center space-x-1 text-slate-700 hover:text-red-600 font-bold text-xs shrink-0 cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition font-kd-meta"
+              title="होमपेज पर वापस जाएं"
             >
               <ArrowLeft className="w-4 h-4" />
+              <span>होम</span>
+            </button>
+
+            <span className="w-px h-4 bg-slate-200 shrink-0" />
+
+            <span className="bg-red-50 text-red-700 border border-red-200 text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 font-kd-meta">
+              {CATEGORIES.find((c) => c.id === article.category)?.labelHindi || article.category}
+            </span>
+
+            <p className="font-kd-headline font-bold text-slate-900 text-sm truncate max-w-xl">
+              {article.title}
+            </p>
+          </div>
+
+          {/* Right: Progress % + Font Size Controls + Audio + Share + Next Story */}
+          <div className="flex items-center space-x-2 shrink-0">
+            {/* Reading Progress Pill */}
+            <div className="flex items-center space-x-1.5 bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-xs font-mono font-semibold border border-slate-200">
+              <div className="w-2 h-2 rounded-full bg-red-600" />
+              <span>{readingProgress}%</span>
+            </div>
+
+            {/* Font resize buttons */}
+            <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200 text-xs">
+              <button
+                type="button"
+                onClick={() => handleUpdateReaderFontSize(Math.max(14, readerFontSize - 1))}
+                className="px-2 py-0.5 rounded text-slate-700 hover:bg-white font-bold cursor-pointer transition"
+                title="फ़ॉन्ट छोटा करें (A-)"
+              >
+                A-
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUpdateReaderFontSize(Math.min(26, readerFontSize + 1))}
+                className="px-2 py-0.5 rounded text-slate-700 hover:bg-white font-bold cursor-pointer transition"
+                title="फ़ॉन्ट बड़ा करें (A+)"
+              >
+                A+
+              </button>
+            </div>
+
+            {/* Listen Audio Button */}
+            <button
+              type="button"
+              onClick={handleSpeechToggle}
+              className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold border transition cursor-pointer ${
+                showAudioPlayer
+                  ? 'bg-red-600 text-white border-red-600'
+                  : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+              }`}
+              title="खबर सुनें (Listen Audio)"
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">{showAudioPlayer ? 'बंद करें' : 'सुनें'}</span>
+            </button>
+
+            {/* Quick WhatsApp Share */}
+            <a
+              href={`https://api.whatsapp.com/send?text=${shareTitle}%20${shareUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-8 h-8 rounded-full bg-[#25D366] hover:bg-[#20ba59] active:scale-95 text-white flex items-center justify-center shadow-xs transition"
+              title="WhatsApp पर शेयर करें"
+            >
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.888 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+              </svg>
+            </a>
+
+            {/* Quick Copy Link */}
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className={`w-8 h-8 rounded-full flex items-center justify-center border transition cursor-pointer ${
+                copiedLink ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+              }`}
+              title={copiedLink ? 'लिंक कॉपी हो गया!' : 'लिंक कॉपी करें'}
+            >
+              {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
+            </button>
+
+            {/* Next Article Shortcut */}
+            {nextArticle && (
+              <button
+                type="button"
+                onClick={() => onSelectArticle(nextArticle)}
+                className="flex items-center space-x-1 bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer ml-1"
+                title={`अगली खबर: ${nextArticle.title}`}
+              >
+                <span className="hidden xl:inline">अगली खबर</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 0.2 MOBILE TOUCH SWIPE FEEDBACK TOAST */}
+      {swipeGestureFeedback && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white text-xs px-4 py-2 rounded-full shadow-2xl flex items-center space-x-2 border border-slate-700 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span className="truncate max-w-[240px] font-medium">{swipeGestureFeedback}</span>
+        </div>
+      )}
+
+      {/* 0.3 MOBILE FLOATING WHATSAPP SHARE PILL (ONE-TAP CONVENIENCE) */}
+      {isScrolledPastHero && (
+        <a
+          href={`https://api.whatsapp.com/send?text=${shareTitle}%20${shareUrl}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="sm:hidden fixed bottom-20 right-4 z-40 bg-[#25D366] hover:bg-[#20ba59] active:scale-90 text-white px-3.5 py-2.5 rounded-full shadow-2xl flex items-center space-x-2 border-2 border-white transition-all animate-in fade-in slide-in-from-bottom-3"
+          title="WhatsApp पर शेयर करें"
+        >
+          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.888 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+          </svg>
+          <span className="text-xs font-bold font-kd-meta">शेयर करें</span>
+        </a>
+      )}
+
+      {/* 1. TOP BREADCRUMB */}
+      <div className="bg-white border-b border-slate-200 py-2.5 shadow-2xs sticky top-[102px] z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center space-x-2 text-xs sm:text-sm text-slate-600 font-kd-meta min-w-0 truncate">
+            <button
+              onClick={onBackToHome}
+              className="flex items-center space-x-1 font-bold text-red-600 hover:text-red-700 hover:underline cursor-pointer shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4 shrink-0" />
               <span>Home</span>
             </button>
-            <span>/</span>
-            <span className="font-bold text-slate-800 uppercase">
+            <span className="shrink-0">/</span>
+            <span className="font-bold text-slate-800 uppercase shrink-0">
               {CATEGORIES.find((c) => c.id === article.category)?.labelEnglish || article.category}
             </span>
-            <span>/</span>
+            <span className="shrink-0 hidden sm:inline">/</span>
             <span className="text-slate-500 font-mono text-xs truncate max-w-xs sm:max-w-md hidden sm:inline">
               {getEnglishArticleSlug(article)}
             </span>
           </div>
 
-          <div className="flex items-center space-x-2">
-            {onToggleReadLater && (
-              <button
-                onClick={() => onToggleReadLater(article)}
-                className={`p-1.5 rounded-full border transition cursor-pointer shadow-2xs ${
-                  isReadLater
-                    ? 'bg-indigo-600 text-white border-indigo-700'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                }`}
-                title={isReadLater ? 'रीड लेटर कतार से हटाएं' : 'बाद में पढ़ें (Read Later)'}
-              >
-                <Clock className="w-4 h-4" />
-              </button>
-            )}
+          <div className="flex items-center space-x-2 shrink-0">
             <button
               onClick={() => onToggleBookmark(article)}
-              className={`p-1.5 rounded-full border transition cursor-pointer shadow-2xs ${
+              className={`flex items-center space-x-1.5 px-3 py-1 rounded-full border text-xs font-semibold transition cursor-pointer shadow-2xs ${
                 isBookmarked
                   ? 'bg-amber-500 text-white border-amber-600'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
               }`}
-              title={isBookmarked ? 'बुकमार्क हटाया जा सकता है' : 'बुकमार्क में सहेजें'}
+              title={isBookmarked ? 'Saved in Bookmarks' : 'Save Story'}
             >
-              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-white' : ''}`} />
+              <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-white' : ''}`} />
+              <span>{isBookmarked ? 'Saved' : 'Save'}</span>
             </button>
           </div>
         </div>
@@ -755,9 +1128,12 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
       )}
 
       {/* MAIN TWO-COLUMN ARTICLE PAGE BODY */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-        {/* LEFT COLUMN: ARTICLE CONTENT (8 COLS) */}
-        <div className="lg:col-span-8 bg-white p-3.5 sm:p-6 md:p-8 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3.5 sm:space-y-5">
+      <div className={`${containerMaxWidthClass} mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 min-w-0`}>
+        {/* LEFT COLUMN: ARTICLE CONTENT (COLS - Dynamic Admin Width Slider) */}
+        <div
+          style={{ maxWidth: contentContainerWidthPx ? `${contentContainerWidthPx}px` : undefined }}
+          className={`${contentColumnClass} min-w-0 w-full bg-white p-3.5 sm:p-6 md:p-8 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3.5 sm:space-y-5 article-content-container`}
+        >
           {/* ADMIN IN-PLACE CUSTOMIZER BAR (STRICTLY VISIBLE ONLY TO AUTHENTICATED ADMIN) */}
           {isAdmin && onOpenAdminSettings && (
             <div className="bg-gradient-to-r from-red-950 via-slate-900 to-red-950 text-white p-3 rounded-xl border border-red-700/60 shadow-md flex items-center justify-between flex-wrap gap-2 text-xs font-kd-meta mb-2">
@@ -775,6 +1151,20 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
                   <Sliders className="w-3 h-3 text-amber-400" />
                   <span>Meta & Author</span>
                 </button>
+                {onUpdateSettings && (
+                  <button
+                    type="button"
+                    onClick={handleToggleAuthorBox}
+                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition flex items-center space-x-1 cursor-pointer ${
+                      isAuthorBoxVisible
+                        ? 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border-emerald-700/60'
+                        : 'bg-red-950/80 hover:bg-red-900 text-red-300 border-red-700/60'
+                    }`}
+                    title={isAuthorBoxVisible ? 'लेखक परिचय बॉक्स छिपाएं (Hide Author Box)' : 'लेखक परिचय बॉक्स दिखाएं (Enable Author Box)'}
+                  >
+                    <span>लेखक बॉक्स: {isAuthorBoxVisible ? 'ON ✓' : 'OFF ✕'}</span>
+                  </button>
+                )}
                 <button
                   onClick={() => onOpenAdminSettings('sidebar_widgets')}
                   className="bg-slate-800 hover:bg-slate-700 text-slate-100 hover:text-white px-2.5 py-1 rounded-lg border border-slate-700 text-[11px] font-bold transition flex items-center space-x-1 cursor-pointer"
@@ -805,263 +1195,104 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
             </div>
           )}
 
-          {/* Category, Location, Date, Views, Audio Listen & PDF Download Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-200/80 pb-3 font-kd-meta text-xs">
-            {/* Left side: Category, Location & Date */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-red-600 text-white text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider shadow-2xs">
-                {article.category}
-              </span>
-              {article.location && metaSettings.showLocationBadge !== false && (
-                <span className="text-xs text-slate-700 flex items-center space-x-1 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                  <MapPin className="w-3.5 h-3.5 text-red-600" />
+          {/* 1. Strip Above Heading: Category & [A- A+, Save, PDF, Views Counter] */}
+          <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5 text-xs font-kd-meta flex-wrap min-w-0">
+            {/* Left: Category Badge + Mobile Location & Time (Hidden on Desktop by default) */}
+            <div className="flex items-center space-x-2 flex-wrap gap-y-1 min-w-0">
+              {articlePageConfig.showCategoryBadge !== false && (
+                <span className="bg-red-600 text-white text-[11px] sm:text-xs font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider shadow-2xs shrink-0">
+                  {article.category}
+                </span>
+              )}
+
+              {/* Location: Hidden on desktop as requested, shown on mobile if enabled */}
+              {article.location && articlePageConfig.showLocationTag !== false && metaSettings.showLocationBadge !== false && (
+                <span className={`text-[11px] sm:text-xs text-slate-600 items-center space-x-1 bg-slate-100 px-2 py-0.5 rounded-md ${metaSettings.showDesktopLocationTime ? 'flex' : 'flex sm:hidden'}`}>
+                  <MapPin className="w-3 h-3 text-red-600 shrink-0" />
                   <span>{article.location}</span>
                 </span>
               )}
+
+              {/* Relative Time: Hidden on desktop as requested, shown on mobile if enabled */}
               {(metaSettings.showPublishDate || metaSettings.showRelativeTime) && (
-                <span className="text-xs text-slate-500 hidden sm:flex items-center space-x-1">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <span className={`text-[11px] sm:text-xs text-slate-500 items-center space-x-1 ${metaSettings.showDesktopLocationTime ? 'flex' : 'flex sm:hidden'}`}>
+                  <Clock className="w-3 h-3 text-slate-400 shrink-0" />
                   <span>{formatHindiTimeAgo(article.createdAt)}</span>
                 </span>
               )}
             </div>
 
-            {/* Right side: Compact Actions (PDF Download, Listen Hindi Audio, Views Counter) */}
-            <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
-              {/* Listen Article Audio Button (Simple, compact, intuitive) */}
-              {metaSettings.showListenButton !== false && (
-                <button
-                  type="button"
-                  onClick={handleSpeechToggle}
-                  className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition shadow-2xs cursor-pointer border ${
-                    showAudioPlayer
-                      ? 'bg-red-600 text-white border-red-700 shadow-xs ring-2 ring-red-100'
-                      : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
-                  }`}
-                  title={showAudioPlayer ? 'ऑडियो प्लेयर बंद करें' : 'खबर सुनें (ऑडियो बुलेटिन)'}
-                >
-                  {showAudioPlayer ? (
-                    <>
-                      <VolumeX className="w-3.5 h-3.5 text-white" />
-                      <span>ऑडियो चालू</span>
-                    </>
-                  ) : (
-                    <>
-                      <Volume2 className="w-3.5 h-3.5 text-amber-700" />
-                      <span>खबर सुनें</span>
-                    </>
-                  )}
-                </button>
-              )}
-
-              {/* Generate / Download Article PDF Button (Real Download + E-Paper Clipping) */}
-              {metaSettings.showPdfButton !== false && (
-                <div className="inline-flex items-center space-x-1">
+            {/* Right (Above Heading): A- A+, Save, PDF, and Views Counter (All Admin Toggleable) */}
+            <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+              {/* 1. Font Size Control (A- / A+) */}
+              {metaSettings.showFontSizeControl !== false && articlePageConfig.showFontSizeControls !== false && (
+                <div className="inline-flex items-center bg-white border border-slate-200 rounded-md p-0.5 shadow-2xs">
                   <button
                     type="button"
-                    onClick={handleDownloadArticlePdf}
-                    disabled={isDownloadingPdf}
-                    className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-red-600 hover:bg-red-700 text-white shadow-2xs transition cursor-pointer disabled:opacity-60"
-                    title="इस खबर का PDF डाउनलोड करें"
+                    onClick={() => handleUpdateReaderFontSize(readerFontSize - 1)}
+                    disabled={readerFontSize <= 14}
+                    className="px-1.5 py-0.5 text-xs font-bold text-slate-600 hover:text-red-600 rounded disabled:opacity-30 cursor-pointer"
+                    title="Font छोटा करें (A-)"
                   >
-                    {isDownloadingPdf ? (
-                      <>
-                        <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
-                        <span>PDF बन रही है...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-3.5 h-3.5 text-white" />
-                        <span>PDF डाउनलोड</span>
-                      </>
-                    )}
+                    A-
                   </button>
+                  <span className="text-[11px] font-mono font-bold text-slate-500 px-1 border-x border-slate-100 select-none">
+                    {readerFontSize}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setShowClippingModal(true)}
-                    className="inline-flex items-center p-1 rounded-md text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 shadow-2xs transition cursor-pointer"
-                    title="ई-पेपर क्लिपिंग देखें व प्रिंट निकालें"
+                    onClick={() => handleUpdateReaderFontSize(readerFontSize + 1)}
+                    disabled={readerFontSize >= 24}
+                    className="px-1.5 py-0.5 text-xs font-bold text-slate-600 hover:text-red-600 rounded disabled:opacity-30 cursor-pointer"
+                    title="Font बड़ा करें (A+)"
                   >
-                    <Newspaper className="w-3.5 h-3.5" />
+                    A+
                   </button>
                 </div>
               )}
 
-              {/* Reader Typography Customizer (Font-Size & Font-Family Dropdown for Readers) */}
-              <div className="relative inline-block text-left">
+              {/* 2. Save Button */}
+              {metaSettings.showBookmarkButton !== false && (
                 <button
                   type="button"
-                  onClick={() => setShowTypographyDropdown(!showTypographyDropdown)}
-                  className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer shadow-2xs ${
-                    showTypographyDropdown
-                      ? 'bg-red-600 text-white'
-                      : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200'
+                  onClick={() => onToggleBookmark(article)}
+                  className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer border shadow-2xs ${
+                    isBookmarked
+                      ? 'bg-amber-500 text-white border-amber-600'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                   }`}
-                  title="फ़ॉन्ट व लिखावट का आकार बदलें (Reader Typography Customizer)"
+                  title={isBookmarked ? 'Saved in Bookmarks' : 'Save Story'}
                 >
-                  <Type className={`w-3.5 h-3.5 ${showTypographyDropdown ? 'text-white' : 'text-rose-600'}`} />
-                  <span>फ़ॉन्ट ({readerFontSize}px)</span>
-                  <ChevronDown className={`w-3 h-3 transition-transform ${showTypographyDropdown ? 'rotate-180' : ''}`} />
+                  <Bookmark className={`w-3 h-3 ${isBookmarked ? 'fill-white' : ''}`} />
+                  <span>{isBookmarked ? 'Saved' : 'Save'}</span>
                 </button>
+              )}
 
-                {/* Typography Popover Dropdown Panel */}
-                {showTypographyDropdown && (
-                  <div className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-40 animate-fadeIn space-y-3.5 font-kd-body text-slate-800 text-xs">
-                    <div className="flex items-center justify-between border-b border-slate-150 pb-2">
-                      <div className="flex items-center space-x-1.5">
-                        <Type className="w-4 h-4 text-red-600" />
-                        <span className="font-bold text-slate-900 font-kd-headline text-xs sm:text-sm">
-                          पाठक टाइपोग्राफी (Reader Typography)
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowTypographyDropdown(false)}
-                        className="text-slate-400 hover:text-slate-700 p-1 rounded-md text-xs"
-                      >
-                        ✕
-                      </button>
-                    </div>
+              {/* 3. PDF Download Button */}
+              {metaSettings.showPdfButton !== false && articlePageConfig.showPrintPdf !== false && (
+                <button
+                  type="button"
+                  onClick={handleDownloadArticlePdf}
+                  disabled={isDownloadingPdf}
+                  className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs transition cursor-pointer disabled:opacity-60"
+                  title="Download Article PDF"
+                >
+                  <Download className="w-3 h-3 text-red-600" />
+                  <span>PDF</span>
+                </button>
+              )}
 
-                    {/* Font Family Selection */}
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                        फ़ॉन्ट शैली (Font Family):
-                      </label>
-                      <select
-                        value={readerFontFamily}
-                        onChange={(e) => handleUpdateReaderFontFamily(e.target.value)}
-                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 font-medium cursor-pointer"
-                      >
-                        <optgroup label="हिन्दी देवनागरी (Hindi Fonts)">
-                          {FONT_OPTIONS.filter((f) => f.category === 'hindi').map((f) => (
-                            <option key={f.id} value={f.id}>
-                              {f.name}
-                            </option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="English & Clean Sans">
-                          {FONT_OPTIONS.filter((f) => f.category === 'english').map((f) => (
-                            <option key={f.id} value={f.id}>
-                              {f.name}
-                            </option>
-                          ))}
-                        </optgroup>
-                      </select>
-                    </div>
-
-                    {/* Font Size Adjuster with Quick Buttons & Slider */}
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1">
-                        <span>अक्षर का आकार (Font Size):</span>
-                        <span className="font-mono text-red-600 font-black">{readerFontSize}px</span>
-                      </div>
-
-                      {/* Quick Preset Buttons: A- / Normal / A+ */}
-                      <div className="grid grid-cols-4 gap-1.5 mb-2">
-                        {[
-                          { label: 'छोटा (15px)', size: 15 },
-                          { label: 'सामान्य (17px)', size: 17 },
-                          { label: 'बड़ा (20px)', size: 20 },
-                          { label: 'विशाल (24px)', size: 24 },
-                        ].map((btn) => (
-                          <button
-                            key={btn.size}
-                            type="button"
-                            onClick={() => handleUpdateReaderFontSize(btn.size)}
-                            className={`py-1 px-1 text-[10px] font-bold rounded-lg border transition cursor-pointer text-center ${
-                              readerFontSize === btn.size
-                                ? 'bg-red-600 text-white border-red-600 shadow-2xs'
-                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                            }`}
-                          >
-                            {btn.label}
-                          </button>
-                        ))}
-                      </div>
-
-                      <input
-                        type="range"
-                        min="13"
-                        max="28"
-                        step="1"
-                        value={readerFontSize}
-                        onChange={(e) => handleUpdateReaderFontSize(Number(e.target.value))}
-                        className="w-full accent-red-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
-                      />
-                    </div>
-
-                    {/* Line Height Adjuster */}
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1">
-                        <span>पंक्तियों के बीच दूरी (Line Spacing):</span>
-                        <span className="font-mono text-slate-900">{readerLineHeight}</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {[
-                          { label: 'सघन (1.5)', value: 1.5 },
-                          { label: 'मानक (1.75)', value: 1.75 },
-                          { label: 'खुला (2.0)', value: 2.0 },
-                        ].map((lh) => (
-                          <button
-                            key={lh.value}
-                            type="button"
-                            onClick={() => setReaderLineHeight(lh.value)}
-                            className={`py-1 text-[10px] font-bold rounded-lg border transition cursor-pointer text-center ${
-                              readerLineHeight === lh.value
-                                ? 'bg-slate-900 text-white border-slate-900'
-                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                            }`}
-                          >
-                            {lh.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Reset Button & Admin Shortcut */}
-                    <div className="pt-2 border-t border-slate-150 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleUpdateReaderFontSize(DEFAULT_PORTAL_SETTINGS.typography.articleBodyFontSizePx || 17);
-                          handleUpdateReaderFontFamily(DEFAULT_PORTAL_SETTINGS.typography.bodyFont || "'Mukta', sans-serif");
-                          setReaderLineHeight(DEFAULT_PORTAL_SETTINGS.typography.articleBodyLineHeight || 1.75);
-                          onResetTypography?.();
-                        }}
-                        className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                      >
-                        डिफ़ॉल्ट पर रीसेट (Reset Default)
-                      </button>
-
-                      {onOpenTypography && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowTypographyDropdown(false);
-                            onOpenTypography();
-                          }}
-                          className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer"
-                        >
-                          एडमिन सेटिंग्स →
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Views Counter (Admin customizable toggle) */}
-              {metaSettings.showViewsCount !== false && (
-                <span className="flex items-center space-x-1 text-slate-600 text-[11px] sm:text-xs font-mono bg-slate-50 px-2 py-1 rounded-md border border-slate-200 shadow-2xs">
-                  <Eye className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{article.viewsCount} पढ़े</span>
+              {/* 4. Views Counter (e.g., 5355 Reads) */}
+              {metaSettings.showViewsCount !== false && articlePageConfig.showViewCount !== false && (
+                <span className="text-[11px] sm:text-xs font-mono text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-md flex items-center space-x-1 shrink-0" title="कुल पाठक संख्या">
+                  <Eye className="w-3 h-3 text-slate-400" />
+                  <span>{article.viewsCount} Reads</span>
                 </span>
               )}
             </div>
           </div>
 
-          {/* Headline (Uses customizable font-kd-headline with news industry sizing and Admin inline editor) */}
+          {/* 2. Headline (Clean, prominent news headline) */}
           <div className="relative group/h1">
             {isEditingTitle && isAdmin ? (
               <div className="space-y-2.5 bg-amber-50/80 p-4 rounded-xl border-2 border-amber-400 shadow-sm animate-fadeIn">
@@ -1108,16 +1339,42 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
                 </div>
               </div>
             ) : (
-              <div>
+              <div className="min-w-0 w-full">
                 <h1
                   style={{
-                    fontSize: `${portalSettings.typography?.articleTitleDesktopPx || 32}px`,
-                    lineHeight: 1.28,
+                    fontSize:
+                      articlePageConfig.h1FontSize === 'large'
+                        ? `clamp(${portalSettings.typography?.articleTitleMobilePx || 24}px, 4.2vw, ${(portalSettings.typography?.articleTitleDesktopPx || 32) + 4}px)`
+                        : articlePageConfig.h1FontSize === 'xlarge'
+                        ? `clamp(${portalSettings.typography?.articleTitleMobilePx || 26}px, 4.6vw, ${(portalSettings.typography?.articleTitleDesktopPx || 32) + 8}px)`
+                        : `clamp(${portalSettings.typography?.articleTitleMobilePx || 22}px, 3.8vw, ${portalSettings.typography?.articleTitleDesktopPx || 32}px)`,
+                    fontFamily: h1FontFamily,
+                    fontWeight: h1FontWeight,
+                    lineHeight: sectionH1?.lineHeight || 1.28,
+                    letterSpacing: sectionH1?.letterSpacingPx ? `${sectionH1.letterSpacingPx}px` : undefined,
+                    textTransform: sectionH1?.textTransform || 'none',
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'normal',
                   }}
-                  className="font-black font-kd-headline text-slate-900 tracking-tight break-words transition-all duration-150"
+                  className="text-slate-900 tracking-tight [overflow-wrap:anywhere] [word-break:normal] min-w-0 transition-all duration-150"
                 >
-                  {inlineTitle || article.title}
+                  {renderStyledHeadline(
+                    inlineTitle || article.title,
+                    article.headlineHighlight,
+                    article.highlightColor || portalSettings?.headlineStyling?.defaultColor || '#dc2626'
+                  )}
                 </h1>
+                {article.subtitle && (
+                  <p
+                    style={{
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'normal',
+                    }}
+                    className="mt-2 text-base sm:text-lg font-semibold text-slate-700 leading-snug [overflow-wrap:anywhere] [word-break:normal] font-kd-body"
+                  >
+                    {article.subtitle}
+                  </p>
+                )}
                 {isAdmin && (
                   <div className="flex items-center gap-2 mt-2">
                     <button
@@ -1127,11 +1384,11 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
                       title="Click to edit headline instantly on page"
                     >
                       <PenTool className="w-3 h-3 text-red-600" />
-                      <span>Edit Headline (Direct Inline)</span>
+                      <span>Edit Headline</span>
                     </button>
                     {titleSaveSuccess && (
                       <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 animate-fadeIn">
-                        ✓ Headline Updated!
+                        ✓ Updated!
                       </span>
                     )}
                   </div>
@@ -1140,231 +1397,397 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
             )}
           </div>
 
-          {/* MERGED COMPACT CARD: SUBTITLE, AUTHOR BYLINE, DATE-TIME & SOCIAL SHARING */}
-          <div className="bg-slate-50/90 rounded-2xl border border-slate-200/90 p-3 sm:p-4 space-y-2.5 sm:space-y-3 shadow-2xs transition-all">
-            {/* Subtitle / Excerpt with compact styling */}
-            {article.summary && (
-              <p
-                style={{
-                  fontSize: portalSettings.typography?.articleLeadSubtitlePx
-                    ? `${portalSettings.typography.articleLeadSubtitlePx}px`
-                    : undefined,
-                }}
-                className="text-xs sm:text-sm font-semibold text-slate-700 leading-relaxed font-kd-body border-l-3 border-red-600 pl-2.5 sm:pl-3 py-0.5"
-              >
-                {article.summary}
+
+
+          {/* 4. Subtitle / Summary (Lead Story Paragraph) */}
+          {article.summary && (
+            <p
+              style={{
+                fontSize: portalSettings.typography?.articleLeadSubtitlePx
+                  ? `${portalSettings.typography.articleLeadSubtitlePx}px`
+                  : undefined,
+                overflowWrap: 'anywhere',
+                wordBreak: 'normal',
+              }}
+              className="text-xs sm:text-sm font-semibold text-slate-700 leading-relaxed font-kd-body border-l-3 border-red-600 pl-3 py-0.5 bg-slate-50/60 rounded-r-lg [overflow-wrap:anywhere] [word-break:normal] min-w-0"
+            >
+              {article.summary}
+            </p>
+          )}
+
+          {/* 4.5. Featured Image & Multi-Image Sliding Carousel (Placed before Byline & Key Highlights) */}
+          <div className="space-y-1.5 my-3.5">
+            <div
+              className="relative rounded-xl overflow-hidden aspect-[16/9] bg-slate-950 border border-slate-200 shadow-xs group select-none"
+              onTouchStart={(e) => {
+                if (e.touches.length === 1) {
+                  featureImageTouchStartXRef.current = e.touches[0].clientX;
+                }
+              }}
+              onTouchEnd={(e) => {
+                if (featureImageTouchStartXRef.current === null || e.changedTouches.length === 0) return;
+                const deltaX = e.changedTouches[0].clientX - featureImageTouchStartXRef.current;
+                if (Math.abs(deltaX) > 40) {
+                  if (deltaX < 0) {
+                    handleNextFeatureImage();
+                  } else {
+                    handlePrevFeatureImage();
+                  }
+                }
+                featureImageTouchStartXRef.current = null;
+              }}
+            >
+              <img
+                key={allFeatureImages[activeFeatureImageIdx]}
+                src={allFeatureImages[activeFeatureImageIdx]}
+                alt={article.imageAltText || `${article.title} - फ़ोटो ${activeFeatureImageIdx + 1}`}
+                className="w-full h-full object-cover transition-opacity duration-300"
+                decoding="async"
+              />
+
+              {/* Multi-Image Controls & Slider Indicators */}
+              {allFeatureImages.length > 1 && (
+                <>
+                  {/* Photo Counter Badge */}
+                  <div className="absolute top-3 right-3 bg-black/75 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/20 shadow-xs flex items-center space-x-1.5 font-kd-meta z-10 pointer-events-none">
+                    <Camera className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{activeFeatureImageIdx + 1} / {allFeatureImages.length}</span>
+                  </div>
+
+                  {/* Previous Slide Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePrevFeatureImage();
+                    }}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center transition backdrop-blur-xs border border-white/20 shadow-md cursor-pointer opacity-90 sm:opacity-0 group-hover:opacity-100 z-10 active:scale-95"
+                    title="पिछली तस्वीर (Previous Image)"
+                    aria-label="Previous Image"
+                  >
+                    <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </button>
+
+                  {/* Next Slide Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNextFeatureImage();
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center transition backdrop-blur-xs border border-white/20 shadow-md cursor-pointer opacity-90 sm:opacity-0 group-hover:opacity-100 z-10 active:scale-95"
+                    title="अगली तस्वीर (Next Image)"
+                    aria-label="Next Image"
+                  >
+                    <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </button>
+
+                  {/* Slide Dots Indicator */}
+                  <div className="absolute bottom-2.5 inset-x-0 flex items-center justify-center space-x-1.5 z-10 pointer-events-auto">
+                    {allFeatureImages.map((_, dotIdx) => (
+                      <button
+                        key={dotIdx}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveFeatureImageIdx(dotIdx);
+                        }}
+                        className={`transition-all rounded-full cursor-pointer ${
+                          activeFeatureImageIdx === dotIdx
+                            ? 'w-6 h-2 bg-red-600 shadow-xs'
+                            : 'w-2 h-2 bg-white/70 hover:bg-white'
+                        }`}
+                        title={`तस्वीर ${dotIdx + 1} पर जाएं`}
+                        aria-label={`Go to slide ${dotIdx + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Image Caption */}
+            {articlePageConfig.showImageCaption !== false && currentFeatureCaption && (
+              <p className="text-xs text-slate-500 italic text-center font-kd-meta">
+                फोटो: {currentFeatureCaption}
               </p>
             )}
+          </div>
 
-            {/* Line 1: Author info + Detailed Date & Time + Reader Views (Configured via Admin Settings) */}
-            <div className={`flex items-center justify-between gap-2.5 ${article.summary ? 'pt-2.5 border-t border-slate-200/70' : ''} text-xs text-slate-600 font-kd-meta`}>
-              <div className="flex items-center space-x-2.5 min-w-0">
+          {/* 5. Sleek Editorial Byline & Action Strip (Division 1 - Top Indian News Style) */}
+          <div className="border-y border-slate-200/90 py-2.5 sm:py-3 my-4 font-kd-meta">
+            {/* MOBILE LAYOUT (Editorial 2-Row Clean Strip) */}
+            <div className="sm:hidden space-y-2.5">
+              {/* Row 1: Author, City / Bureau & Relative Time */}
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  {metaSettings.showAuthorAvatar && (
+                    <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 bg-slate-100 shrink-0 shadow-2xs aspect-square flex items-center justify-center relative">
+                      <img
+                        src={article.authorPhotoUrl || getAuthorPhoto(article.authorName)}
+                        alt={article.authorName}
+                        className="w-full h-full object-cover object-center aspect-square rounded-full block"
+                      />
+                    </div>
+                  )}
+                  <div className="min-w-0 leading-tight">
+                    <div className="flex items-center space-x-1.5 flex-wrap">
+                      {articlePageConfig.showAuthorByline !== false && metaSettings.showAuthorName !== false && (
+                        <span className="font-bold text-slate-900 text-xs truncate">
+                          {article.authorName}
+                        </span>
+                      )}
+                      {articlePageConfig.showEditorByline !== false && article.editorName && (
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          · संपा: {article.editorName}
+                        </span>
+                      )}
+                    </div>
+                    {articlePageConfig.showRelativeTime !== false && (
+                      <div className="text-[10px] text-slate-400 mt-0.5 flex items-center space-x-1">
+                        <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>{formatHindiTimeAgo(article.createdAt)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Mobile Action Buttons [Audio + WhatsApp + Facebook + Share] */}
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                {/* 1. Audio Listen */}
+                {metaSettings.showListenButton !== false && articlePageConfig.showAudioListen !== false && (
+                  <button
+                    type="button"
+                    onClick={handleSpeechToggle}
+                    className={`inline-flex items-center space-x-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition cursor-pointer border shadow-2xs mr-auto ${
+                      showAudioPlayer
+                        ? 'bg-red-600 text-white border-red-700'
+                        : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200'
+                    }`}
+                    title={showAudioPlayer ? 'ऑडियो बंद करें' : 'खबर सुनें'}
+                  >
+                    {showAudioPlayer ? (
+                      <>
+                        <VolumeX className="w-3.5 h-3.5 text-white shrink-0" />
+                        <span>ऑडियो बंद</span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                        <span>खबर सुनें</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {/* 2. WhatsApp (Simple round official icon) */}
+                {metaSettings.platforms?.whatsapp !== false && (
+                  <a
+                    href={`https://api.whatsapp.com/send?text=${shareTitle}%20${shareUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 rounded-full bg-[#25D366] hover:bg-[#20ba59] active:scale-95 text-white flex items-center justify-center shadow-2xs transition shrink-0"
+                    title="WhatsApp पर शेयर करें"
+                    aria-label="WhatsApp"
+                  >
+                    <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.888 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                  </a>
+                )}
+
+                {/* 3. Facebook (Simple round official icon) */}
+                {metaSettings.platforms?.facebook !== false && (
+                  <a
+                    href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 rounded-full bg-[#1877F2] hover:bg-[#166fe5] active:scale-95 text-white flex items-center justify-center shadow-2xs transition shrink-0"
+                    title="Facebook पर शेयर करें"
+                    aria-label="Facebook"
+                  >
+                    <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  </a>
+                )}
+
+                {/* 4. Simple Share Button */}
+                {metaSettings.showNativeShare !== false && (
+                  <button
+                    type="button"
+                    onClick={handleNativeShare}
+                    className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 flex items-center justify-center transition cursor-pointer active:scale-95 shadow-2xs shrink-0"
+                    title="खबर शेयर करें"
+                    aria-label="Share"
+                  >
+                    <Share2 className="w-4 h-4 text-red-600 shrink-0" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* DESKTOP LAYOUT (Clean Single Horizontal Line like The Hindu / Bhaskar) */}
+            <div className="hidden sm:flex items-center justify-between gap-3 min-w-0">
+              {/* Left: Author Info */}
+              <div className="flex items-center space-x-3 min-w-0">
                 {metaSettings.showAuthorAvatar && (
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border border-slate-300 bg-slate-200 shrink-0 ring-2 ring-white shadow-2xs">
+                  <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 bg-slate-100 shrink-0 shadow-2xs aspect-square flex items-center justify-center relative">
                     <img
                       src={article.authorPhotoUrl || getAuthorPhoto(article.authorName)}
                       alt={article.authorName}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-center aspect-square rounded-full block"
                     />
                   </div>
                 )}
                 <div className="min-w-0 leading-tight">
-                  {(metaSettings.showAuthorName || metaSettings.showAuthorRole) && (
-                    <div className="flex items-center space-x-1.5 flex-wrap gap-y-0.5">
-                      {metaSettings.showAuthorName && (
-                        <span className="font-bold text-slate-900 text-xs sm:text-sm truncate">
-                          {article.authorName}
-                        </span>
-                      )}
-                      {metaSettings.showAuthorName && metaSettings.showAuthorRole && (
-                        <span className="text-[10px] text-slate-300">•</span>
-                      )}
-                      {metaSettings.showAuthorRole && (
-                        <span className="text-[10px] sm:text-xs text-red-700 bg-red-50 border border-red-200/60 font-medium px-1.5 py-0.2 rounded truncate">
-                          {article.authorRole || 'Special Correspondent'}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {/* Detailed Date & Time */}
-                  {(metaSettings.showPublishDate || metaSettings.showRelativeTime) && (
-                    <div className="flex items-center space-x-2 text-[10px] sm:text-[11px] text-slate-500 mt-1 flex-wrap gap-y-0.5">
-                      {metaSettings.showPublishDate && (
-                        <span className="flex items-center space-x-1">
-                          <Calendar className="w-3 h-3 text-red-600 shrink-0" />
-                          <span>{formatArticleDateTime(article.createdAt)}</span>
-                        </span>
-                      )}
-                      {metaSettings.showPublishDate && metaSettings.showRelativeTime && (
-                        <span className="text-slate-300">•</span>
-                      )}
-                      {metaSettings.showRelativeTime && (
-                        <span className="flex items-center space-x-1 text-slate-400">
-                          <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span>{formatHindiTimeAgo(article.createdAt)}</span>
-                        </span>
+                  <div className="flex items-center space-x-2 flex-wrap min-w-0">
+                    {articlePageConfig.showAuthorByline !== false && metaSettings.showAuthorName !== false && (
+                      <span className="font-bold text-slate-900 text-sm truncate">
+                        {article.authorName}
+                      </span>
+                    )}
+                    {articlePageConfig.showEditorByline !== false && article.editorName && (
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        · संपा: {article.editorName}
+                      </span>
+                    )}
+                  </div>
+                  {articlePageConfig.showPublishedDate !== false && metaSettings.showPublishDate !== false && (
+                    <div className="flex items-center space-x-2 text-xs text-slate-500 mt-0.5">
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>{formatArticleDateTime(article.createdAt)}</span>
+                      </div>
+                      {articlePageConfig.showReadingTime !== false && (
+                        <>
+                          <span>•</span>
+                          <div className="flex items-center space-x-1 text-slate-500" title="अनुमानित पढ़ने का समय">
+                            <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>{estimatedReadTimeMinutes} मिनट पढ़ने का समय</span>
+                          </div>
+                        </>
                       )}
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Reader View Count on Mobile & Desktop + Quick Admin Settings access */}
+              {/* Right: Actions Row [Audio Listen | Simple Share | WhatsApp | Facebook | Twitter | Copy Link] */}
               <div className="flex items-center space-x-2 shrink-0">
-                {metaSettings.showViewsCount && (
-                  <div className="flex items-center space-x-1 text-slate-500 text-[11px] sm:text-xs font-mono bg-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-slate-200/80 shadow-2xs">
-                    <Eye className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{article.viewsCount} Readers</span>
-                  </div>
-                )}
-                {isAdmin && onOpenAdminSettings && (
+                {/* 1. Audio Listen */}
+                {metaSettings.showListenButton !== false && (
                   <button
-                    onClick={() => onOpenAdminSettings('articlemeta')}
-                    title="Article Meta & Action Bar Settings"
-                    className="p-1 sm:p-1.5 rounded-full text-slate-400 hover:text-red-600 hover:bg-slate-100 transition cursor-pointer"
-                  >
-                    <Sliders className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Line 2: 1-Line Compact Version (Bookmark + Social Icons + Share Button) */}
-            <div
-              className={`flex items-center justify-between gap-1.5 sm:gap-2 pt-2.5 border-t border-slate-200/80 text-xs w-full ${
-                metaSettings.compactSingleLine
-                  ? 'flex-nowrap overflow-x-auto no-scrollbar py-0.5'
-                  : 'flex-wrap sm:flex-nowrap'
-              }`}
-            >
-              {/* Left Side: Bookmark & Reading Action */}
-              <div className="flex items-center space-x-1 sm:space-x-1.5 shrink-0">
-                {/* Read Later Button */}
-                {onToggleReadLater && (
-                  <button
-                    onClick={() => onToggleReadLater(article)}
-                    className={`flex items-center space-x-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border text-xs font-semibold transition-all duration-200 cursor-pointer shadow-2xs active:scale-90 shrink-0 ${
-                      isReadLater
-                        ? 'bg-indigo-50 text-indigo-700 border-indigo-300 ring-2 ring-indigo-100'
-                        : 'bg-white text-slate-700 border-slate-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/50'
+                    type="button"
+                    onClick={handleSpeechToggle}
+                    className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer border ${
+                      showAudioPlayer
+                        ? 'bg-red-600 text-white border-red-700 shadow-xs'
+                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
                     }`}
-                    title={isReadLater ? 'रीड लेटर से हटाएं' : 'बाद में पढ़ें (Read Later)'}
+                    title={showAudioPlayer ? 'ऑडियो बंद करें' : 'खबर सुनें (Audio Bulletin)'}
                   >
-                    <Clock className="w-3.5 h-3.5 text-indigo-600" />
-                    <span className="text-[11px] font-semibold">{isReadLater ? 'कतार में है' : 'बाद में पढ़ें'}</span>
+                    {showAudioPlayer ? (
+                      <>
+                        <VolumeX className="w-3.5 h-3.5 text-white" />
+                        <span>ऑडियो ON</span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-3.5 h-3.5 text-red-600" />
+                        <span>सुनें</span>
+                      </>
+                    )}
                   </button>
                 )}
 
-                {/* Bookmark Toggle */}
-                {metaSettings.showBookmarkButton && (
-                  <button
-                    onClick={() => onToggleBookmark(article)}
-                    className={`flex items-center space-x-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border text-xs font-semibold transition-all duration-200 cursor-pointer shadow-2xs active:scale-90 shrink-0 ${
-                      isBookmarked
-                        ? 'bg-amber-50 text-amber-700 border-amber-300 ring-2 ring-amber-100'
-                        : 'bg-white text-slate-700 border-slate-200 hover:text-amber-600 hover:border-amber-200 hover:bg-amber-50/50'
-                    }`}
-                    title={isBookmarked ? 'सेव किया गया' : 'बुकमार्क करें'}
-                  >
-                    <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-amber-500 text-amber-500' : ''}`} />
-                    <span className="text-[11px] font-semibold">{isBookmarked ? 'सेव है' : 'बुकमार्क'}</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Right Side: Social Media Sharing Icons + Quick Share Button */}
-              <div className="flex items-center space-x-1 sm:space-x-1.5 shrink-0 justify-end">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-kd-meta hidden md:inline mr-0.5 shrink-0">
-                  शेयर:
-                </span>
-
-                {/* Social Media Icons (WhatsApp, Telegram, Twitter, Facebook) */}
-                {metaSettings.showSocialIcons && (
-                  <>
+                {/* 3. Social Media Buttons Strip (WhatsApp, Facebook, Twitter, Copy Link) */}
+                {metaSettings.showSocialIcons !== false && (
+                  <div className="inline-flex items-center space-x-1.5 pl-1.5 border-l border-slate-200">
                     {/* WhatsApp */}
-                    {metaSettings.platforms.whatsapp && portalSettings.sharePlatforms.whatsapp && (
+                    {metaSettings.platforms?.whatsapp !== false && (
                       <a
                         href={`https://api.whatsapp.com/send?text=${shareTitle}%20${shareUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="व्हाट्सएप पर शेयर करें"
-                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#25D366] hover:bg-[#20ba59] active:scale-90 text-white flex items-center justify-center shadow-2xs hover:scale-105 transition-all duration-200 shrink-0"
+                        title="WhatsApp पर शेयर करें"
+                        className="w-7 h-7 rounded-full bg-[#25D366] hover:bg-[#20ba59] text-white flex items-center justify-center transition hover:scale-105 active:scale-95 shadow-2xs"
                       >
-                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.888 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
                         </svg>
                       </a>
                     )}
 
-                    {/* Telegram */}
-                    {metaSettings.platforms.telegram && portalSettings.sharePlatforms.telegram && (
+                    {/* Facebook */}
+                    {metaSettings.platforms?.facebook !== false && (
                       <a
-                        href={`https://t.me/share/url?url=${shareUrl}&text=${shareTitle}`}
+                        href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="टेलीग्राम पर शेयर करें"
-                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#0088cc] hover:bg-[#0077b5] active:scale-90 text-white flex items-center justify-center shadow-2xs hover:scale-105 transition-all duration-200 shrink-0"
+                        title="Facebook पर शेयर करें"
+                        className="w-7 h-7 rounded-full bg-[#1877F2] hover:bg-[#166fe5] text-white flex items-center justify-center transition hover:scale-105 active:scale-95 shadow-2xs"
                       >
-                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current ml-0.5" viewBox="0 0 24 24">
-                          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                         </svg>
                       </a>
                     )}
 
-                    {/* X / Twitter */}
-                    {metaSettings.platforms.twitter && portalSettings.sharePlatforms.twitter && (
+                    {/* Twitter / X */}
+                    {metaSettings.platforms?.twitter !== false && (
                       <a
                         href={`https://twitter.com/intent/tweet?text=${shareTitle}&url=${shareUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="X पर शेयर करें"
-                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-900 hover:bg-black active:scale-90 text-white flex items-center justify-center shadow-2xs hover:scale-105 transition-all duration-200 shrink-0"
+                        title="X (Twitter) पर शेयर करें"
+                        className="w-7 h-7 rounded-full bg-slate-900 hover:bg-black text-white flex items-center justify-center transition hover:scale-105 active:scale-95 shadow-2xs"
                       >
-                        <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
                           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                         </svg>
                       </a>
                     )}
 
-                    {/* Facebook */}
-                    {metaSettings.platforms.facebook && portalSettings.sharePlatforms.facebook && (
-                      <a
-                        href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="फेसबुक पर शेयर करें"
-                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#1877F2] hover:bg-[#166fe5] active:scale-90 text-white flex items-center justify-center shadow-2xs hover:scale-105 transition-all duration-200 shrink-0"
+                    {/* Copy Link */}
+                    {metaSettings.platforms?.copyLink !== false && (
+                      <button
+                        type="button"
+                        onClick={handleCopyLink}
+                        title={copiedLink ? 'Link Copied!' : 'Copy Link'}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition hover:scale-105 active:scale-95 cursor-pointer ${
+                          copiedLink ? 'bg-emerald-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                        }`}
                       >
-                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" viewBox="0 0 24 24">
-                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                        </svg>
-                      </a>
+                        {copiedLink ? <Check className="w-3.5 h-3.5 text-white" /> : <Link2 className="w-3.5 h-3.5" />}
+                      </button>
                     )}
-                  </>
+                  </div>
                 )}
 
-                {/* One-Click Native Quick Share Button (Red Pill) */}
-                {metaSettings.showNativeShare && (
+                {/* 3. Simple Share Button (Last on Desktop as requested) */}
+                {metaSettings.showNativeShare !== false && (
                   <button
+                    type="button"
                     onClick={handleNativeShare}
-                    className="flex items-center space-x-1.5 bg-red-600 hover:bg-red-700 active:scale-90 text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-bold shadow-2xs hover:shadow-xs transition-all duration-200 cursor-pointer shrink-0"
-                    title="शेयर करें"
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition cursor-pointer active:scale-95 shadow-2xs"
+                    title="खबर शेयर करें (Share)"
                   >
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span className="text-[11px] sm:text-xs">शेयर</span>
+                    <Share2 className="w-3.5 h-3.5 text-red-600" />
+                    <span>Share</span>
                   </button>
                 )}
 
-                {/* Copy Link Button */}
-                {metaSettings.platforms.copyLink && portalSettings.sharePlatforms.copyLink && (
+                {/* Admin Quick Access */}
+                {isAdmin && onOpenAdminSettings && (
                   <button
-                    onClick={handleCopyLink}
-                    title={copiedLink ? 'लिंक कॉपी हो गया!' : 'लिंक कॉपी करें'}
-                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shadow-2xs active:scale-90 hover:scale-105 transition-all duration-200 cursor-pointer shrink-0 ${
-                      copiedLink ? 'bg-emerald-600 text-white' : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
-                    }`}
+                    type="button"
+                    onClick={() => onOpenAdminSettings('articlemeta')}
+                    title="Article Meta Settings"
+                    className="p-1 rounded-full text-slate-400 hover:text-red-600 hover:bg-slate-100 transition cursor-pointer"
                   >
-                    {copiedLink ? <Check className="w-3.5 h-3.5 text-white" /> : <Link2 className="w-3.5 h-3.5" />}
+                    <Sliders className="w-3 h-3" />
                   </button>
                 )}
               </div>
@@ -1387,23 +1810,9 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
           )}
 
           {/* EDITORIAL KEY HIGHLIGHTS (मुख्य बिंदु / 5 खास बातें) */}
-          <ArticleKeyHighlights article={article} />
-
-          {/* Featured Image & Caption */}
-          <div className="space-y-1.5">
-            <div className="rounded-xl overflow-hidden aspect-[16/9] bg-slate-900 border border-slate-200 shadow-xs">
-              <img
-                src={article.imageUrl}
-                alt={article.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            {article.imageCaption && (
-              <p className="text-xs text-slate-500 italic text-center font-kd-meta">
-                फोटो: {article.imageCaption}
-              </p>
-            )}
-          </div>
+          {articlePageConfig.showKeyHighlights !== false && (
+            <ArticleKeyHighlights article={article} />
+          )}
 
           {/* Article Full Paragraphs with In-Content Middle Ad */}
           <div
@@ -1411,8 +1820,10 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
               fontSize: `${readerFontSize}px`,
               fontFamily: readerFontFamily,
               lineHeight: readerLineHeight,
+              overflowWrap: 'anywhere',
+              wordBreak: 'normal',
             }}
-            className="space-y-4 text-slate-800 transition-all duration-150"
+            className="space-y-4 text-slate-800 transition-all duration-150 min-w-0 max-w-full article-content-container"
           >
             {paragraphs.slice(0, midPoint).map((p, idx) => renderFormattedParagraph(p, idx))}
 
@@ -1431,44 +1842,205 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
             )}
           </div>
 
-          {/* BOTTOM SOCIAL SHARING BUTTONS (ICON-ONLY) */}
-          <div className="border-t border-slate-200 pt-4">
-            {renderSocialIconButtons()}
-          </div>
-
-          {/* EMOJI REACTIONS (MINIMALIST, ONLY EMOJIS WITHOUT TEXT) */}
-          <div className="py-2.5 flex items-center justify-between border-y border-slate-150 my-4 select-none">
-            <div className="flex items-center space-x-2 sm:space-x-2.5 overflow-x-auto scrollbar-none py-1">
-              {[
-                { type: 'like', emoji: '👍', count: reactions.like || 0 },
-                { type: 'love', emoji: '❤️', count: reactions.love || 0 },
-                { type: 'insightful', emoji: '💡', count: reactions.insightful || 0 },
-                { type: 'funny', emoji: '😂', count: reactions.funny || 0 },
-              ].map((item) => (
-                <button
-                  key={item.type}
-                  type="button"
-                  onClick={() => handleReaction(item.type as any)}
-                  className={`px-3 py-1.5 rounded-full border text-base sm:text-lg flex items-center space-x-1.5 transition-all duration-150 cursor-pointer active:scale-90 ${
-                    userReaction === item.type
-                      ? 'bg-red-50 border-red-400 text-red-700 ring-2 ring-red-200 shadow-xs scale-105 font-bold'
-                      : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
-                  }`}
-                  title={`${item.emoji} (${item.count})`}
-                >
-                  <span className="leading-none">{item.emoji}</span>
-                  <span className="font-mono text-xs font-bold text-slate-600">
-                    {item.count}
-                  </span>
-                </button>
-              ))}
-            </div>
-            {userReaction && (
-              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full animate-fadeIn font-kd-meta shrink-0 ml-2">
-                ✓ दर्ज हुआ
+          {/* Article Tags (टैग्स - Admin Publish Article से मैचिंग) */}
+          {articlePageConfig.showTags !== false && article.tags && article.tags.length > 0 && (
+            <div className="pt-2 pb-1 flex flex-wrap items-center gap-1.5 font-kd-meta">
+              <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
+                <Tag className="w-3.5 h-3.5 text-red-600" />
+                <span>टैग्स:</span>
               </span>
-            )}
-          </div>
+              {article.tags.map((tag, idx) => {
+                const cleanTag = tag.replace(/^#/, '');
+                return (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center text-xs bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-700 px-2.5 py-1 rounded-full border border-slate-200 transition font-medium cursor-pointer"
+                  >
+                    #{cleanTag}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Post-Content Disclaimer Section (सूचना / अस्वीकरण - Fully Admin Customizable) */}
+          {articlePageConfig.showDisclaimerBox !== false && (
+            <div className="my-4 p-3 sm:p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/90 text-amber-950 font-kd-meta leading-relaxed shadow-2xs flex items-start space-x-2.5">
+              <div className="w-5 h-5 rounded-md bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0 mt-0.5 text-amber-700">
+                <Info className="w-3.5 h-3.5 stroke-[2]" />
+              </div>
+              <div className="space-y-0.5">
+                <span
+                  className="font-bold text-amber-900 block"
+                  style={{ fontSize: articlePageConfig.disclaimerFontSize || '12px' }}
+                >
+                  सूचना / अस्वीकरण (Disclaimer):
+                </span>
+                <p
+                  className="text-amber-900/90 leading-relaxed font-normal"
+                  style={{ fontSize: articlePageConfig.disclaimerFontSize || '12px' }}
+                >
+                  {articlePageConfig.disclaimerText ||
+                    "'खबरी दोस्त' पर मौजूद सभी समाचार सामग्री कंप्यूटर द्वारा तैयार की गई है और इसे थर्ड पार्टी तथा सोशल मीडिया से लिया गया है। चूंकि यह सामग्री केवल जानकारी देने के उद्देश्य से उपलब्ध कराई गई है, इसलिए कृपया इसे पूरी सावधानी के साथ पढ़ें। किसी भी तरह की समस्या उत्पन्न होने पर 'खबरी दोस्त' जिम्मेदार नहीं होगा।"}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* AUTHOR DETAILS SECTION: Horizontal layout with rounded author image on left, author's name & bio paragraph on right */}
+          {isAuthorBoxVisible ? (
+            <div className="border border-slate-200/90 bg-white rounded-2xl p-4 sm:p-5 my-5 shadow-2xs font-kd-body">
+              <div className="flex flex-row items-center sm:items-start gap-3.5 sm:gap-4 md:gap-5 min-w-0">
+                {/* Left side: Strictly Rounded Author Image (Square Cropped Container -> Round Shape) */}
+                <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 aspect-square rounded-full overflow-hidden bg-slate-100 shrink-0 border-2 border-slate-200 shadow-2xs flex items-center justify-center relative">
+                  <img
+                    src={article.authorPhotoUrl || getAuthorPhoto(article.authorName)}
+                    alt={article.authorName}
+                    className="w-full h-full object-cover object-center aspect-square rounded-full block"
+                    loading="lazy"
+                  />
+                </div>
+
+                {/* Right side: Author Name & Bio Paragraph */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center space-x-2 flex-wrap">
+                      <h4 className="font-bold text-slate-900 text-base sm:text-lg font-kd-headline leading-tight">
+                        {article.authorName}
+                      </h4>
+                      {article.authorRole && (
+                        <span className="text-[10px] sm:text-[11px] text-red-700 bg-red-50 border border-red-100 font-semibold px-2 py-0.5 rounded-full font-kd-meta">
+                          {article.authorRole}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Admin In-Place Toggle (Show/Hide Author Details) */}
+                    {isAdmin && onUpdateSettings && (
+                      <button
+                        type="button"
+                        onClick={handleToggleAuthorBox}
+                        className="text-[10px] sm:text-[11px] font-bold text-slate-600 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 px-2.5 py-1 rounded-lg transition cursor-pointer font-kd-meta flex items-center space-x-1 shadow-2xs shrink-0"
+                        title="एडमिन: लेखक विवरण छिपाएं (Hide Author Details)"
+                      >
+                        <Sliders className="w-3 h-3 text-red-600" />
+                        <span>लेखक विवरण: दृश्यमान (Hide)</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-kd-body mt-1 sm:mt-1.5">
+                    {article.authorBio ||
+                      'खबरी दोस्त के विशेष संवाददाता। राष्ट्रीय, प्रादेशिक और जनहित के मामलों पर निष्पक्ष, सटीक व तथ्यपरक रिपोर्टिंग के प्रति समर्पित।'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : isAdmin ? (
+            /* Admin-only preview box when Author Details are disabled */
+            <div className="border border-dashed border-red-300 bg-red-50/50 rounded-2xl p-3.5 sm:p-4 my-5 flex items-center justify-between font-kd-meta text-xs text-red-900 shadow-2xs flex-wrap gap-2">
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                <span>
+                  <strong>लेखक विवरण (Author Details):</strong> वर्तमान में पाठकों के लिए <em>छिपा हुआ</em> है (Admin Preview)
+                </span>
+              </div>
+              {onUpdateSettings && (
+                <button
+                  type="button"
+                  onClick={handleToggleAuthorBox}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded-lg text-xs transition cursor-pointer shadow-2xs"
+                  title="लेखक विवरण को पाठकों के लिए सक्रिय करें (Enable Author Details)"
+                >
+                  लेखक विवरण दिखाएं (Enable)
+                </button>
+              )}
+            </div>
+          ) : null}
+
+          {/* 1. CONTENT END QUICK ACTIONS: Follow on Google | Download PDF | WhatsApp Channel | Telegram Channel */}
+          {articlePageConfig.showQuickActionsStrip !== false && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-4 pb-2 border-t border-slate-200 font-kd-meta">
+              {/* Google News */}
+              <a
+                href={portalSettings?.headerFooter?.socialLinks?.googleNews || 'https://news.google.com'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-semibold shadow-2xs transition active:scale-95"
+                title="Google News पर फॉलो करें"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                <span className="truncate">Google News</span>
+              </a>
+
+              {/* Download PDF */}
+              <button
+                type="button"
+                onClick={handleDownloadArticlePdf}
+                disabled={isDownloadingPdf}
+                className="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl bg-white hover:bg-red-50/50 border border-slate-200 hover:border-red-200 text-slate-800 hover:text-red-700 text-xs font-semibold shadow-2xs transition active:scale-95 cursor-pointer disabled:opacity-50"
+                title="खबर को PDF में डाउनलोड करें"
+              >
+                {isDownloadingPdf ? (
+                  <>
+                    <Loader2 className="w-4 h-4 text-red-600 animate-spin shrink-0" />
+                    <span className="truncate">PDF बन रही है...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 text-red-600 shrink-0" />
+                    <span className="truncate">Download PDF</span>
+                  </>
+                )}
+              </button>
+
+              {/* WhatsApp Channel */}
+              <a
+                href={portalSettings?.headerFooter?.socialLinks?.whatsappChannel || 'https://whatsapp.com/channel/example'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-semibold shadow-2xs transition active:scale-95"
+                title="WhatsApp चैनल से जुड़ें"
+              >
+                <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.888 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                </svg>
+                <span className="truncate">WhatsApp चैनल</span>
+              </a>
+
+              {/* Telegram Channel */}
+              <a
+                href={portalSettings?.headerFooter?.socialLinks?.telegramChannel || 'https://t.me/example'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center space-x-2 py-2 px-3 rounded-xl bg-[#0088cc] hover:bg-[#0077b5] text-white text-xs font-semibold shadow-2xs transition active:scale-95"
+                title="Telegram चैनल से जुड़ें"
+              >
+                <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+                <span className="truncate">Telegram चैनल</span>
+              </a>
+            </div>
+          )}
+
+          {/* 2. REACTION EMOJIS: Simple clean emojis (👍, ❤️, 😂, 😲) without any extra text */}
+          {articlePageConfig.showReactionsBar !== false && (
+            <Reactions
+              articleId={article.id}
+              initialReactions={reactions}
+              userReaction={userReaction}
+              onReactionChange={(type, updated) => {
+                handleReaction(type);
+                if (updated) setReactions(updated);
+              }}
+            />
+          )}
 
           {/* BOTTOM ADVERTISEMENT */}
           {portalSettings.adSettings.showBottomAd && (
@@ -1481,244 +2053,101 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
             </div>
           )}
 
-          {/* AUTHOR BIO & FACT-CHECK CARD (Controlled by Admin Settings - Responsive Mobile & Desktop Layout) */}
-          {sidebarWidgets.showAuthorBio !== false && (
-            <div className="bg-gradient-to-br from-white via-slate-50 to-red-50/30 rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs font-kd-meta space-y-3">
-              {/* Card Header Tag */}
-              <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/70">
-                <span className="text-[11px] font-bold text-red-700 uppercase tracking-wider flex items-center space-x-1.5">
-                  <UserCheck className="w-3.5 h-3.5 text-red-600" />
-                  <span>संपादकीय प्रोफाइल • Author Credentials</span>
-                </span>
-                <span className="text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 font-bold px-2 py-0.5 rounded-full inline-flex items-center space-x-1">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                  <span>Verified Desk</span>
-                </span>
-              </div>
-
-              {/* Responsive Body */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                <div className="flex items-center space-x-3 sm:space-x-0">
-                  <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl overflow-hidden border-2 border-red-200 shrink-0 shadow-xs bg-slate-100">
-                    <img
-                      src={article.authorPhotoUrl || getAuthorPhoto(article.authorName)}
-                      alt={article.authorName}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  {/* On Mobile: show name and role right next to avatar */}
-                  <div className="sm:hidden min-w-0">
-                    <h4 className="font-bold text-sm text-slate-900 leading-tight truncate">
-                      {article.authorName}
-                    </h4>
-                    <span className="text-[10px] bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded inline-block mt-0.5">
-                      {article.authorRole || 'वरिष्ठ संवाददाता'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex-1 min-w-0 w-full">
-                  {/* On Desktop: show name and role here */}
-                  <div className="hidden sm:flex items-center space-x-2 flex-wrap gap-y-1">
-                    <h4 className="font-bold text-base text-slate-900">
-                      {article.authorName}
-                    </h4>
-                    <span className="text-[10px] bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded-md border border-red-200">
-                      {article.authorRole || 'वरिष्ठ संवाददाता'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 mt-1 leading-relaxed font-kd-body">
-                    खबरी दोस्त नेशनल व रीजनल न्यूज़ नेटवर्क की समर्पित संपादकीय टीम द्वारा ग्राउंड रिपोर्टिंग और तथ्य-जांच के साथ प्रकाशित।
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* CONNECT WITH KHABRI DOST: JOIN OUR GROUPS */}
-          {sidebarWidgets.showFollowUsChannels !== false && (
-            <div className="bg-slate-50/90 rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-2xs space-y-4 font-kd-meta">
-              {/* Header: Connect with Khabri Dost to Join our Groups */}
-              <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-200">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center shadow-xs shrink-0">
-                    <ShieldCheck className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm sm:text-base font-kd-headline text-slate-900 tracking-tight">
-                      Connect with Khabri Dost to Join our Groups
-                    </h4>
-                    <p className="text-[11px] text-slate-500">
-                      ताज़ा अपडेट्स और ब्रेकिंग न्यूज़ सीधे अपने फोन पर प्राप्त करें
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* 2 Channels: WhatsApp & Telegram (High-Contrast & Compact) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {/* 1. WhatsApp Channel */}
-                <a
-                  href={portalSettings?.headerFooter?.socialLinks?.whatsappChannel || 'https://whatsapp.com/channel/example'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-[#075E54] hover:bg-[#128C7E] active:scale-98 p-2.5 sm:p-3 rounded-xl flex items-center justify-between text-white border border-emerald-600/50 shadow-xs hover:shadow-md transition-all group cursor-pointer overflow-hidden"
-                  title="WhatsApp ग्रुप / चैनल जॉइन करें - तुरंत ब्रेकिंग अलर्ट्स"
-                >
-                  <div className="flex items-center space-x-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-400/25 text-white flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
-                      <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
-                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-                      </svg>
-                    </div>
-                    <div className="min-w-0 leading-tight">
-                      <p className="text-xs sm:text-sm font-black text-white truncate">
-                        WhatsApp Group
-                      </p>
-                      <p className="text-[10px] sm:text-[11px] text-emerald-200 truncate">
-                        ताज़ा ब्रेकिंग अलर्ट्स
-                      </p>
-                    </div>
-                  </div>
-                  <span className="flex items-center space-x-1 text-emerald-950 font-black text-[11px] sm:text-xs bg-white group-hover:bg-emerald-100 px-2 py-1 rounded-md transition shrink-0 ml-2 shadow-2xs">
-                    <span>जॉइन</span>
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  </span>
-                </a>
-
-                {/* 2. Telegram Channel */}
-                <a
-                  href={portalSettings?.headerFooter?.socialLinks?.telegramChannel || 'https://t.me/example'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-[#0077b5] hover:bg-[#0088cc] active:scale-98 p-2.5 sm:p-3 rounded-xl flex items-center justify-between text-white border border-sky-400/50 shadow-xs hover:shadow-md transition-all group cursor-pointer overflow-hidden"
-                  title="Telegram चैनल से जुड़ें - तुरंत बुलेटिन"
-                >
-                  <div className="flex items-center space-x-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-sky-300/25 text-white flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
-                      <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
-                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.458c.538-.196 1.006.128.832.939z"/>
-                      </svg>
-                    </div>
-                    <div className="min-w-0 leading-tight">
-                      <p className="text-xs sm:text-sm font-black text-white truncate">
-                        Telegram Group
-                      </p>
-                      <p className="text-[10px] sm:text-[11px] text-sky-200 truncate">
-                        इंस्टेंट न्यूज़ बुलेटिन
-                      </p>
-                    </div>
-                  </div>
-                  <span className="flex items-center space-x-1 text-sky-950 font-black text-[11px] sm:text-xs bg-white group-hover:bg-sky-100 px-2 py-1 rounded-md transition shrink-0 ml-2 shadow-2xs">
-                    <span>जुड़ें</span>
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                  </span>
-                </a>
-              </div>
-
-              {/* Social Media Follow Line */}
-              <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-600 flex-wrap gap-2">
-                <span className="font-semibold text-slate-700 text-[11px]">
-                  सोशल मीडिया पर फॉलो करें:
-                </span>
-                <div className="flex items-center space-x-2">
-                  <a
-                    href={portalSettings?.headerFooter?.socialLinks?.youtube || 'https://youtube.com'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-7 h-7 rounded-lg bg-[#FF0000] text-white flex items-center justify-center hover:opacity-90 transition shadow-2xs"
-                    title="YouTube Official"
-                  >
-                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                    </svg>
-                  </a>
-                  <a
-                    href={portalSettings?.headerFooter?.socialLinks?.twitter || 'https://x.com'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center hover:bg-slate-800 transition shadow-2xs"
-                    title="X (Twitter) Official"
-                  >
-                    <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                    </svg>
-                  </a>
-                  <a
-                    href={portalSettings?.headerFooter?.socialLinks?.facebook || 'https://facebook.com'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-7 h-7 rounded-lg bg-[#1877F2] text-white flex items-center justify-center hover:opacity-90 transition shadow-2xs"
-                    title="Facebook Official"
-                  >
-                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                    </svg>
-                  </a>
-                  <a
-                    href={portalSettings?.headerFooter?.socialLinks?.instagram || 'https://instagram.com'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white flex items-center justify-center hover:opacity-90 transition shadow-2xs"
-                    title="Instagram Official"
-                  >
-                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                    </svg>
-                  </a>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* COMMENTS SECTION (Controlled by Admin Settings) */}
-          {sidebarWidgets.showCommentsSection !== false && (
-            <div className="border-t border-slate-200 pt-6 space-y-4">
+          {/* 3. SIMPLIFIED COMMENTS SECTION (Desktop & Mobile) */}
+          {(articlePageConfig.showCommentsSection !== false && sidebarWidgets.showCommentsSection !== false) && (
+            <div className="border-t border-slate-200 pt-5 space-y-3 font-kd-body">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold font-kd-headline text-lg text-slate-900 flex items-center space-x-2">
+                <h3 className="font-bold font-kd-headline text-base sm:text-lg text-slate-900 flex items-center space-x-2">
                   <MessageSquare className="w-4 h-4 text-red-600" />
-                  <span>पाठकों की प्रतिक्रियाएं ({comments.length})</span>
+                  <span>Comments ({comments.length})</span>
                 </h3>
+                {!user && (
+                  <button
+                    type="button"
+                    onClick={signInWithGoogle}
+                    className="text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer"
+                  >
+                    Google से साइन-इन
+                  </button>
+                )}
               </div>
 
+              {/* Status Notice */}
+              {commentNotice && (
+                <div
+                  className={`p-2.5 rounded-xl text-xs font-medium ${
+                    commentNotice.isError
+                      ? 'bg-red-50 text-red-700 border border-red-200'
+                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  }`}
+                >
+                  {commentNotice.text}
+                </div>
+              )}
+
+              {/* Comment Input Box */}
               <form onSubmit={handleCommentSubmit} className="space-y-2">
+                {!user && (
+                  <input
+                    type="text"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="आपका नाम (वैकल्पिक)..."
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-600 focus:bg-white transition"
+                  />
+                )}
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="इस खबर पर अपनी राय साझा करें..."
-                  rows={3}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:bg-white transition font-kd-body"
+                  placeholder="इस खबर पर अपनी राय लिखें..."
+                  rows={2}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:bg-white transition"
                 />
                 <div className="flex justify-between items-center font-kd-meta">
                   <span className="text-[11px] text-slate-500">
-                    {user ? `टिप्पणीकर्ता: ${user.displayName}` : 'साइन-इन आवश्यक'}
+                    {user ? `नाम: ${user.displayName}` : guestName ? `नाम: ${guestName}` : 'पाठक'}
                   </span>
                   <button
                     type="submit"
-                    disabled={isSubmittingComment}
-                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center space-x-1.5 transition disabled:opacity-50"
+                    disabled={isSubmittingComment || !newComment.trim()}
+                    className="bg-red-600 hover:bg-red-700 active:scale-95 text-white text-xs font-semibold px-4 py-1.5 rounded-lg flex items-center space-x-1.5 transition disabled:opacity-50 cursor-pointer shadow-2xs"
                   >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>{isSubmittingComment ? 'भेज रहे हैं...' : 'टिप्पणी भेजें'}</span>
+                    {isSubmittingComment ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>भेज रहे हैं...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>कमेंट भेजें</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
 
-              <div className="space-y-3 pt-2 font-kd-body">
+              {/* Simplified Comments Stream */}
+              <div className="space-y-2 pt-1">
                 {comments.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">
-                    अभी तक कोई टिप्पणी नहीं है। अपनी राय साझा करने वाले पहले पाठक बनें!
+                  <p className="text-xs text-slate-400 italic py-1">
+                    अभी कोई कमेंट नहीं है। सबसे पहले अपनी राय साझा करें!
                   </p>
                 ) : (
                   comments.map((c) => (
-                    <div key={c.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs sm:text-sm space-y-1">
-                      <div className="flex items-center justify-between font-kd-meta">
-                        <span className="font-bold text-slate-800">{c.authorName}</span>
-                        <span className="text-[10px] text-slate-400">
+                    <div key={c.id} className="p-2.5 sm:p-3 bg-slate-50/70 rounded-xl border border-slate-100 text-xs sm:text-sm space-y-1 min-w-0">
+                      <div className="flex items-center justify-between font-kd-meta min-w-0">
+                        <span className="font-bold text-slate-800 text-xs sm:text-sm truncate mr-2">{c.authorName}</span>
+                        <span className="text-[10px] text-slate-400 shrink-0">
                           {formatHindiTimeAgo(c.createdAt)}
                         </span>
                       </div>
-                      <p className="text-slate-700">{c.content}</p>
+                      <p
+                        style={{ overflowWrap: 'anywhere', wordBreak: 'normal' }}
+                        className="text-slate-700 leading-relaxed text-xs sm:text-sm min-w-0 [overflow-wrap:anywhere] [word-break:normal]"
+                      >
+                        {c.content}
+                      </p>
                     </div>
                   ))
                 )}
@@ -1727,8 +2156,18 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
           )}
         </div>
 
-        {/* RIGHT COLUMN: RICH INTERACTIVE SIDEBAR WITH MODULAR ADS & OPINION POLL (4 COLS) */}
-        <aside className="lg:col-span-4 space-y-4">
+        {/* RIGHT COLUMN: RICH INTERACTIVE SIDEBAR WITH MODULAR ADS & OPINION POLL */}
+        <aside className={`${sidebarColumnClass} min-w-0 w-full space-y-4 pt-4 lg:pt-0`}>
+          {/* Mobile-only section title divider */}
+          <div className="lg:hidden flex items-center justify-between pb-2.5 border-b-2 border-red-600/30 font-kd-headline mb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-600 shrink-0 animate-pulse" />
+              <h3 className="text-base font-black text-slate-900 tracking-tight">
+                चर्चित व अनुशंसित • Trending & Recommended
+              </h3>
+            </div>
+          </div>
+
           {/* Admin Quick Controls Bar */}
           {isAdmin && onOpenAdminSettings && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-2.5 flex items-center justify-between shadow-2xs font-kd-meta">
@@ -1784,57 +2223,8 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
                     </div>
                     <h3 className="font-bold font-kd-headline text-slate-900 text-sm sm:text-base flex items-center gap-1.5 flex-wrap min-w-0">
                       <span className="truncate">ट्रेंडिंग ख़बरें</span>
-                      {sidebarWidgets.trendingCategoryFilter && sidebarWidgets.trendingCategoryFilter !== 'all' && (
-                        <span className="text-[10px] bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.2 rounded font-bold font-kd-meta shrink-0">
-                          {sidebarWidgets.trendingCategoryFilter}
-                        </span>
-                      )}
                     </h3>
                   </div>
-
-                  <div className="flex items-center space-x-1 bg-slate-50 border border-slate-200/80 p-0.5 rounded-lg shrink-0">
-                    {/* Play/Pause Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => setIsTrendingPaused(!isTrendingPaused)}
-                      title={isTrendingPaused ? 'स्लाइडिंग जारी रखें' : 'स्लाइडिंग रोकें'}
-                      className="p-1 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition cursor-pointer"
-                    >
-                      {isTrendingPaused ? <Play className="w-3 h-3 fill-red-600 text-red-600" /> : <Pause className="w-3 h-3" />}
-                    </button>
-
-                    {/* Manual Step Jump Buttons */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (trendingScrollRef.current) {
-                          trendingScrollRef.current.scrollTop -= 80;
-                        }
-                      }}
-                      title="ऊपर स्क्रॉल करें"
-                      className="p-1 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition cursor-pointer"
-                    >
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (trendingScrollRef.current) {
-                          trendingScrollRef.current.scrollTop += 80;
-                        }
-                      }}
-                      title="नीचे स्क्रॉल करें"
-                      className="p-1 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition cursor-pointer"
-                    >
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Decorative Line (Simple line ke niche line) */}
-                <div className="w-full flex items-center">
-                  <div className="w-12 h-0.5 bg-red-600 rounded-full"></div>
-                  <div className="flex-1 h-px bg-slate-100"></div>
                 </div>
               </div>
 
@@ -1871,7 +2261,7 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
                           <span className="text-[10px] font-bold text-red-600 uppercase block mb-0.5 font-kd-meta">
                             {art.category}
                           </span>
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-red-700 transition leading-snug font-kd-headline line-clamp-2">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-red-700 transition leading-snug font-kd-headline line-clamp-2 [overflow-wrap:anywhere] [word-break:normal]">
                             {art.title}
                           </h4>
                           <span className="text-[10px] text-slate-400 mt-0.5 block font-kd-meta">
@@ -1899,7 +2289,7 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
                         <span className="text-[10px] font-bold text-red-600 uppercase block mb-0.5 font-kd-meta">
                           {art.category}
                         </span>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-red-700 transition leading-snug font-kd-headline">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-red-700 transition leading-snug font-kd-headline [overflow-wrap:anywhere] [word-break:normal]">
                           {art.title}
                         </h4>
                         <span className="text-[10px] text-slate-400 mt-0.5 block font-kd-meta">
@@ -1957,14 +2347,6 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
             />
           )}
 
-          {/* 4.5 DAILY NEWSPAPER SUDOKU GAME WIDGET */}
-          {onOpenSudokuModal && (
-            <SudokuGameWidget
-              onOpenSudokuModal={onOpenSudokuModal}
-              isAdmin={isAdmin}
-            />
-          )}
-
           {/* 5. BOTTOM ADVERTISEMENT SPACE (MODULAR SLOT 3) */}
           {sidebarAds.bottomSlot?.enabled !== false && (
             <AdBanner
@@ -1979,12 +2361,12 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
         </aside>
       </div>
 
-      {/* RELATED ARTICLES SECTION (Strictly from the same category with admin choice of 3, 4, 6 or more) */}
-      {sidebarWidgets.showRelatedStories !== false && relatedArticles.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-          <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/90 shadow-2xs space-y-6">
-            {/* Header Bar with Admin Count & Typography Option */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 border-b-2 border-red-600 gap-3">
+      {/* RELATED ARTICLES SECTION (Admin customizable: category, location, date, buttons, count, mobile layout) */}
+      {(articlePageConfig.showRelatedStories !== false && sidebarWidgets.showRelatedStories !== false) && relatedArticles.length > 0 && (
+        <section className={`${containerMaxWidthClass} mx-auto px-3 sm:px-6 lg:px-8 pt-6 sm:pt-8`}>
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 lg:p-7 border border-slate-200/90 shadow-2xs space-y-4 sm:space-y-6">
+            {/* Header Bar with Admin Count & Settings */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 sm:pb-3.5 border-b-2 border-red-600 gap-2.5">
               <div>
                 <div className="flex items-center space-x-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
@@ -1996,25 +2378,29 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
                     }}
                     className="font-black font-kd-headline text-base sm:text-lg text-slate-900 tracking-tight"
                   >
-                    संबंधित ख़बरें
+                    {articlePageConfig.relatedHeadingTitle || sidebarWidgets.relatedHeadingTitle || 'यह भी पढ़ें'}
                   </h3>
-                  <span
-                    style={{
-                      fontSize: portalSettings.typography?.relatedCategoryBadgePx
-                        ? `${portalSettings.typography.relatedCategoryBadgePx}px`
-                        : undefined,
-                    }}
-                    className="text-[11px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full uppercase font-kd-meta"
-                  >
-                    {article.category}
-                  </span>
+                  {(articlePageConfig.showRelatedHeadingCategoryBadge ?? sidebarWidgets.showRelatedHeadingCategoryBadge) && (
+                    <span
+                      style={{
+                        fontSize: portalSettings.typography?.relatedCategoryBadgePx
+                          ? `${portalSettings.typography.relatedCategoryBadgePx}px`
+                          : undefined,
+                      }}
+                      className="text-[11px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full uppercase font-kd-meta"
+                    >
+                      {article.category}
+                    </span>
+                  )}
+                  {(articlePageConfig.showRelatedHeadingSubtitle ?? sidebarWidgets.showRelatedHeadingSubtitle) && (
+                    <span className="text-xs text-slate-500 font-medium font-kd-meta pl-1 hidden sm:inline">
+                      {articlePageConfig.relatedHeadingSubtitleText || sidebarWidgets.relatedHeadingSubtitleText || 'अन्य ताज़ा ख़बरें'}
+                    </span>
+                  )}
                 </div>
-                <p className="text-xs text-slate-500 font-kd-body mt-0.5">
-                  इस विषय ({article.category}) से जुड़ी अन्य प्रमुख एवं ताज़ा ख़बरें
-                </p>
               </div>
 
-              {/* Admin Option: Choose 3, 4, or 6 articles & Heading Size */}
+              {/* Admin Option: Quick Count [2, 3, 4, 6, 8, 12, +] & Settings Shortcut */}
               {isAdmin && (
                 <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-1.5 rounded-xl text-xs font-kd-meta border border-slate-200 self-start sm:self-auto">
                   <div className="flex items-center space-x-1">
@@ -2022,7 +2408,7 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
                       <Sliders className="w-3 h-3 text-red-600" />
                       <span>संख्या:</span>
                     </span>
-                    {[3, 4, 6].map((num) => (
+                    {[2, 3, 4, 6, 8, 12].map((num) => (
                       <button
                         key={num}
                         type="button"
@@ -2037,17 +2423,33 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
                         {num}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      onClick={() => handleSetRelatedCount(Math.min(24, adminRelatedCount + 1))}
+                      className="w-5 h-5 rounded bg-white hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center cursor-pointer shadow-2xs border border-slate-200"
+                      title="1 और कार्ड बढ़ाएं"
+                    >
+                      +
+                    </button>
                   </div>
 
                   {onOpenAdminSettings && (
-                    <div className="flex items-center space-x-1 pl-2 border-l border-slate-300">
+                    <div className="flex items-center space-x-2 pl-2 border-l border-slate-300">
+                      <button
+                        type="button"
+                        onClick={() => onOpenAdminSettings('article_meta')}
+                        className="text-[11px] font-bold text-purple-700 hover:text-purple-800 underline flex items-center gap-0.5 cursor-pointer"
+                        title="कार्ड्स व लेआउट कस्टमाइज़ करें"
+                      >
+                        कार्ड्स सेटिंग ⚙
+                      </button>
                       <button
                         type="button"
                         onClick={() => onOpenAdminSettings('typography')}
                         className="text-[11px] font-bold text-red-600 hover:text-red-700 underline flex items-center gap-0.5 cursor-pointer"
                         title="कस्टमाइज़ फ़ॉन्ट साइज़"
                       >
-                        फ़ॉन्ट बदलें ✎
+                        फ़ॉन्ट ✎
                       </button>
                     </div>
                   )}
@@ -2055,72 +2457,446 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
               )}
             </div>
 
-            {/* Dynamic Grid: 3 columns, 4 columns, or 6 columns */}
-            <div
-              className={`grid gap-5 ${
-                adminRelatedCount === 3
-                  ? 'grid-cols-1 md:grid-cols-3'
-                  : adminRelatedCount === 4
-                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
-                  : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-              }`}
-            >
-              {relatedArticles.map((relArt) => (
+            {/* Dynamic Grid: tight mobile gap and responsive widths */}
+            {(() => {
+              const isListMode =
+                articlePageConfig.relatedMobileLayout === 'compact_list' ||
+                sidebarWidgets.relatedMobileLayout === 'list';
+              const isGrid2Mode =
+                articlePageConfig.relatedMobileLayout === 'grid_2col' ||
+                sidebarWidgets.relatedMobileLayout === 'grid2';
+
+              const cardShowCategory =
+                articlePageConfig.relatedCardShowCategory ??
+                sidebarWidgets.relatedCardShowCategory ??
+                false;
+              const cardShowLocation =
+                articlePageConfig.relatedCardShowLocation ??
+                sidebarWidgets.relatedCardShowLocation ??
+                false;
+              const cardShowDate =
+                articlePageConfig.relatedCardShowDate ??
+                sidebarWidgets.relatedCardShowDate ??
+                false;
+              const cardShowReadMore =
+                articlePageConfig.relatedCardShowReadMore ??
+                sidebarWidgets.relatedCardShowReadMore ??
+                false;
+
+              return (
                 <div
-                  key={relArt.id}
-                  onClick={() => {
-                    onSelectArticle(relArt);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="bg-slate-50 hover:bg-white rounded-2xl overflow-hidden border border-slate-200 hover:border-red-400 hover:shadow-lg transition-all duration-300 group cursor-pointer flex flex-col justify-between"
+                  className={
+                    isGrid2Mode
+                      ? 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-5'
+                      : isListMode
+                      ? 'flex flex-col space-y-2.5 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:gap-4 sm:space-y-0 lg:gap-5'
+                      : `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${
+                          adminRelatedCount === 3 ? '3' : '4'
+                        } gap-3 sm:gap-4 lg:gap-5`
+                  }
                 >
-                  <div>
-                    <div className="aspect-[16/10] overflow-hidden bg-slate-200 relative">
-                      <img
-                        src={relArt.imageUrl}
-                        alt={relArt.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                      <span className="absolute top-2.5 left-2.5 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md uppercase font-kd-meta shadow-xs">
-                        {relArt.category}
-                      </span>
-                      {relArt.location && (
-                        <span className="absolute bottom-2.5 left-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-medium px-2 py-0.5 rounded font-kd-meta flex items-center space-x-1">
-                          <MapPin className="w-3 h-3 text-red-400" />
-                          <span>{relArt.location}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="p-4 space-y-2">
-                      <h4
-                        style={{
-                          fontSize: portalSettings.typography?.relatedCardTitlePx
-                            ? `${portalSettings.typography.relatedCardTitlePx}px`
-                            : undefined,
+                  {relatedArticles.map((relArt) => {
+                    return (
+                      <div
+                        key={relArt.id}
+                        onClick={() => {
+                          onSelectArticle(relArt);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
-                        className="text-xs sm:text-sm font-bold font-kd-headline text-slate-900 group-hover:text-red-700 transition leading-snug line-clamp-2"
+                        className={`bg-slate-50 hover:bg-white rounded-xl sm:rounded-2xl overflow-hidden border border-slate-200 hover:border-red-400 hover:shadow-md transition-all duration-200 group cursor-pointer ${
+                          isListMode
+                            ? 'flex flex-row sm:flex-col justify-between items-center sm:items-stretch p-2 sm:p-0'
+                            : 'flex flex-col justify-between'
+                        }`}
                       >
-                        {relArt.title}
-                      </h4>
-                      <p className="text-xs text-slate-600 font-kd-body line-clamp-2 leading-relaxed">
-                        {relArt.summary || relArt.content.slice(0, 110)}
-                      </p>
-                    </div>
-                  </div>
+                        <div className={isListMode ? 'flex sm:block items-center gap-3 w-full' : 'w-full'}>
+                          {sidebarWidgets.relatedCardShowImage !== false && (
+                            <div
+                              className={`overflow-hidden bg-slate-200 relative shrink-0 ${
+                                isListMode
+                                  ? 'w-20 h-20 sm:w-full sm:h-auto sm:aspect-[16/10] rounded-lg sm:rounded-none'
+                                  : 'aspect-[16/10]'
+                              }`}
+                            >
+                              <img
+                                src={relArt.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
+                                alt={relArt.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                loading="lazy"
+                              />
+                              {/* Category Badge on card (Admin toggleable) */}
+                              {cardShowCategory && (
+                                <span className="absolute top-1.5 left-1.5 bg-red-600 text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-md uppercase font-kd-meta shadow-xs">
+                                  {relArt.category}
+                                </span>
+                              )}
+                              {/* Location Badge on card (Admin toggleable) */}
+                              {cardShowLocation && relArt.location && (
+                                <span className="absolute bottom-1.5 left-1.5 bg-black/75 backdrop-blur-xs text-white text-[9px] sm:text-[10px] font-medium px-1.5 py-0.5 rounded font-kd-meta flex items-center space-x-1">
+                                  <MapPin className="w-2.5 h-2.5 text-red-400" />
+                                  <span className="truncate max-w-[80px] sm:max-w-[100px]">{relArt.location}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
 
-                  <div className="p-4 pt-0 border-t border-slate-100 mt-2 flex items-center justify-between text-[11px] text-slate-400 font-kd-meta">
-                    <span>{formatHindiTimeAgo(relArt.createdAt)}</span>
-                    <span className="text-red-600 font-bold group-hover:translate-x-1 transition-transform flex items-center gap-0.5">
-                      पढ़ें ➔
-                    </span>
-                  </div>
+                          <div className={isListMode ? 'p-1.5 sm:p-3.5 space-y-1 flex-1 min-w-0' : 'p-3 sm:p-4 space-y-1 sm:space-y-2 flex-1 min-w-0'}>
+                            <h4
+                              style={{
+                                fontSize: portalSettings.typography?.relatedCardTitlePx
+                                  ? `${portalSettings.typography.relatedCardTitlePx}px`
+                                  : undefined,
+                                overflowWrap: 'anywhere',
+                                wordBreak: 'normal',
+                              }}
+                              className="text-xs sm:text-sm font-bold font-kd-headline text-slate-900 group-hover:text-red-700 transition leading-snug line-clamp-2 [overflow-wrap:anywhere] [word-break:normal]"
+                            >
+                              {relArt.title}
+                            </h4>
+                            {sidebarWidgets.relatedCardShowSummary !== false && (
+                              <p
+                                style={{ overflowWrap: 'anywhere', wordBreak: 'normal' }}
+                                className="text-[11px] sm:text-xs text-slate-600 font-kd-body line-clamp-2 leading-relaxed hidden sm:block [overflow-wrap:anywhere] [word-break:normal]"
+                              >
+                                {relArt.summary || relArt.content.slice(0, 110)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {(cardShowDate || cardShowReadMore) && (
+                          <div className="px-3 pb-2.5 sm:px-4 sm:pb-3.5 pt-1 border-t border-slate-100 mt-0.5 sm:mt-1 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 font-kd-meta w-full">
+                            {cardShowDate ? (
+                              <span>{formatHindiTimeAgo(relArt.createdAt)}</span>
+                            ) : (
+                              <span />
+                            )}
+                            {cardShowReadMore && (
+                              <span className="text-red-600 font-bold group-hover:translate-x-1 transition-transform flex items-center gap-0.5">
+                                पढ़ें ➔
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </div>
         </section>
+      )}
+
+      {/* MOBILE STICKY FLOATING SOCIAL VIRAL SHARE & ADVERTISEMENT BAR (Admin Configurable) */}
+      {stickyBarConfig.enabled !== false && !isMobileStickyDismissed && (
+        <aside
+          aria-label="Mobile Sticky Floating Action & Ad Bar"
+          className={`sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.12)] transition-all duration-300 pb-[env(safe-area-inset-bottom)] ${
+            stickyBarConfig.autoHideOnFooter !== false && isFooterNear
+              ? 'translate-y-full opacity-0 pointer-events-none'
+              : 'translate-y-0 opacity-100'
+          }`}
+        >
+          {/* 1. ADVERTISEMENT MODE ONLY */}
+          {stickyBarConfig.mode === 'ad' && (
+            <div className="px-3 py-1.5 flex items-center justify-between gap-2 min-h-[50px]">
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-[9px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-300">
+                  Ad
+                </span>
+                <span className="text-[10px] text-slate-500 font-kd-meta truncate max-w-[70px]">
+                  {stickyBarConfig.adAltText || 'प्रायोजित'}
+                </span>
+              </div>
+
+              {stickyBarConfig.adType === 'script' && stickyBarConfig.adScriptCode ? (
+                <div
+                  className="flex-1 overflow-hidden max-h-[55px] text-center"
+                  dangerouslySetInnerHTML={{ __html: stickyBarConfig.adScriptCode }}
+                />
+              ) : (
+                <a
+                  href={stickyBarConfig.adTargetUrl || '#contact'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex justify-center items-center overflow-hidden"
+                  title={stickyBarConfig.adAltText || 'Sponsored Partner'}
+                >
+                  <img
+                    src={stickyBarConfig.adImageUrl || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=640&auto=format&fit=crop&q=80'}
+                    alt={stickyBarConfig.adAltText || 'प्रायोजित विज्ञापन'}
+                    className="h-[46px] w-auto max-w-[320px] object-contain rounded shadow-2xs"
+                  />
+                </a>
+              )}
+
+              {stickyBarConfig.dismissible !== false && (
+                <button
+                  type="button"
+                  onClick={() => setIsMobileStickyDismissed(true)}
+                  className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition shrink-0 cursor-pointer"
+                  title="विज्ञापन बंद करें / Dismiss"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* 2. DUAL MODE: STACKED AD + SHARING STRIP */}
+          {stickyBarConfig.mode === 'both' && (
+            <div className="flex flex-col">
+              {/* Ad Banner Strip */}
+              <div className="px-2.5 py-1 bg-amber-50/50 border-b border-slate-200/60 flex items-center justify-between gap-2 min-h-[44px]">
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-[8px] font-black uppercase text-amber-700 bg-amber-100 px-1 rounded border border-amber-300">
+                    Ad
+                  </span>
+                </div>
+                {stickyBarConfig.adType === 'script' && stickyBarConfig.adScriptCode ? (
+                  <div
+                    className="flex-1 overflow-hidden max-h-[44px] text-center"
+                    dangerouslySetInnerHTML={{ __html: stickyBarConfig.adScriptCode }}
+                  />
+                ) : (
+                  <a
+                    href={stickyBarConfig.adTargetUrl || '#contact'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex justify-center items-center overflow-hidden"
+                  >
+                    <img
+                      src={stickyBarConfig.adImageUrl || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=640&auto=format&fit=crop&q=80'}
+                      alt={stickyBarConfig.adAltText || 'प्रायोजित विज्ञापन'}
+                      className="h-[38px] w-auto max-w-[280px] object-contain rounded"
+                    />
+                  </a>
+                )}
+                {stickyBarConfig.dismissible !== false && (
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileStickyDismissed(true)}
+                    className="w-6 h-6 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-800 transition shrink-0 cursor-pointer"
+                    title="विज्ञापन बंद करें"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Social Sharing Strip */}
+              <div className="px-3 py-1.5 flex items-center justify-between gap-1.5">
+                <div className="flex items-center space-x-1.5 shrink-0">
+                  <Share2 className="w-3.5 h-3.5 text-red-600 animate-pulse" />
+                  {stickyBarConfig.showShareLabel !== false && (
+                    <span className="text-[11px] font-bold text-slate-800 font-kd-meta">
+                      Share:
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-1.5 overflow-x-auto py-0.5">
+                  {(stickyBarConfig.sharePlatforms?.whatsapp ?? true) && (
+                    <a
+                      href={`https://api.whatsapp.com/send?text=${shareTitle}%20${shareUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center space-x-1 bg-[#25D366] hover:bg-[#20ba59] active:scale-90 text-white px-2.5 py-1 rounded-full text-[11px] font-bold shadow-2xs transition"
+                      title="WhatsApp पर शेयर करें"
+                    >
+                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.888 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                      </svg>
+                      <span>WhatsApp</span>
+                    </a>
+                  )}
+
+                  {(stickyBarConfig.sharePlatforms?.telegram ?? true) && (
+                    <a
+                      href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-7 h-7 rounded-full bg-[#0088cc] active:scale-90 text-white flex items-center justify-center shadow-2xs hover:scale-105 transition"
+                      title="Telegram पर शेयर करें"
+                    >
+                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                      </svg>
+                    </a>
+                  )}
+
+                  {(stickyBarConfig.sharePlatforms?.twitter ?? true) && (
+                    <a
+                      href={`https://twitter.com/intent/tweet?text=${shareTitle}&url=${shareUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-7 h-7 rounded-full bg-slate-950 active:scale-90 text-white flex items-center justify-center shadow-2xs hover:scale-105 transition"
+                      title="X पर शेयर करें"
+                    >
+                      <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                      </svg>
+                    </a>
+                  )}
+
+                  {(stickyBarConfig.sharePlatforms?.facebook ?? true) && (
+                    <a
+                      href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-7 h-7 rounded-full bg-[#1877F2] active:scale-90 text-white flex items-center justify-center shadow-2xs hover:scale-105 transition"
+                      title="Facebook पर शेयर करें"
+                    >
+                      <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                      </svg>
+                    </a>
+                  )}
+
+                  {(stickyBarConfig.sharePlatforms?.copyLink ?? true) && (
+                    <button
+                      type="button"
+                      onClick={handleCopyLink}
+                      className={`w-7 h-7 rounded-full flex items-center justify-center shadow-2xs active:scale-90 transition cursor-pointer ${
+                        copiedLink ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 border border-slate-300'
+                      }`}
+                      title={copiedLink ? 'लिंक कॉपी हो गया!' : 'लिंक कॉपी करें'}
+                    >
+                      {copiedLink ? <Check className="w-3 h-3 text-white" /> : <Link2 className="w-3 h-3" />}
+                    </button>
+                  )}
+
+                  {(stickyBarConfig.sharePlatforms?.nativeShare ?? true) && (
+                    <button
+                      type="button"
+                      onClick={handleNativeShare}
+                      className="w-7 h-7 rounded-full bg-red-600 hover:bg-red-700 active:scale-90 text-white flex items-center justify-center shadow-2xs transition cursor-pointer"
+                      title="अन्य ऐप्स पर शेयर करें"
+                    >
+                      <Share2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 3. DEFAULT SOCIAL SHARING MODE ONLY */}
+          {(stickyBarConfig.mode === 'share' || !stickyBarConfig.mode) && (
+            <div className="px-3.5 py-2 flex items-center justify-between">
+              <div className="flex items-center space-x-1.5 shrink-0">
+                <Share2 className="w-3.5 h-3.5 text-red-600 animate-pulse" />
+                {stickyBarConfig.showShareLabel !== false && (
+                  <span className="text-[11px] font-bold text-slate-800 font-kd-meta">
+                    Share:
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                {/* WhatsApp Button */}
+                {(stickyBarConfig.sharePlatforms?.whatsapp ?? true) && (
+                  <a
+                    href={`https://api.whatsapp.com/send?text=${shareTitle}%20${shareUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-1.5 bg-[#25D366] hover:bg-[#20ba59] active:scale-90 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-2xs transition"
+                    title="WhatsApp पर शेयर करें"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.888 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                    <span>WhatsApp</span>
+                  </a>
+                )}
+
+                {/* Telegram */}
+                {(stickyBarConfig.sharePlatforms?.telegram ?? true) && (
+                  <a
+                    href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 rounded-full bg-[#0088cc] hover:bg-[#0077b5] active:scale-90 text-white flex items-center justify-center shadow-2xs hover:scale-105 transition duration-150"
+                    title="Telegram पर शेयर करें"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                    </svg>
+                  </a>
+                )}
+
+                {/* Twitter / X */}
+                {(stickyBarConfig.sharePlatforms?.twitter ?? true) && (
+                  <a
+                    href={`https://twitter.com/intent/tweet?text=${shareTitle}&url=${shareUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 rounded-full bg-slate-950 active:scale-90 text-white flex items-center justify-center shadow-2xs hover:scale-105 transition duration-150"
+                    title="X (Twitter) पर शेयर करें"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                  </a>
+                )}
+
+                {/* Facebook */}
+                {(stickyBarConfig.sharePlatforms?.facebook ?? true) && (
+                  <a
+                    href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 rounded-full bg-[#1877F2] active:scale-90 text-white flex items-center justify-center shadow-2xs hover:scale-105 transition duration-150"
+                    title="Facebook पर शेयर करें"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  </a>
+                )}
+
+                {/* Copy Link */}
+                {(stickyBarConfig.sharePlatforms?.copyLink ?? true) && (
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center shadow-2xs active:scale-90 transition duration-150 cursor-pointer ${
+                      copiedLink ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 border border-slate-300'
+                    }`}
+                    title={copiedLink ? 'लिंक कॉपी हो गया!' : 'लिंक कॉपी करें'}
+                  >
+                    {copiedLink ? <Check className="w-3.5 h-3.5 text-white" /> : <Link2 className="w-3.5 h-3.5" />}
+                  </button>
+                )}
+
+                {/* Native OS Share Drawer */}
+                {(stickyBarConfig.sharePlatforms?.nativeShare ?? true) && (
+                  <button
+                    type="button"
+                    onClick={handleNativeShare}
+                    className="w-8 h-8 rounded-full bg-red-600 hover:bg-red-700 active:scale-90 text-white flex items-center justify-center shadow-2xs transition duration-150 cursor-pointer"
+                    title="अन्य ऐप्स पर शेयर करें"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                {/* Optional User Dismiss Button */}
+                {stickyBarConfig.dismissible !== false && (
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileStickyDismissed(true)}
+                    className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-90 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer ml-1"
+                    title="बार छुपाएं / Hide"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </aside>
       )}
 
       {/* E-PAPER CLIPPING & PRINT / PDF MODAL */}
@@ -2130,6 +2906,22 @@ export const ArticlePageView: React.FC<ArticlePageViewProps> = ({
           portalSettings={portalSettings}
           onClose={() => setShowClippingModal(false)}
         />
+      )}
+
+      {/* Temporary, Non-Intrusive 'Link Copied!' Toast Notification */}
+      {copiedLink && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center space-x-2.5 px-4 py-2.5 bg-slate-900/95 backdrop-blur-md text-white rounded-full shadow-2xl border border-slate-700/60 text-xs sm:text-sm font-medium animate-in fade-in slide-in-from-bottom-3 duration-200 pointer-events-none"
+        >
+          <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+            <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+          </div>
+          <span className="font-kd-meta tracking-wide whitespace-nowrap">
+            Link Copied! / लिंक कॉपी हो गया!
+          </span>
+        </div>
       )}
     </article>
   );

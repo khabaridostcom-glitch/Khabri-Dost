@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Shield,
   Lock,
@@ -17,8 +17,17 @@ import {
   HardDrive,
   Activity,
   Cpu,
+  Download,
+  Upload,
+  FileJson,
+  X,
 } from 'lucide-react';
 import { PortalSettings } from '../../types/news';
+import {
+  generatePortalBackupData,
+  restorePortalBackupData,
+  PortalBackupSnapshot,
+} from '../../services/newsService';
 
 interface AdminManagementTabProps {
   portalSettings: PortalSettings;
@@ -31,9 +40,16 @@ export const AdminManagementTab: React.FC<AdminManagementTabProps> = ({
 }) => {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [adminEmail, setAdminEmail] = useState('khabridost.com@gmail.com');
-  const [backupStatus, setBackupStatus] = useState<'idle' | 'running' | 'success'>('idle');
+  const [backupStatus, setBackupStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  const [backupMessage, setBackupMessage] = useState<string | null>(null);
   const [cacheCleared, setCacheCleared] = useState(false);
   const [auditLogVisible, setAuditLogVisible] = useState(false);
+
+  // Restore state
+  const restoreFileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingRestoreData, setPendingRestoreData] = useState<PortalBackupSnapshot | null>(null);
+  const [restoreStatus, setRestoreStatus] = useState<'idle' | 'restoring' | 'success' | 'error'>('idle');
+  const [restoreFeedback, setRestoreFeedback] = useState<string | null>(null);
 
   // Security audit items
   const securityChecks = [
@@ -44,13 +60,88 @@ export const AdminManagementTab: React.FC<AdminManagementTabProps> = ({
     { label: 'SSL/TLS HTTPS Protocol', status: '256-bit Encrypted', ok: true },
   ];
 
-  // Trigger simulated snapshot backup
-  const handleTriggerBackup = () => {
+  // Trigger real JSON snapshot backup download
+  const handleTriggerBackup = async () => {
     setBackupStatus('running');
-    setTimeout(() => {
+    setBackupMessage(null);
+    try {
+      const snapshot = await generatePortalBackupData(adminEmail);
+      const jsonStr = JSON.stringify(snapshot, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateSlug = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      a.href = url;
+      a.download = `khabridost-backup-${dateSlug}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
       setBackupStatus('success');
-      setTimeout(() => setBackupStatus('idle'), 4000);
-    }, 1200);
+      setBackupMessage(
+        `Backup downloaded (${snapshot.articles.length} articles, ${snapshot.mediaAssets.length} media assets, settings included).`
+      );
+      setTimeout(() => {
+        setBackupStatus('idle');
+      }, 5000);
+    } catch (err: any) {
+      console.error('Backup failed:', err);
+      setBackupStatus('error');
+      setBackupMessage(err?.message || 'Failed to generate backup.');
+      setTimeout(() => setBackupStatus('idle'), 6000);
+    }
+  };
+
+  // Handle file select for restore
+  const handleSelectRestoreFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== 'object') {
+          throw new Error('File does not contain valid JSON.');
+        }
+        if (!parsed.articles && !parsed.settings) {
+          throw new Error('File does not appear to be a Khabri Dost backup (missing articles and settings).');
+        }
+        setPendingRestoreData(parsed);
+        setRestoreFeedback(null);
+      } catch (err: any) {
+        setRestoreStatus('error');
+        setRestoreFeedback(`Failed to read file: ${err?.message || 'Invalid JSON format'}`);
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so same file can be re-selected if needed
+    e.target.value = '';
+  };
+
+  // Confirm and execute restore
+  const handleConfirmRestore = async () => {
+    if (!pendingRestoreData) return;
+    setRestoreStatus('restoring');
+    try {
+      const result = await restorePortalBackupData(pendingRestoreData);
+      if (result.restoredSettings) {
+        onUpdateSettings(result.restoredSettings);
+      }
+      setRestoreStatus('success');
+      setRestoreFeedback(result.message);
+      setPendingRestoreData(null);
+      setTimeout(() => {
+        setRestoreStatus('idle');
+        setRestoreFeedback(null);
+      }, 7000);
+    } catch (err: any) {
+      console.error('Restore failed:', err);
+      setRestoreStatus('error');
+      setRestoreFeedback(err?.message || 'Failed to restore backup snapshot.');
+    }
   };
 
   // Clear client and CDN cache
@@ -61,7 +152,7 @@ export const AdminManagementTab: React.FC<AdminManagementTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
+      {/* Top Banner with Real Backup & Restore Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
         <div>
           <div className="flex items-center space-x-2">
@@ -78,25 +169,146 @@ export const AdminManagementTab: React.FC<AdminManagementTabProps> = ({
           <p className="text-xs text-slate-500 mt-1">
             Super admin access control, security protocols, database backups, and operational maintenance controls.
           </p>
+          {backupMessage && (
+            <p className={`text-xs mt-2 font-semibold ${backupStatus === 'error' ? 'text-red-600' : 'text-emerald-700'}`}>
+              {backupMessage}
+            </p>
+          )}
+          {restoreFeedback && (
+            <p className={`text-xs mt-2 font-semibold ${restoreStatus === 'error' ? 'text-red-600' : 'text-emerald-700'}`}>
+              {restoreFeedback}
+            </p>
+          )}
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-wrap gap-y-2">
+          {/* Hidden File Input for Restore */}
+          <input
+            ref={restoreFileInputRef}
+            type="file"
+            accept=".json,application/json"
+            onChange={handleSelectRestoreFile}
+            className="hidden"
+          />
+
+          {/* Restore JSON Backup Button */}
           <button
+            type="button"
+            onClick={() => restoreFileInputRef.current?.click()}
+            disabled={restoreStatus === 'restoring'}
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold text-xs rounded-xl shadow-2xs flex items-center space-x-1.5 transition cursor-pointer"
+            title="Upload and restore a JSON database backup"
+          >
+            <Upload className="w-3.5 h-3.5 text-blue-600" />
+            <span>Restore Backup</span>
+          </button>
+
+          {/* Download JSON Backup Button */}
+          <button
+            type="button"
             onClick={handleTriggerBackup}
             disabled={backupStatus === 'running'}
             className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs flex items-center space-x-1.5 transition cursor-pointer"
+            title="Download full JSON snapshot of database records and portal settings"
           >
-            <Database className="w-4 h-4 text-emerald-400" />
+            <Download className="w-4 h-4 text-emerald-400" />
             <span>
               {backupStatus === 'running'
-                ? 'Backing up...'
+                ? 'Generating Backup...'
                 : backupStatus === 'success'
-                ? 'Backup Complete ✓'
-                : 'Create Database Snapshot'}
+                ? 'Backup Downloaded ✓'
+                : 'Download Backup (JSON)'}
             </span>
           </button>
         </div>
       </div>
+
+      {/* Confirmation Modal for Restore */}
+      {pendingRestoreData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2">
+                <FileJson className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-base text-slate-900">
+                  Confirm Database Restore
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingRestoreData(null)}
+                className="text-slate-400 hover:text-slate-700 text-sm font-bold"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              You are about to restore data from a Khabri Dost backup file. This will update the database records and portal settings.
+            </p>
+
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Backup Timestamp:</span>
+                <span className="font-mono font-bold text-slate-800">
+                  {pendingRestoreData.metadata?.exportTimestamp
+                    ? new Date(pendingRestoreData.metadata.exportTimestamp).toLocaleString()
+                    : 'Unknown'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Domain / System:</span>
+                <span className="font-semibold text-slate-800">
+                  {pendingRestoreData.metadata?.portalDomain || 'khabridost.com'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Articles in Backup:</span>
+                <span className="font-bold text-blue-600">
+                  {Array.isArray(pendingRestoreData.articles) ? pendingRestoreData.articles.length : 0} items
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Media Assets in Backup:</span>
+                <span className="font-bold text-blue-600">
+                  {Array.isArray(pendingRestoreData.mediaAssets) ? pendingRestoreData.mediaAssets.length : 0} items
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Portal Settings:</span>
+                <span className="font-bold text-emerald-600">
+                  {pendingRestoreData.settings ? 'Included ✓' : 'None'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start space-x-2 text-xs text-amber-800">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                Note: Backups contain database records and settings metadata. External storage media files (if hosted externally) must remain accessible at their original URLs.
+              </span>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setPendingRestoreData(null)}
+                className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRestore}
+                disabled={restoreStatus === 'restoring'}
+                className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50"
+              >
+                {restoreStatus === 'restoring' ? 'Restoring Data...' : 'Confirm & Restore'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Grid of Security & Admin Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

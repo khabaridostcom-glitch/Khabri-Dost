@@ -103,10 +103,10 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
       <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col relative text-slate-900">
         {/* Top Decorative Banner */}
-        <div className="bg-gradient-to-r from-red-700 via-red-600 to-slate-900 text-white p-5 sm:p-6 relative">
+        <div className="bg-gradient-to-r from-red-700 via-red-600 to-red-800 text-white p-5 sm:p-6 relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-white transition cursor-pointer"
@@ -268,9 +268,9 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                   type="button"
                   onClick={() => handleDirectAdminLogin('khabaridost.com@gmail.com')}
                   disabled={loading || !!successInfo}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-amber-300 hover:text-white font-semibold py-2.5 px-4 rounded-xl transition flex items-center justify-center space-x-2 border border-slate-700 cursor-pointer disabled:opacity-50 text-xs"
+                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2.5 px-4 rounded-xl transition flex items-center justify-center space-x-2 border border-slate-300 cursor-pointer disabled:opacity-50 text-xs shadow-2xs"
                 >
-                  <UserCheck className="w-3.5 h-3.5 text-amber-400" />
+                  <UserCheck className="w-3.5 h-3.5 text-red-600" />
                   <span>वैकल्पिक ईमेल (khabaridost.com@gmail.com) से प्रवेश करें</span>
                 </button>
               </div>
@@ -294,7 +294,7 @@ export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={loading || !!successInfo}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-4 rounded-xl transition flex items-center justify-center space-x-3 shadow-md cursor-pointer disabled:opacity-50 text-xs sm:text-sm"
+                className="w-full bg-white hover:bg-slate-50 text-slate-800 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center space-x-3 border border-slate-300 shadow-xs cursor-pointer disabled:opacity-50 text-xs sm:text-sm"
               >
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                   <path

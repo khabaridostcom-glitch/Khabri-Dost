@@ -168,30 +168,30 @@ export const AiSeoAssistantModule: React.FC<AiSeoAssistantModuleProps> = ({
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Module Hero Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-red-950 to-slate-900 border border-red-500/30 rounded-2xl p-5 sm:p-6 text-white shadow-xl relative overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 text-slate-800 shadow-sm relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start space-x-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-red-900/40 shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center text-white shadow-sm shrink-0">
               <Sparkles className="w-6 h-6 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-extrabold tracking-tight">
+                <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900">
                   AI SEO Assistant Studio
                 </h2>
-                <span className="text-[10px] font-mono uppercase bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] font-mono uppercase bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-full font-bold">
                   GEMINI 3.8 FLASH
                 </span>
               </div>
-              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+              <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
                 Automatically generate search-engine optimized headlines, clean URL slugs, meta descriptions, keyword tags, and Discover highlights based on article drafts or Google Trends topics.
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2 shrink-0">
-            <span className="text-[11px] font-mono bg-slate-800 text-slate-300 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-1.5">
-              <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="text-[11px] font-mono bg-slate-100 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 flex items-center gap-1.5">
+              <Cpu className="w-3.5 h-3.5 text-indigo-600" />
               <span>Provider: {activeProvider.toUpperCase()}</span>
             </span>
           </div>

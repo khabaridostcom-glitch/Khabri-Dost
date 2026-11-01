@@ -121,21 +121,21 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
   };
 
   return (
-    <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-red-950/40 border border-red-500/30 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4 text-slate-800">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div className="flex items-center space-x-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-red-900/30">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center text-white shadow-sm">
             <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <span>AI Automated Meta Title & Description Generator</span>
-              <span className="text-[10px] font-mono uppercase bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-mono uppercase bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-full">
                 Gemini AI
               </span>
             </h4>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-500">
               Generate 100% search and news optimized metadata based on your article draft.
             </p>
           </div>
@@ -145,7 +145,7 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
           type="button"
           onClick={handleGenerate}
           disabled={loading}
-          className="bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer shadow-md shadow-red-950/50 flex items-center justify-center space-x-2 shrink-0 disabled:opacity-50"
+          className="bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer shadow-sm flex items-center justify-center space-x-2 shrink-0 disabled:opacity-50"
         >
           {loading ? (
             <>
@@ -163,10 +163,10 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
 
       {/* Helper notice if no content */}
       {wordCount < 10 && !result && (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex items-start space-x-2.5 text-xs text-slate-400">
-          <FileText className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-start space-x-2.5 text-xs text-slate-600">
+          <FileText className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
           <div>
-            <span className="text-slate-200 font-semibold block mb-0.5">Body content recommended:</span>
+            <span className="text-slate-900 font-semibold block mb-0.5">Body content recommended:</span>
             <span>
               As you draft your article (current words: {wordCount}), AI can evaluate context to craft high-CTR titles and meta snippets.
             </span>
@@ -176,8 +176,8 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
 
       {/* Error state */}
       {error && (
-        <div className="p-3 bg-red-950/60 border border-red-700/50 rounded-xl flex items-center space-x-2 text-xs text-red-200">
-          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+        <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center space-x-2 text-xs text-red-700">
+          <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
           <span>{error}</span>
         </div>
       )}
@@ -186,10 +186,10 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
       {result && (
         <div className="space-y-4 pt-1 animate-fadeIn">
           {/* Top Explanation Banner */}
-          <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-xl text-xs text-slate-300 flex items-start space-x-2">
-            <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-xs text-slate-800 flex items-start space-x-2">
+            <Lightbulb className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider block mb-0.5">
+              <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider block mb-0.5">
                 AI SEO Strategy & Insights:
               </span>
               <span>{result.explanation}</span>
@@ -197,7 +197,7 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
             <button
               type="button"
               onClick={handleApplyAll}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center space-x-1 shrink-0 ml-2 cursor-pointer"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center space-x-1 shrink-0 ml-2 cursor-pointer shadow-2xs"
             >
               {appliedField === 'all' ? (
                 <>
@@ -214,17 +214,17 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
           </div>
 
           {/* 1. Meta Title Section */}
-          <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3.5 space-y-2">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold text-slate-200">
+                <span className="text-xs font-bold text-slate-900">
                   Suggested SEO Meta Title
                 </span>
                 <span
                   className={`text-[10px] font-mono px-2 py-0.5 rounded ${
                     selectedTitle.length >= 48 && selectedTitle.length <= 60
-                      ? 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/50'
-                      : 'bg-amber-900/40 text-amber-300 border border-amber-700/50'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                      : 'bg-amber-50 text-amber-800 border border-amber-300'
                   }`}
                 >
                   {selectedTitle.length} / 60 chars ({selectedTitle.length >= 48 && selectedTitle.length <= 60 ? 'Optimal' : 'Needs Review'})
@@ -236,10 +236,10 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
                   onApplyMeta({ seoTitle: selectedTitle });
                   notifyApplied('title');
                 }}
-                className="text-[11px] font-bold text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
+                className="text-[11px] font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer"
               >
                 {appliedField === 'title' ? (
-                  <span className="text-emerald-400 flex items-center gap-1">
+                  <span className="text-emerald-600 flex items-center gap-1">
                     <Check className="w-3 h-3" /> Applied
                   </span>
                 ) : (
@@ -248,14 +248,14 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
               </button>
             </div>
 
-            <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 text-xs sm:text-sm font-bold text-white flex items-center justify-between gap-2">
+            <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs sm:text-sm font-bold text-slate-900 flex items-center justify-between gap-2 shadow-2xs">
               <span className="line-clamp-2">{selectedTitle}</span>
             </div>
 
             {/* Alternative Titles */}
             {result.alternativeTitles && result.alternativeTitles.length > 0 && (
               <div className="space-y-1 pt-1">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
                   Alternative Title Angles:
                 </span>
                 <div className="grid grid-cols-1 gap-1.5">
@@ -265,12 +265,12 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
                       onClick={() => setSelectedTitle(altTitle)}
                       className={`p-2 rounded-lg text-xs cursor-pointer transition flex items-center justify-between border ${
                         selectedTitle === altTitle
-                          ? 'bg-red-950/40 border-red-500/50 text-white font-medium'
-                          : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-900 hover:text-white'
+                          ? 'bg-red-50 border-red-400 text-red-900 font-medium'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                       }`}
                     >
                       <span className="line-clamp-1">{altTitle}</span>
-                      <span className="text-[10px] text-slate-500 shrink-0 ml-2 font-mono">
+                      <span className="text-[10px] text-slate-400 shrink-0 ml-2 font-mono">
                         {altTitle.length}ch
                       </span>
                     </div>
@@ -281,17 +281,17 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
           </div>
 
           {/* 2. Meta Description Section */}
-          <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3.5 space-y-2">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold text-slate-200">
+                <span className="text-xs font-bold text-slate-900">
                   Suggested Meta Description
                 </span>
                 <span
                   className={`text-[10px] font-mono px-2 py-0.5 rounded ${
                     selectedDescription.length >= 135 && selectedDescription.length <= 160
-                      ? 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/50'
-                      : 'bg-amber-900/40 text-amber-300 border border-amber-700/50'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                      : 'bg-amber-50 text-amber-800 border border-amber-300'
                   }`}
                 >
                   {selectedDescription.length} / 160 chars ({selectedDescription.length >= 135 && selectedDescription.length <= 160 ? 'Optimal for SERP' : 'Needs Review'})
@@ -303,10 +303,10 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
                   onApplyMeta({ seoDescription: selectedDescription });
                   notifyApplied('desc');
                 }}
-                className="text-[11px] font-bold text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
+                className="text-[11px] font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer"
               >
                 {appliedField === 'desc' ? (
-                  <span className="text-emerald-400 flex items-center gap-1">
+                  <span className="text-emerald-600 flex items-center gap-1">
                     <Check className="w-3 h-3" /> Applied
                   </span>
                 ) : (
@@ -315,14 +315,14 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
               </button>
             </div>
 
-            <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 text-xs text-slate-200 leading-relaxed">
+            <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs text-slate-800 leading-relaxed shadow-2xs">
               {selectedDescription}
             </div>
 
             {/* Alternative Descriptions */}
             {result.alternativeDescriptions && result.alternativeDescriptions.length > 0 && (
               <div className="space-y-1 pt-1">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
                   Alternative Snippet Variations:
                 </span>
                 <div className="grid grid-cols-1 gap-1.5">
@@ -332,12 +332,12 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
                       onClick={() => setSelectedDescription(altDesc)}
                       className={`p-2 rounded-lg text-xs cursor-pointer transition flex items-center justify-between border ${
                         selectedDescription === altDesc
-                          ? 'bg-red-950/40 border-red-500/50 text-white font-medium'
-                          : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-900 hover:text-white'
+                          ? 'bg-red-50 border-red-400 text-red-900 font-medium'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                       }`}
                     >
                       <span className="line-clamp-2">{altDesc}</span>
-                      <span className="text-[10px] text-slate-500 shrink-0 ml-2 font-mono">
+                      <span className="text-[10px] text-slate-400 shrink-0 ml-2 font-mono">
                         {altDesc.length}ch
                       </span>
                     </div>
@@ -350,41 +350,41 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
           {/* 3. Focus Keywords & Image Alt Text */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Keywords */}
-            <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 space-y-1.5">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-200">Focus Keywords</span>
+                <span className="text-xs font-bold text-slate-900">Focus Keywords</span>
                 <button
                   type="button"
                   onClick={() => {
                     onApplyMeta({ focusKeywords: result.focusKeywords });
                     notifyApplied('kw');
                   }}
-                  className="text-[11px] font-bold text-red-400 hover:text-red-300 cursor-pointer"
+                  className="text-[11px] font-bold text-red-600 hover:text-red-700 cursor-pointer"
                 >
                   {appliedField === 'kw' ? 'Applied' : 'Apply →'}
                 </button>
               </div>
-              <div className="text-xs text-slate-300 font-mono bg-slate-900 p-2 rounded-lg border border-slate-800">
+              <div className="text-xs text-slate-800 font-mono bg-white p-2 rounded-lg border border-slate-200 shadow-2xs">
                 {result.focusKeywords}
               </div>
             </div>
 
             {/* Alt Text */}
-            <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 space-y-1.5">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-200">Image Alt Text</span>
+                <span className="text-xs font-bold text-slate-900">Image Alt Text</span>
                 <button
                   type="button"
                   onClick={() => {
                     onApplyMeta({ imageAltText: result.imageAltText });
                     notifyApplied('alt');
                   }}
-                  className="text-[11px] font-bold text-red-400 hover:text-red-300 cursor-pointer"
+                  className="text-[11px] font-bold text-red-600 hover:text-red-700 cursor-pointer"
                 >
                   {appliedField === 'alt' ? 'Applied' : 'Apply →'}
                 </button>
               </div>
-              <div className="text-xs text-slate-300 bg-slate-900 p-2 rounded-lg border border-slate-800 line-clamp-2">
+              <div className="text-xs text-slate-800 bg-white p-2 rounded-lg border border-slate-200 line-clamp-2 shadow-2xs">
                 {result.imageAltText}
               </div>
             </div>
@@ -394,10 +394,10 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Highlights */}
             {result.highlights && result.highlights.length > 0 && (
-              <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 space-y-1.5">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                    <List className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <List className="w-3.5 h-3.5 text-amber-500" />
                     <span>Story Highlights</span>
                   </span>
                   <button
@@ -406,12 +406,12 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
                       onApplyMeta({ highlights: result.highlights });
                       notifyApplied('highlights');
                     }}
-                    className="text-[11px] font-bold text-red-400 hover:text-red-300 cursor-pointer"
+                    className="text-[11px] font-bold text-red-600 hover:text-red-700 cursor-pointer"
                   >
                     {appliedField === 'highlights' ? 'Applied' : 'Apply →'}
                   </button>
                 </div>
-                <ul className="space-y-1 text-xs text-slate-300">
+                <ul className="space-y-1 text-xs text-slate-700">
                   {result.highlights.map((h, i) => (
                     <li key={i} className="flex items-start gap-1.5">
                       <span className="text-red-500 font-bold">•</span>
@@ -425,10 +425,10 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
             {/* Tags & URL Slug */}
             <div className="space-y-3">
               {result.tags && result.tags.length > 0 && (
-                <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 space-y-1.5">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                      <Tag className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-blue-500" />
                       <span>Recommended Tags</span>
                     </span>
                     <button
@@ -437,14 +437,14 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
                         onApplyMeta({ tags: result.tags });
                         notifyApplied('tags');
                       }}
-                      className="text-[11px] font-bold text-red-400 hover:text-red-300 cursor-pointer"
+                      className="text-[11px] font-bold text-red-600 hover:text-red-700 cursor-pointer"
                     >
                       {appliedField === 'tags' ? 'Applied' : 'Apply →'}
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {result.tags.map((t, i) => (
-                      <span key={i} className="text-[11px] bg-slate-900 text-slate-300 border border-slate-800 px-2 py-0.5 rounded">
+                      <span key={i} className="text-[11px] bg-white text-slate-700 border border-slate-200 px-2 py-0.5 rounded shadow-2xs">
                         #{t}
                       </span>
                     ))}
@@ -453,10 +453,10 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
               )}
 
               {result.urlSlug && (
-                <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 space-y-1.5">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                      <Link className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <Link className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Clean SEO Slug</span>
                     </span>
                     <button
@@ -465,12 +465,12 @@ export const AiSeoMetaGenerator: React.FC<AiSeoMetaGeneratorProps> = ({
                         onApplyMeta({ urlSlug: result.urlSlug });
                         notifyApplied('slug');
                       }}
-                      className="text-[11px] font-bold text-red-400 hover:text-red-300 cursor-pointer"
+                      className="text-[11px] font-bold text-red-600 hover:text-red-700 cursor-pointer"
                     >
                       {appliedField === 'slug' ? 'Applied' : 'Apply →'}
                     </button>
                   </div>
-                  <div className="text-xs font-mono text-emerald-400 bg-slate-900 p-2 rounded-lg border border-slate-800">
+                  <div className="text-xs font-mono text-emerald-700 bg-white p-2 rounded-lg border border-slate-200 shadow-2xs">
                     /{result.urlSlug}
                   </div>
                 </div>

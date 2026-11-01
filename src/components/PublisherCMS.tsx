@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
   PenTool,
@@ -35,10 +35,13 @@ import {
   Zap,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { NewsArticle, NewsCategory, ApiConfiguration } from '../types/news';
+import { NewsArticle, NewsCategory, ApiConfiguration, MediaAsset } from '../types/news';
 import { CATEGORIES } from '../data/seedNews';
 import { publishArticle, deleteArticle } from '../services/newsService';
 import { AiSeoAssistantModal, DraftedSeoArticle } from './admin/AiSeoAssistantModal';
+import { MediaManagerModal } from './MediaManagerModal';
+import { WordPressVisualEditor } from './admin/WordPressVisualEditor';
+import { compressImage } from '../utils/imageCompressor';
 
 interface PublisherCMSProps {
   onClose: () => void;
@@ -46,6 +49,8 @@ interface PublisherCMSProps {
   onArticlePublished: () => void;
   onSelectArticleToView: (article: NewsArticle) => void;
   apiConfig?: ApiConfiguration;
+  mediaLibrary?: MediaAsset[];
+  onAddMedia?: (media: Omit<MediaAsset, 'id' | 'uploadedAt'>) => void;
 }
 
 const IMAGE_PRESETS = [
@@ -97,9 +102,59 @@ export const PublisherCMS: React.FC<PublisherCMSProps> = ({
   onArticlePublished,
   onSelectArticleToView,
   apiConfig,
+  mediaLibrary = [],
+  onAddMedia,
 }) => {
   const { user, isAdmin, signInWithGoogle } = useAuth();
   const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'trends' | 'citizen' | 'autoshare'>('create');
+
+  // Media picker & upload state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const comp = await compressImage(file, { maxWidth: 1600, quality: 0.82, format: 'image/webp' });
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      setImageUrl(comp.dataUrl);
+      setImageCaption(`${cleanName} — सचित्र रिपोर्ट`);
+      if (!imageAltText) setImageAltText(cleanName);
+      if (onAddMedia) {
+        onAddMedia({
+          url: comp.dataUrl,
+          title: cleanName,
+          caption: `${cleanName} — सचित्र रिपोर्ट`,
+          altText: cleanName,
+          category: category || 'national',
+          fileSize: comp.compressedSizeFormatted || `${(file.size / 1024).toFixed(1)} KB`,
+          dimensions: `${comp.compressedWidth}x${comp.compressedHeight}`,
+          type: 'image',
+        });
+      }
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        setImageUrl(dataUrl);
+        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+        if (onAddMedia) {
+          onAddMedia({
+            url: dataUrl,
+            title: cleanName,
+            caption: `${cleanName} — सचित्र रिपोर्ट`,
+            altText: cleanName,
+            category: category || 'national',
+            fileSize: `${(file.size / 1024).toFixed(1)} KB`,
+            dimensions: '1200x800',
+            type: 'image',
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Google Trends & AI Writer State
   const [trends, setTrends] = useState<any[]>([]);
@@ -125,8 +180,8 @@ export const PublisherCMS: React.FC<PublisherCMSProps> = ({
   const [category, setCategory] = useState<NewsCategory>('national');
   const [location, setLocation] = useState('नई दिल्ली');
   const [authorName, setAuthorName] = useState(user?.displayName || 'संपादकीय टीम');
-  const [imageUrl, setImageUrl] = useState(IMAGE_PRESETS[0].url);
-  const [imageCaption, setImageCaption] = useState(IMAGE_PRESETS[0].caption);
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageCaption, setImageCaption] = useState('');
   const [tags, setTags] = useState('ताज़ा ख़बर, ब्रेकिंग');
   const [isBreaking, setIsBreaking] = useState(false);
   const [isTopStory, setIsTopStory] = useState(true);
@@ -541,82 +596,90 @@ export const PublisherCMS: React.FC<PublisherCMSProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/85 backdrop-blur-sm flex justify-center p-2 sm:p-4 md:p-6 animate-fadeIn">
-      <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden my-auto border border-slate-200 flex flex-col max-h-[94vh]">
-        {/* Header Bar */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-lg bg-red-600 flex items-center justify-center text-white shadow">
-              <PenTool className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-bold font-['Rozha_One',serif]">
-                संपादकीय कक्ष • Publisher Editorial Desk
-              </h2>
-              <p className="text-xs text-slate-400">
-                खबरी दोस्त न्यूज़ पोर्टल | समाचार प्रकाशन एवं प्रबंधन प्रणाली
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700 text-xs overflow-x-auto">
-              <button
-                onClick={() => setActiveTab('create')}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-md font-medium transition whitespace-nowrap ${
-                  activeTab === 'create' ? 'bg-red-600 text-white font-bold' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                + नई ख़बर
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('trends');
-                  loadGoogleTrends();
-                }}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-md font-medium transition flex items-center space-x-1.5 whitespace-nowrap ${
-                  activeTab === 'trends' ? 'bg-red-600 text-white font-bold' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <Flame className="w-3.5 h-3.5 text-amber-400" />
-                <span>गूगल ट्रेंड्स & AI</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('citizen');
-                  loadCitizenSubmissions();
-                }}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-md font-medium transition flex items-center space-x-1.5 whitespace-nowrap ${
-                  activeTab === 'citizen' ? 'bg-red-600 text-white font-bold' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <Inbox className="w-3.5 h-3.5 text-sky-400" />
-                <span>नागरिक पत्रकार</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('autoshare')}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-md font-medium transition flex items-center space-x-1.5 whitespace-nowrap ${
-                  activeTab === 'autoshare' ? 'bg-red-600 text-white font-bold' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <Share2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>ऑटो-शेयर</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('manage')}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-md font-medium transition whitespace-nowrap ${
-                  activeTab === 'manage' ? 'bg-red-600 text-white font-bold' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                सभी समाचार ({articles.length})
-              </button>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/85 backdrop-blur-sm flex justify-center p-1 sm:p-4 md:p-6 animate-fadeIn">
+      <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden my-auto border border-slate-200 flex flex-col max-h-[96vh] sm:max-h-[94vh]">
+        {/* Header Bar (Responsive: 2-Row on Mobile, Single Row on Desktop) */}
+        <div className="bg-slate-900 text-white px-3.5 sm:px-6 py-3 sm:py-4 border-b border-slate-800 shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center space-x-2.5 min-w-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-red-600 flex items-center justify-center text-white shadow-xs shrink-0">
+                <PenTool className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-sm sm:text-xl font-bold font-['Rozha_One',serif] truncate">
+                  संपादकीय कक्ष • Publisher Editorial Desk
+                </h2>
+                <p className="text-[10px] sm:text-xs text-slate-400 truncate hidden xs:block">
+                  खबरी दोस्त न्यूज़ पोर्टल | समाचार प्रकाशन एवं प्रबंधन प्रणाली
+                </p>
+              </div>
             </div>
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer shrink-0"
+              title="Close Desk"
+              aria-label="Close Desk"
             >
               <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Tab Strip (Horizontal Scrollable on Mobile) */}
+          <div className="mt-2.5 sm:mt-3 flex items-center overflow-x-auto scrollbar-none gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700 text-xs font-kd-meta">
+            <button
+              type="button"
+              onClick={() => setActiveTab('create')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition whitespace-nowrap shrink-0 cursor-pointer ${
+                activeTab === 'create' ? 'bg-red-600 text-white font-bold shadow-2xs' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              + नई ख़बर
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('trends');
+                loadGoogleTrends();
+              }}
+              className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center space-x-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+                activeTab === 'trends' ? 'bg-red-600 text-white font-bold shadow-2xs' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5 text-amber-400" />
+              <span>गूगल ट्रेंड्स & AI</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('citizen');
+                loadCitizenSubmissions();
+              }}
+              className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center space-x-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+                activeTab === 'citizen' ? 'bg-red-600 text-white font-bold shadow-2xs' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Inbox className="w-3.5 h-3.5 text-sky-400" />
+              <span>नागरिक पत्रकार</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('autoshare')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center space-x-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+                activeTab === 'autoshare' ? 'bg-red-600 text-white font-bold shadow-2xs' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              <Share2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>ऑटो-शेयर</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('manage')}
+              className={`px-3 py-1.5 rounded-lg font-medium transition whitespace-nowrap shrink-0 cursor-pointer ${
+                activeTab === 'manage' ? 'bg-red-600 text-white font-bold shadow-2xs' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              सभी समाचार ({articles.length})
             </button>
           </div>
         </div>
@@ -775,145 +838,208 @@ export const PublisherCMS: React.FC<PublisherCMSProps> = ({
 
               {/* Row 4: Image Selector & Presets */}
               <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-700 uppercase">
-                    मुख्य फ़ोटो (Featured Photo URL)
-                  </label>
-                  <div className="flex items-center space-x-2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-blue-600" />
+                      <span>मुख्य फ़ीचर्ड फ़ोटो (Featured Photo)</span>
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      लाइब्रेरी से चुनें, अपने कंप्यूटर से सीधे अपलोड करें अथवा AI सुझाव लें।
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setIsMediaPickerOpen(true)}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-2xs transition cursor-pointer"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      <span>Media Library</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-2xs transition cursor-pointer"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>फ़ोटो अपलोड करें</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={handleGenerateAiImage}
                       disabled={isGeneratingAiImage}
-                      className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center space-x-1 cursor-pointer"
+                      className="text-xs text-red-600 hover:text-red-700 font-semibold px-2 py-1 bg-red-50 hover:bg-red-100 rounded-lg flex items-center space-x-1 transition cursor-pointer"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                      <span>{isGeneratingAiImage ? 'फ़ोटो खोजी जा रही है...' : 'AI फ़ोटो सुझाव'}</span>
+                      <span>{isGeneratingAiImage ? 'खोज रहे हैं...' : 'AI सुझाव'}</span>
                     </button>
-                    <span className="text-[11px] text-slate-400 hidden sm:inline">
-                      • टेम्पलेट्स में से भी चुन सकते हैं
-                    </span>
                   </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                    className="flex-1 bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-red-600 focus:outline-none"
-                  />
-                  <input
-                    type="text"
-                    value={imageCaption}
-                    onChange={(e) => setImageCaption(e.target.value)}
-                    placeholder="फ़ोटो कैप्शन / विवरण"
-                    className="w-1/3 bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-red-600 focus:outline-none"
-                  />
-                </div>
+                {/* Live Image Preview or Placeholder */}
+                {imageUrl && imageUrl.trim() !== '' ? (
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                    <div className="flex flex-col sm:flex-row gap-4 items-start">
+                      <div className="relative group w-full sm:w-48 h-32 rounded-lg overflow-hidden bg-slate-900 border border-slate-300 shrink-0 shadow-2xs">
+                        <img
+                          src={imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
+                          alt={imageAltText || 'Featured Photo Preview'}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1.5 transition">
+                          <button
+                            type="button"
+                            onClick={() => setIsMediaPickerOpen(true)}
+                            className="p-1.5 bg-blue-600 text-white rounded-md text-[10px] font-bold"
+                            title="बदलें"
+                          >
+                            <ImageIcon className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setImageUrl('');
+                              setImageCaption('');
+                              setImageAltText('');
+                            }}
+                            className="p-1.5 bg-red-600 text-white rounded-md text-[10px] font-bold"
+                            title="हटाएं"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
 
-                {/* Quick Presets */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
-                  {IMAGE_PRESETS.map((preset, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => {
-                        setImageUrl(preset.url);
-                        setImageCaption(preset.caption);
-                      }}
-                      className={`cursor-pointer rounded-lg overflow-hidden border p-1 text-center transition ${
-                        imageUrl === preset.url
-                          ? 'border-red-600 bg-red-50 ring-2 ring-red-500'
-                          : 'border-slate-200 hover:border-slate-300 bg-slate-50'
-                      }`}
-                    >
-                      <img src={preset.url} alt="" className="w-full h-14 object-cover rounded" />
-                      <span className="text-[10px] font-semibold text-slate-700 block mt-1 truncate">
-                        {preset.name}
-                      </span>
+                      <div className="flex-1 space-y-2 w-full text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800">चयनित फ़ीचर्ड फ़ोटो विवरण:</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setImageUrl('');
+                              setImageCaption('');
+                              setImageAltText('');
+                            }}
+                            className="text-red-600 hover:text-red-700 font-bold text-[11px] hover:underline"
+                          >
+                            ✕ फ़ोटो हटाएं
+                          </button>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-0.5">
+                            फ़ोटो कैप्शन व क्रेडिट (Caption):
+                          </label>
+                          <input
+                            type="text"
+                            value={imageCaption}
+                            onChange={(e) => setImageCaption(e.target.value)}
+                            placeholder="फ़ोटो कैप्शन / विवरण / क्रेडिट..."
+                            className="w-full bg-white border border-slate-300 rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-red-600 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-0.5">
+                            Alt Text (Image SEO Description):
+                          </label>
+                          <input
+                            type="text"
+                            value={imageAltText}
+                            onChange={(e) => setImageAltText(e.target.value)}
+                            placeholder="सटीक दृश्य विवरण (गूगल इमेज सर्च के लिए)..."
+                            className="w-full bg-white border border-slate-300 rounded-lg p-1.5 text-xs focus:ring-1 focus:ring-red-600 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="pt-1">
+                          <input
+                            type="url"
+                            value={imageUrl}
+                            onChange={(e) => setImageUrl(e.target.value)}
+                            placeholder="सीधा URL पेस्ट करें..."
+                            className="w-full bg-white border border-slate-300 rounded-lg p-1.5 text-[11px] font-mono text-slate-600 focus:outline-none"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                ) : (
+                  <div className="p-4 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50/60 text-center space-y-2">
+                    <p className="text-xs font-bold text-slate-700">कोई फ़ीचर्ड फ़ोटो चयनित नहीं है</p>
+                    <p className="text-[11px] text-slate-500">
+                      ऊपर दिए गए "Media Library" या "फ़ोटो अपलोड करें" बटन का उपयोग करें, अथवा नीचे दिए गए टेम्पलेट्स में से चुनें:
+                    </p>
+                    <div className="flex items-center justify-center gap-2 max-w-md mx-auto pt-1">
+                      <input
+                        type="url"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        placeholder="या सीधे इमेज URL पेस्ट करें (https://...)"
+                        className="flex-1 bg-white border border-slate-300 rounded-lg p-1.5 text-xs font-mono focus:ring-1 focus:ring-red-600 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Quick Presets Toggle / Drawer */}
+                <div className="pt-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1.5">
+                    या त्वरित टेम्पलेट फ़ोटो चुनें (Quick Presets):
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {IMAGE_PRESETS.map((preset, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          setImageUrl(preset.url);
+                          setImageCaption(preset.caption);
+                          if (!imageAltText) setImageAltText(preset.name);
+                        }}
+                        className={`cursor-pointer rounded-lg overflow-hidden border p-1 text-center transition ${
+                          imageUrl === preset.url
+                            ? 'border-red-600 bg-red-50 ring-2 ring-red-500'
+                            : 'border-slate-200 hover:border-slate-300 bg-slate-50'
+                        }`}
+                      >
+                        <img src={preset.url || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'} alt="" className="w-full h-12 object-cover rounded" />
+                        <span className="text-[10px] font-semibold text-slate-700 block mt-1 truncate">
+                          {preset.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Row 5: Full Content with Rich Formatting Toolbar */}
-              <div>
+              {/* Row 5: Full Content with WordPress Visual Editor */}
+              <div className="space-y-1">
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-bold text-slate-700 uppercase">
                     विस्तृत समाचार (Full Article Content) *
                   </label>
-                  <span className="text-[11px] text-slate-400">
-                    {content.trim().split(/\s+/).filter(Boolean).length} शब्द • {content.length} अक्षर
+                  <span className="text-[11px] font-mono text-slate-400">
+                    WordPress Visual & HTML Mode
                   </span>
                 </div>
-
-                {/* Toolbar */}
-                <div className="bg-slate-100 border border-b-0 border-slate-300 rounded-t-lg px-3 py-1.5 flex flex-wrap items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setContent((prev) => `${prev} **बोल्ड शब्द** `)}
-                    className="p-1 rounded hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-0.5"
-                    title="Bold (**text**)"
-                  >
-                    <Bold className="w-3.5 h-3.5" />
-                    <span>Bold</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setContent((prev) => `${prev} *इटैलिक शब्द* `)}
-                    className="p-1 rounded hover:bg-slate-200 text-slate-700 text-xs italic flex items-center gap-0.5"
-                    title="Italic (*text*)"
-                  >
-                    <Italic className="w-3.5 h-3.5" />
-                    <span>Italic</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setContent((prev) => `${prev}\n\n## उप-शीर्षक (Heading)\n`)}
-                    className="p-1 rounded hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-0.5"
-                    title="Heading (##)"
-                  >
-                    <Heading2 className="w-3.5 h-3.5" />
-                    <span>Heading</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setContent((prev) => `${prev}\n\n> "महत्वपूर्ण बयान अथवा उद्धरण"\n`)}
-                    className="p-1 rounded hover:bg-slate-200 text-slate-700 text-xs flex items-center gap-0.5"
-                    title="Quote (>)"
-                  >
-                    <Quote className="w-3.5 h-3.5" />
-                    <span>उद्धरण</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setContent((prev) => `${prev}\n• बिंदु 1\n• बिंदु 2\n`)}
-                    className="p-1 rounded hover:bg-slate-200 text-slate-700 text-xs flex items-center gap-0.5"
-                    title="Bullet List"
-                  >
-                    <List className="w-3.5 h-3.5" />
-                    <span>सूची</span>
-                  </button>
-
-                  <div className="h-4 w-px bg-slate-300 mx-1"></div>
-
-                  <button
-                    type="button"
-                    onClick={() => setContent((prev) => `${prev}। `)}
-                    className="px-2 py-0.5 bg-white border border-slate-300 rounded text-xs font-bold text-red-600 hover:bg-red-50"
-                    title="Insert Hindi Purna Viram"
-                  >
-                    पूर्ण विराम (।)
-                  </button>
-                </div>
-
-                <textarea
+                <WordPressVisualEditor
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="सम्पूर्ण समाचार विस्तार से यहाँ लिखें... (पैराग्राफ अलग करने के लिए दो बार Enter दबाएं)"
-                  rows={8}
-                  required
-                  className="w-full bg-white border border-slate-300 rounded-b-lg p-4 text-sm font-['Mukta',sans-serif] leading-relaxed focus:ring-2 focus:ring-red-600 focus:outline-none"
+                  onChange={(val) => setContent(val)}
+                  mediaLibrary={mediaLibrary}
+                  placeholder="सम्पूर्ण समाचार विस्तार से यहाँ लिखें... (टूलबार से हेडिंग, बोल्ड, इटैलिक, उद्धरण, चित्र या वीडियो एम्बेड जोड़ें)"
+                  minHeightPx={320}
                 />
               </div>
 
@@ -1366,10 +1492,10 @@ export const PublisherCMS: React.FC<PublisherCMSProps> = ({
                             संलग्न तस्वीरें ({sub.images.length}/3):
                           </span>
                           <div className="flex flex-wrap gap-2">
-                            {sub.images.map((img: string, idx: number) => (
+                            {sub.images.filter((img: string) => img && img.trim() !== '').map((img: string, idx: number) => (
                               <img
                                 key={idx}
-                                src={img}
+                                src={img || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                                 alt={`Citizen ${idx + 1}`}
                                 className="w-24 h-20 object-cover rounded-lg border border-slate-200 cursor-pointer hover:scale-105 transition"
                                 onClick={() => window.open(img, '_blank')}
@@ -1585,7 +1711,7 @@ export const PublisherCMS: React.FC<PublisherCMSProps> = ({
                       className="flex items-center space-x-3 flex-1 cursor-pointer min-w-0"
                     >
                       <img
-                        src={art.imageUrl}
+                        src={art.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                         alt=""
                         className="w-14 h-12 rounded object-cover shrink-0 bg-slate-100"
                       />
@@ -1599,6 +1725,19 @@ export const PublisherCMS: React.FC<PublisherCMSProps> = ({
                               ब्रेकिंग
                             </span>
                           )}
+                          {art.status === 'pending_review' ? (
+                            <span className="bg-amber-100 text-amber-800 border border-amber-300 text-[9px] px-1.5 py-0.2 rounded font-bold">
+                              समीक्षा लंबित
+                            </span>
+                          ) : art.status === 'draft' ? (
+                            <span className="bg-slate-100 text-slate-700 border border-slate-300 text-[9px] px-1.5 py-0.2 rounded font-bold">
+                              ड्राफ्ट
+                            </span>
+                          ) : art.status === 'scheduled' ? (
+                            <span className="bg-blue-100 text-blue-800 border border-blue-300 text-[9px] px-1.5 py-0.2 rounded font-bold">
+                              शेड्यूल
+                            </span>
+                          ) : null}
                         </div>
                         <h4 className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
                           {art.title}
@@ -1657,6 +1796,28 @@ export const PublisherCMS: React.FC<PublisherCMSProps> = ({
           if (draft.urlSlug) setUrlSlug(draft.urlSlug);
           setSuccessMessage('✓ AI SEO Assistant: Refined draft applied to editor!');
           setTimeout(() => setSuccessMessage(''), 4500);
+        }}
+      />
+
+      {/* FEATURED IMAGE MEDIA PICKER MODAL */}
+      <MediaManagerModal
+        isOpen={isMediaPickerOpen}
+        onClose={() => setIsMediaPickerOpen(false)}
+        mediaList={mediaLibrary}
+        onAddMedia={(media) => {
+          if (onAddMedia) {
+            onAddMedia(media);
+          }
+        }}
+        isPickerMode={true}
+        pickerTitle="लेख के लिए मुख्य फ़ीचर्ड फ़ोटो चुनें (Featured Image)"
+        onSelectMedia={(media, meta) => {
+          setImageUrl(media.url);
+          if (meta?.caption || media.caption) setImageCaption(meta?.caption || media.caption || '');
+          if (meta?.altText || media.altText || media.title) {
+            setImageAltText(meta?.altText || media.altText || media.title || '');
+          }
+          setIsMediaPickerOpen(false);
         }}
       />
     </div>

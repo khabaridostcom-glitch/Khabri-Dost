@@ -460,3 +460,87 @@ graph TD
 * **Firestore Rules:** Deployed to production project `ai-studio-595d1ed9-f621-49b9-8c06-e20c04392313`.
 * **Dynamic Sitemap:** Verified live at `/sitemap.xml`.
 * **Read Later Feature:** Verified active in Header, Article View, Hero Slider, and Cards.
+* **Refactoring Metric:** Monolithic `App.tsx` reduced from 3,278 lines to 1,029 lines (~68% reduction in code size) with zero loss of features.
+
+---
+
+## 7. Clean Code Architecture & Structural Refactoring Guide
+
+To ensure that **any engineer, contributor, or team member can immediately understand the Khabri Dost architecture**, the application has been refactored from a single monolithic file into a clean, layered architectural hierarchy:
+
+```
+src/
+├── context/
+│   └── AuthContext.tsx           # User authentication, Firebase Auth, Google Sign-in & RBAC roles
+│
+├── hooks/
+│   └── useNewsPortalData.ts      # Central state engine: Firestore real-time subscriptions, 
+│                                 # CRUD operations (Articles, Inquiries, Media, Live Blogs, Settings)
+│
+├── components/
+│   ├── home/                     # Modular homepage slices
+│   │   ├── RegionalStatesFilterBar.tsx  # 📍 Quick City/State filter strip with user pinned city
+│   │   └── TopCategoriesGrid.tsx        # High-density 3-column category grid with 3 cards each
+│   │
+│   ├── navigation/               # Navigation & Bar elements
+│   │   ├── MobileBottomNav.tsx          # 5-slot mobile bottom navigation bar with safe-area insets
+│   │   └── AdminFrontendCustomizerBar.tsx # Admin top bar for live visual customization
+│   │
+│   ├── modals/                   # Self-contained modal dialogues
+│   │   ├── AllStatesDirectoryModal.tsx  # 28 States & 8 UTs directory with regional tabs & search
+│   │   ├── QuickReadSlidePanel.tsx      # AI 3-bullet Hindi summary bottom-sheet & drawer
+│   │   ├── BookmarksModal.tsx           # User bookmarks management
+│   │   ├── ReadLaterModal.tsx           # Reading queue management
+│   │   ├── StaffLoginModal.tsx          # Staff/admin authentication dialog
+│   │   └── DailySudokuModal.tsx         # Interactive newspaper sudoku game
+│   │
+│   ├── epaper/                   # Digital newspaper reader, cropping & PDF export
+│   │   ├── EPaperPageView.tsx           # Dedicated full-page broadside reader
+│   │   ├── EPaperModal.tsx              # Quick e-paper modal
+│   │   └── EPaperPdfViewer.tsx          # Canvas-based PDF viewer
+│   │
+│   ├── admin/                    # WordPress-style 5-category admin panel tabs
+│   │   ├── AdminManagementTab.tsx
+│   │   ├── AdvertisementTab.tsx
+│   │   ├── AiSeoAssistantTab.tsx
+│   │   ├── BulkArticleManager.tsx
+│   │   ├── MediaLibraryTab.tsx
+│   │   └── SpotlightSettingsTab.tsx
+│   │
+│   ├── Header.tsx                # Universal top header with logo, search, city & utilities
+│   ├── Footer.tsx                # Complete news footer with legal policies & channel links
+│   ├── ArticlePageView.tsx       # Dedicated reading UX with TTS, highlights & comments
+│   ├── SpotlightSection.tsx      # 3-column hero slider, secondary cards & live brief ticker
+│   └── TrendingSection.tsx       # Multi-style trending section (Hero Grid, Ranked List, Carousel)
+│
+├── types/
+│   └── news.ts                   # Strict TypeScript contracts for all portal entities
+│
+├── services/
+│   └── newsService.ts            # Firestore client SDK & local persistence adapters
+│
+├── data/
+│   ├── seedNews.ts               # Default news articles, categories, and Indian states
+│   └── portalDefaults.ts         # Default portal customization values
+│
+└── App.tsx                       # Master orchestrator (~1,000 clean lines):
+                                  # Coordinates route resolution, layout rendering, and touch gestures.
+```
+
+### 7.1 Single Responsibility Principle (SRP) Applied
+1. **State & Subscriptions Separated from Presentation:**
+   - Previous state logic spanned over 1,200 lines inside `App.tsx`.
+   - Now cleanly encapsulated inside `useNewsPortalData.ts`. Any data mutation (e.g. `handleSaveArticle`, `handleToggleBookmark`, `handleUpdateSettings`) can be read and understood in one place.
+2. **Modal Isolation:**
+   - Giant modal JSX (such as `AllStatesDirectoryModal`, which alone was 355 lines) is now isolated into self-contained components with internal search/tab states, leaving `App.tsx` declarative.
+3. **Touch-Swipe Elastic Feedback:**
+   - Spring resistance damping (`deltaX * 0.32`) and post-release keyframes (`cubic-bezier(0.34, 1.56, 0.64, 1)`) provide intuitive mobile category transitions while preserving vertical scrolling.
+4. **AI Quick Read Integration:**
+   - Driven server-side through `server.ts` using `@google/genai` (`gemini-3.8-flash`) returning structured 3-bullet Hindi summaries with automatic fallback.
+
+### 7.2 Golden Rules for Developers
+- **No Mock Fallbacks When Firestore is Provisioned:** All updates go through Firestore `newsService.ts` and sync live to all readers.
+- **Maintain Light Mode First:** Keep the clean editorial aesthetics with Mukta, Hind, and Rozha One typography.
+- **Zero Inline Modals in App.tsx:** When adding a new modal or panel, create a dedicated file under `src/components/modals/`.
+- **Run Verification:** Always execute `npm run lint` (`tsc --noEmit`) and `npm run build` after changes.
+

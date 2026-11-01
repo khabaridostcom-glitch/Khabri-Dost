@@ -46,13 +46,15 @@ export const LiveBlogReaderModal: React.FC<LiveBlogReaderModalProps> = ({
       <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95">
         {/* Modal Header */}
         <div className="bg-slate-900 text-white p-4 sm:p-6 flex items-start justify-between gap-4 shrink-0 relative overflow-hidden">
-          <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none">
-            <img
-              src={blog.coverImage}
-              alt=""
-              className="w-full h-full object-cover"
-            />
-          </div>
+          {blog.coverImage && blog.coverImage.trim() !== '' && (
+            <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none">
+              <img
+                src={blog.coverImage || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
 
           <div className="space-y-2 relative z-10 max-w-2xl">
             <div className="flex items-center space-x-2.5">

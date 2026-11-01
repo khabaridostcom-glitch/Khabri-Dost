@@ -24,23 +24,202 @@ import {
   EPaperSettings,
   AdResponsiveBreakpoints,
   CitizenNewsSubmission,
+  ArticlePageConfig,
+  MobileStickyBarConfig,
+  FooterBannerAdConfig,
+  DesktopStickyAdConfig,
+  MobileBottomNavConfig,
+  BottomNavItemConfig,
+  BottomNavItemType,
+  HeadlineStylingConfig,
+  LinkStylingConfig,
+  TrendingSectionConfig,
+  TypographySettings,
+  MediaAsset,
+  MediaFolder,
 } from '../types/news';
 
+export interface TypographyPresetConfig {
+  id: string;
+  name: string;
+  hindiName: string;
+  description: string;
+  badge: string;
+  settings: Partial<TypographySettings>;
+}
+
 export const FONT_OPTIONS = [
-  // Hindi / Devanagari
-  { id: "'Rozha One', serif", name: 'रोज़ा वन (Rozha One - अख़बारी बोल्ड)', category: 'hindi' },
-  { id: "'Mukta', sans-serif", name: 'मुक्ता (Mukta - आधुनिक पठनीय)', category: 'hindi' },
-  { id: "'Noto Sans Devanagari', sans-serif", name: 'नोटो सैन्स (Noto Sans Hindi)', category: 'hindi' },
-  { id: "'Noto Serif Devanagari', serif", name: 'नोटो सेरिफ (Noto Serif - संपादकीय)', category: 'hindi' },
-  { id: "'Yatra One', cursive", name: 'यात्रा वन (Yatra One - पारम्परिक)', category: 'hindi' },
-  { id: "'Tiro Devanagari Hindi', serif", name: 'तीरो देवनागरी (Tiro Devanagari)', category: 'hindi' },
-  { id: "'Kalam', cursive", name: 'कलम (Kalam - हस्तलिखित)', category: 'hindi' },
+  // Primary Recommended Noto Sans Family
+  { id: "'Noto Sans Devanagari', 'Noto Sans', sans-serif", name: 'Noto Sans Devanagari & Latin (Recommended • 100 Thin to 900 Black)', category: 'hindi' },
+  { id: "'Noto Sans Devanagari', sans-serif", name: 'Noto Sans Devanagari (देवनागरी पूर्ण 9 वेट्स)', category: 'hindi' },
+  { id: "'Noto Sans', sans-serif", name: 'Noto Sans (Latin / English / Numbers - 9 Weights & Italics)', category: 'english' },
+
+  // Devanagari Editorial & Classic Fonts
+  { id: "'Noto Serif Devanagari', serif", name: 'Noto Serif Devanagari (संपादकीय क्लासिक सेरिफ़)', category: 'hindi' },
+  { id: "'Hind', 'Noto Sans Devanagari', sans-serif", name: 'Hind (हिंद - न्यूज़ बुलेटिन मानक)', category: 'hindi' },
+  { id: "'Mukta', 'Noto Sans Devanagari', sans-serif", name: 'Mukta (मुक्ता - आधुनिक डिजिटल देवनागरी)', category: 'hindi' },
+  { id: "'Rozha One', 'Noto Serif Devanagari', serif", name: 'Rozha One (रोज़ा वन - अख़बारी हेडलाइन्स)', category: 'hindi' },
+  { id: "'Rajdhani', sans-serif", name: 'Rajdhani (राजधानी - आधुनिक कॉम्पैक्ट डिस्प्ले)', category: 'hindi' },
+  { id: "'Tiro Devanagari Hindi', serif", name: 'Tiro Devanagari Hindi (तीरो - साहित्यिक सेरिफ़)', category: 'hindi' },
+  { id: "'Gotu', sans-serif", name: 'Gotu (गोटु - कर्वी व विशिष्ट हेडिंग्स)', category: 'hindi' },
+  { id: "'Sahitya', serif", name: 'Sahitya (साहित्य - गंभीर विश्लेषणात्मक सेरिफ़)', category: 'hindi' },
+  { id: "'Yatra One', cursive", name: 'Yatra One (यात्रा वन - पारम्परिक देवनागरी)', category: 'hindi' },
+  { id: "'Kalam', cursive", name: 'Kalam (कलम - व्यक्तिगत हस्तलिखित शैली)', category: 'hindi' },
 
   // English & Universal Sans / Serif
   { id: "'Poppins', sans-serif", name: 'Poppins (पॉपिन्स - मॉडर्न जियोमेट्रिक)', category: 'english' },
-  { id: "'Inter', sans-serif", name: 'Inter (इंटर - डिजिटल क्लीन)', category: 'english' },
+  { id: "'Inter', sans-serif", name: 'Inter (इंटर - डिजिटल क्लीन UI)', category: 'english' },
   { id: "'Roboto', sans-serif", name: 'Roboto (रोबोटो - न्यूट्रल सैन्स)', category: 'english' },
-  { id: "'Merriweather', serif", name: 'Merriweather (मेरीवेदर - क्लासिक)', category: 'english' },
+  { id: "'Merriweather', serif", name: 'Merriweather (मेरीवेदर - क्लासिक बुक सेरिफ़)', category: 'english' },
+];
+
+export const TYPOGRAPHY_PRESETS: TypographyPresetConfig[] = [
+  {
+    id: 'noto_sans_complete',
+    name: 'Noto Sans Hindi Complete',
+    hindiName: 'नोटो सैन्स देवनागरी (आधुनिक डिजिटल)',
+    description: 'Google Noto Sans Devanagari का संपूर्ण परिवार - 9 वेट्स, मोबाइल व 4K स्क्रीन पर क्रिस्टल क्लियर',
+    badge: 'NOTO COMPLETE',
+    settings: {
+      headlineFont: "'Noto Sans Devanagari', sans-serif",
+      bodyFont: "'Noto Sans Devanagari', sans-serif",
+      headerFont: "'Noto Sans Devanagari', sans-serif",
+      footerFont: "'Noto Sans Devanagari', sans-serif",
+      metaFont: "'Noto Sans Devanagari', sans-serif",
+      headlineWeight: 700,
+      bodyWeight: 400,
+      baseSize: 'normal',
+      mobileScale: 'normal',
+      headingSize: 'normal',
+      titleSize: 'normal',
+      contentSize: 'normal',
+      customScaleFont: 1.0,
+      sizeHeadingScale: 1.0,
+      sizeTitleScale: 1.0,
+      sizeContentScale: 1.0,
+    },
+  },
+  {
+    id: 'dainik_jagran',
+    name: 'Dainik Jagran Editorial',
+    hindiName: 'दैनिक जागरण अख़बारी शैली',
+    description: 'बोल्ड क्लासिक अख़बारी हेडलाइंस, अत्यंत सुपाठ्य बॉडी फॉन्ट व संतुलित स्पेसिंग',
+    badge: 'EDITORIAL BESTSELLER',
+    settings: {
+      headlineFont: "'Rozha One', serif",
+      bodyFont: "'Mukta', sans-serif",
+      headerFont: "'Rozha One', serif",
+      footerFont: "'Mukta', sans-serif",
+      metaFont: "'Mukta', sans-serif",
+      headlineWeight: 800,
+      bodyWeight: 400,
+      baseSize: 'normal',
+      mobileScale: 'normal',
+      headingSize: 'large',
+      titleSize: 'normal',
+      contentSize: 'normal',
+      customScaleFont: 1.0,
+      sizeHeadingScale: 1.06,
+      sizeTitleScale: 1.0,
+      sizeContentScale: 1.0,
+    },
+  },
+  {
+    id: 'amar_ujala',
+    name: 'Amar Ujala Contemporary',
+    hindiName: 'अमर उजाला बोल्ड समकालीन',
+    description: 'सशक्त व तीक्ष्ण हेडलाइंस, हाई-इम्पैक्ट कार्ड टाइटल्स और आरामदेह बॉडी टेक्स्ट',
+    badge: 'HIGH IMPACT',
+    settings: {
+      headlineFont: "'Hind', sans-serif",
+      bodyFont: "'Mukta', sans-serif",
+      headerFont: "'Hind', sans-serif",
+      footerFont: "'Mukta', sans-serif",
+      metaFont: "'Mukta', sans-serif",
+      headlineWeight: 700,
+      bodyWeight: 400,
+      baseSize: 'normal',
+      mobileScale: 'normal',
+      headingSize: 'xlarge',
+      titleSize: 'large',
+      contentSize: 'normal',
+      customScaleFont: 1.02,
+      sizeHeadingScale: 1.12,
+      sizeTitleScale: 1.06,
+    },
+  },
+  {
+    id: 'bbc_hindi',
+    name: 'BBC Hindi Modern Clean',
+    hindiName: 'बीबीसी हिंदी क्लीन न्यूट्रल',
+    description: 'आधुनिक कॉर्पोरेट न्यूट्रल स्टाइल, अंतर्राष्ट्रीय मानकों के अनुरूप न्यूनतम थकावट',
+    badge: 'BBC STYLE',
+    settings: {
+      headlineFont: "'Noto Sans Devanagari', sans-serif",
+      bodyFont: "'Hind', sans-serif",
+      headerFont: "'Noto Sans Devanagari', sans-serif",
+      footerFont: "'Noto Sans Devanagari', sans-serif",
+      metaFont: "'Noto Sans Devanagari', sans-serif",
+      headlineWeight: 600,
+      bodyWeight: 400,
+      baseSize: 'normal',
+      mobileScale: 'compact',
+      headingSize: 'normal',
+      titleSize: 'normal',
+      contentSize: 'normal',
+      customScaleFont: 0.98,
+      sizeHeadingScale: 1.0,
+      sizeTitleScale: 0.96,
+    },
+  },
+  {
+    id: 'navbharat_times',
+    name: 'Navbharat Times Classical',
+    hindiName: 'नवभारत टाइम्स क्लासिक सेरिफ',
+    description: 'पारंपरिक नोटो सेरिफ हेडलाइंस व संपादकीय गरिमा, वरिष्ठ पाठकों के लिए श्रेष्ठ',
+    badge: 'CLASSIC SERIF',
+    settings: {
+      headlineFont: "'Noto Serif Devanagari', serif",
+      bodyFont: "'Mukta', sans-serif",
+      headerFont: "'Noto Serif Devanagari', serif",
+      footerFont: "'Mukta', sans-serif",
+      metaFont: "'Mukta', sans-serif",
+      headlineWeight: 700,
+      bodyWeight: 400,
+      baseSize: 'large',
+      mobileScale: 'normal',
+      headingSize: 'large',
+      titleSize: 'large',
+      contentSize: 'large',
+      customScaleFont: 1.04,
+      sizeHeadingScale: 1.1,
+      sizeContentScale: 1.08,
+    },
+  },
+  {
+    id: 'compact_mobile',
+    name: 'Mobile First Rapid Feed',
+    hindiName: 'फास्ट मोबाइल फीड (कॉम्पैक्ट)',
+    description: 'स्मार्टफोन स्क्रीन्स के लिए स्पेस-ऑप्टिमाइज्ड, त्वरित स्क्रॉलिंग व उच्च पठनीयता',
+    badge: 'MOBILE OPTIMIZED',
+    settings: {
+      headlineFont: "'Rajdhani', sans-serif",
+      bodyFont: "'Noto Sans Devanagari', sans-serif",
+      headerFont: "'Rajdhani', sans-serif",
+      footerFont: "'Noto Sans Devanagari', sans-serif",
+      metaFont: "'Noto Sans Devanagari', sans-serif",
+      headlineWeight: 700,
+      bodyWeight: 400,
+      baseSize: 'small',
+      mobileScale: 'compact',
+      headingSize: 'sm',
+      titleSize: 'sm',
+      contentSize: 'normal',
+      customScaleFont: 0.96,
+      sizeHeadingScale: 0.94,
+      mobileSidebarFontScale: 0.95,
+    },
+  },
 ];
 
 export const DEFAULT_POPUP_CONFIG: PortalPopupConfig = {
@@ -89,10 +268,13 @@ export const DEFAULT_SPOTLIGHT_LAYOUT: SpotlightLayoutSettings = {
 export const DEFAULT_ARTICLE_META_SETTINGS: ArticleMetaSettings = {
   showAuthorAvatar: true,
   showAuthorName: true,
-  showAuthorRole: true,
+  showAuthorRole: false,
+  showAuthorBox: true,
   showPublishDate: true,
   showRelativeTime: true,
   showViewsCount: true,
+  showFontSizeControl: true,
+  showDesktopLocationTime: false,
   showListenButton: true,
   showPdfButton: true,
   showLocationBadge: true,
@@ -124,7 +306,18 @@ export const DEFAULT_ARTICLE_SIDEBAR_WIDGETS: ArticleSidebarWidgets = {
   showCommentsSection: true,
   showRelatedStories: true,
   showFollowUsChannels: true,
-  relatedArticlesCount: 4, // 3, 4 or 6 (admin configurable)
+  relatedArticlesCount: 4, // 3, 4, 6, 8, 10, 12 or more (admin configurable)
+  relatedHeadingTitle: 'यह भी पढ़ें',
+  showRelatedHeadingCategoryBadge: false, // Category badge removed from header per user request
+  showRelatedHeadingSubtitle: false, // 'अन्य ताज़ा ख़बरें' removed per user request
+  relatedHeadingSubtitleText: '',
+  relatedCardShowCategory: false, // Admin can toggle show/hide on cards (business, sports, etc.)
+  relatedCardShowLocation: false, // Admin can toggle show/hide on cards (location)
+  relatedCardShowDate: false, // '23 दिन पहले' removed per user request
+  relatedCardShowReadMore: false, // 'और पढ़ें' removed per user request
+  relatedCardShowSummary: true,
+  relatedCardShowImage: true,
+  relatedMobileLayout: 'list', // Mobile compact layout without wide gaps
   sidebarSliderMode: true, // Interactive slider carousel for single page content sidebar
   trendingSliderEnabled: true, // Vertical bottom-to-top auto-sliding
   trendingStoriesCount: 5, // Top 5 trending stories
@@ -239,6 +432,258 @@ export const DEFAULT_ARTICLE_BANNER_BREAKPOINTS: AdResponsiveBreakpoints = {
   enableCustomBreakpoints: true,
 };
 
+export const DEFAULT_FOOTER_BANNER_AD_CONFIG: FooterBannerAdConfig = {
+  enabled: true,
+  type: 'image',
+  desktopImageUrl: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&auto=format&fit=crop&q=80',
+  mobileImageUrl: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=640&auto=format&fit=crop&q=80',
+  targetUrl: '#contact',
+  title: 'खबरी दोस्त डिजिटल न्यूज़ नेटवर्क • टेस्टिंग विज्ञापन बैनर (Testing Ad Banner)',
+  subTitle: '5 लाख+ पाठकों तक अपने ब्रांड का प्रचार करें | विशेष फेस्टिव छूट 30% ऑफ',
+  altText: 'प्रायोजित टेस्टिंग विज्ञापन बैनर (Testing Banner Ad)',
+  scriptCode: '',
+};
+
+export const DEFAULT_MOBILE_STICKY_BAR_CONFIG: MobileStickyBarConfig = {
+  enabled: true,
+  mode: 'share',
+  sharePlatforms: {
+    whatsapp: true,
+    twitter: true,
+    facebook: true,
+    telegram: true,
+    copyLink: true,
+    nativeShare: true,
+  },
+  showShareLabel: true,
+  adType: 'image',
+  adImageUrl: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=640&auto=format&fit=crop&q=80',
+  adTargetUrl: '#contact',
+  adAltText: 'खबरी दोस्त मीडिया नेटवर्क प्रायोजित विज्ञापन',
+  adScriptCode: '',
+  adHeightPx: 50,
+  dismissible: true,
+  autoHideOnFooter: true,
+};
+
+export const DEFAULT_DESKTOP_STICKY_AD_CONFIG: DesktopStickyAdConfig = {
+  enabled: false,
+  type: 'image',
+  imageUrl: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&auto=format&fit=crop&q=80',
+  targetUrl: '#contact',
+  title: 'Khabri Dost Media • Desktop Sponsor Leaderboard',
+  subTitle: 'Connect with 500,000+ informed readers across India | Special Editorial Partner Rate',
+  altText: 'Khabri Dost Desktop Sticky Advertisement',
+  scriptCode: '',
+  dismissible: true,
+  widthPx: 728,
+  maxHeightPx: 90,
+};
+
+export const DEFAULT_BOTTOM_NAV_ITEMS: BottomNavItemConfig[] = [
+  { id: 'nav-slot-1', type: 'home', label: 'होम', icon: '🏠' },
+  { id: 'nav-slot-2', type: 'latest', label: 'ताज़ा', icon: '⚡' },
+  { id: 'nav-slot-3', type: 'trending', label: 'ट्रेंडिंग', icon: '🔥' },
+  { id: 'nav-slot-4', type: 'states', label: 'राज्य', icon: '📍' },
+  { id: 'nav-slot-5', type: 'epaper', label: 'ई-पेपर', icon: '📰' },
+];
+
+export const BOTTOM_NAV_PRESETS: {
+  id: string;
+  name: string;
+  nameHindi: string;
+  description: string;
+  badge: string;
+  badgeColor: string;
+  items: BottomNavItemConfig[];
+}[] = [
+  {
+    id: 'standard',
+    name: 'Standard News',
+    nameHindi: 'डिफ़ॉल्ट न्यूज़ पोर्टल (स्टैंडर्ड)',
+    description: 'होम, ताज़ा ब्रेकिंग, ट्रेंडिंग, राज्यवार, और डिजिटल ई-पेपर',
+    badge: 'डिफ़ॉल्ट',
+    badgeColor: 'bg-red-100 text-red-800 border-red-200',
+    items: [
+      { id: 'slot-1', type: 'home', label: 'होम', icon: '🏠' },
+      { id: 'slot-2', type: 'latest', label: 'ताज़ा', icon: '⚡' },
+      { id: 'slot-3', type: 'trending', label: 'ट्रेंडिंग', icon: '🔥' },
+      { id: 'slot-4', type: 'states', label: 'राज्य', icon: '📍' },
+      { id: 'slot-5', type: 'epaper', label: 'ई-पेपर', icon: '📰' },
+    ],
+  },
+  {
+    id: 'multimedia',
+    name: 'Multimedia & Video',
+    nameHindi: 'वीडियो व विजुअल मीडिया फ़र्स्ट',
+    description: 'वीडियो बुलेटिन, फ़ोटो गैलरी, ट्रेंडिंग और लाइव कवरेज',
+    badge: 'ऑडियो-वीडियो',
+    badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
+    items: [
+      { id: 'slot-1', type: 'home', label: 'होम', icon: '🏠' },
+      { id: 'slot-2', type: 'videos', label: 'वीडियो', icon: '📺' },
+      { id: 'slot-3', type: 'trending', label: 'ट्रेंडिंग', icon: '🔥' },
+      { id: 'slot-4', type: 'photos', label: 'फ़ोटो', icon: '📸' },
+      { id: 'slot-5', type: 'epaper', label: 'ई-पेपर', icon: '📰' },
+    ],
+  },
+  {
+    id: 'community',
+    name: 'Citizen Journalism',
+    nameHindi: 'नागरिक पत्रकारिता व पाठक सहभागिता',
+    description: 'नागरिक खबर भेजें, सुडोकू पहेलियां और संपर्क डेस्क',
+    badge: 'इंटरैक्टिव',
+    badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
+    items: [
+      { id: 'slot-1', type: 'home', label: 'होम', icon: '🏠' },
+      { id: 'slot-2', type: 'latest', label: 'ताज़ा', icon: '⚡' },
+      { id: 'slot-3', type: 'submit_news', label: 'खबर भेजें', icon: '✍️' },
+      { id: 'slot-4', type: 'games', label: 'सुडोकू', icon: '🎮' },
+      { id: 'slot-5', type: 'contact', label: 'संपर्क', icon: '📞' },
+    ],
+  },
+  {
+    id: 'entertainment',
+    name: 'Entertainment & Games',
+    nameHindi: 'मनोरंजन, खेल व वायरल हब',
+    description: 'वायरल स्टोरीज, फोटो गैलरी, माइंड गेम्स और वीडियो',
+    badge: 'लाइफस्टाइल',
+    badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    items: [
+      { id: 'slot-1', type: 'home', label: 'होम', icon: '🏠' },
+      { id: 'slot-2', type: 'trending', label: 'ट्रेंडिंग', icon: '🔥' },
+      { id: 'slot-3', type: 'photos', label: 'गैलरी', icon: '📸' },
+      { id: 'slot-4', type: 'games', label: 'गेम्स', icon: '🎮' },
+      { id: 'slot-5', type: 'videos', label: 'वीडियो', icon: '📺' },
+    ],
+  },
+  {
+    id: 'regional',
+    name: 'Regional & Archives',
+    nameHindi: 'प्रादेशिक न्यूज़ व डिजिटल आर्काइव',
+    description: 'राज्यवार समाचार, तिथि अनुसार पुरालेख और ई-अख़बार',
+    badge: 'प्रादेशिक',
+    badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+    items: [
+      { id: 'slot-1', type: 'home', label: 'होम', icon: '🏠' },
+      { id: 'slot-2', type: 'states', label: 'राज्य', icon: '📍' },
+      { id: 'slot-3', type: 'latest', label: 'ताज़ा', icon: '⚡' },
+      { id: 'slot-4', type: 'archive', label: 'पुरालेख', icon: '📂' },
+      { id: 'slot-5', type: 'epaper', label: 'ई-पेपर', icon: '📰' },
+    ],
+  },
+  {
+    id: 'transparency',
+    name: 'Ethics & Legal Desk',
+    nameHindi: 'संपादकीय, तथ्य-जांच व शिकायत निवारण',
+    description: 'तथ्य-जांच, आचार संहिता, विधिक नीतियां व ग्रीवेंस',
+    badge: 'विधिक व ट्रस्ट',
+    badgeColor: 'bg-slate-100 text-slate-800 border-slate-200',
+    items: [
+      { id: 'slot-1', type: 'home', label: 'होम', icon: '🏠' },
+      { id: 'slot-2', type: 'latest', label: 'ताज़ा', icon: '⚡' },
+      { id: 'slot-3', type: 'submit_news', label: 'खबर भेजें', icon: '✍️' },
+      { id: 'slot-4', type: 'complaint', label: 'शिकायत', icon: '⚖️' },
+      { id: 'slot-5', type: 'legal', label: 'विधिक हब', icon: '🛡️' },
+    ],
+  },
+];
+
+export const DEFAULT_MOBILE_BOTTOM_NAV_CONFIG: MobileBottomNavConfig = {
+  enabled: true,
+  activePreset: 'standard',
+  items: DEFAULT_BOTTOM_NAV_ITEMS,
+  fifthItem: 'epaper',
+  customLabel: '',
+  customIcon: '',
+  customCategory: '',
+  customUrl: '',
+  openInNewTab: false,
+  showLabels: true,
+  homeLabel: 'होम',
+  latestLabel: 'ताज़ा',
+  trendingLabel: 'ट्रेंडिंग',
+  statesLabel: 'राज्य',
+};
+
+export const DEFAULT_TRENDING_CONFIG: TrendingSectionConfig = {
+  enabled: true,
+  title: 'ट्रेंडिंग न्यूज़ • सबसे ज्यादा पढ़ी जा रही सुर्खियां',
+  subTitle: '24 घंटे में पाठकों द्वारा सबसे ज्यादा पढ़ी, शेयर और पसंद की गई प्रमुख खबरें',
+  badgeText: '🔥 ट्रेंडिंग नाउ',
+  displayStyle: 'hero_grid',
+  itemCount: 8,
+  showRankBadges: true,
+  showViewCounts: true,
+  showFireBadge: true,
+  showCategoryTag: true,
+  showReadTime: true,
+  showHashtagsBar: true,
+  autoTrendingViewsThreshold: 500,
+};
+
+export const DEFAULT_HEADLINE_STYLING_CONFIG: HeadlineStylingConfig = {
+  enabled: true,
+  defaultColor: '#dc2626', // Vibrant editorial red
+  applyToHero: true,
+  applyToFeatured: true,
+  applyToCompact: true,
+};
+
+export const DEFAULT_LINK_STYLING_CONFIG: LinkStylingConfig = {
+  bodyLinkColor: '#1e3a8a', // Professional navy
+  hoverColor: '#dc2626', // Editorial red hover
+  underlineBehavior: 'hover',
+  distinctExternal: false,
+  externalLinkColor: '#dc2626',
+};
+
+export const DEFAULT_ARTICLE_PAGE_CONFIG: ArticlePageConfig = {
+  containerMaxWidth: 'wide',
+  contentContainerWidthPx: 780,
+  contentColumnWidth: 'standard',
+  h1FontSize: 'normal',
+  h1FontFamily: 'Rozha One',
+  bodyLineHeight: 'relaxed',
+  showCategoryBadge: true,
+  showLocationTag: true,
+  showAuthorByline: true,
+  showEditorByline: true,
+  showAuthorBioBox: true,
+  showPublishedDate: true,
+  showRelativeTime: true,
+  showReadingTime: true,
+  showViewCount: true,
+  showKeyHighlights: true,
+  showImageCaption: true,
+  showTags: true,
+  showAudioListen: true,
+  showFontSizeControls: true,
+  showPrintPdf: true,
+  showClippingModal: true,
+  showCopyLink: true,
+  showSocialShare: true,
+  showReactionsBar: true,
+  showCommentsSection: true,
+  showQuickActionsStrip: true,
+  showDisclaimerBox: true,
+  disclaimerText:
+    "'खबरी दोस्त' पर मौजूद सभी समाचार सामग्री कंप्यूटर द्वारा तैयार की गई है और इसे थर्ड पार्टी तथा सोशल मीडिया से लिया गया है। चूंकि यह सामग्री केवल जानकारी देने के उद्देश्य से उपलब्ध कराई गई है, इसलिए कृपया इसे पूरी सावधानी के साथ पढ़ें। किसी भी तरह की समस्या उत्पन्न होने पर 'खबरी दोस्त' जिम्मेदार नहीं होगा।",
+  disclaimerFontSize: '12px',
+  showRelatedStories: true,
+  relatedHeadingTitle: 'यह भी पढ़ें',
+  showRelatedHeadingCategoryBadge: false,
+  showRelatedHeadingSubtitle: false,
+  relatedHeadingSubtitleText: '',
+  relatedArticlesCount: 4,
+  relatedCardShowCategory: false,
+  relatedCardShowLocation: false,
+  relatedCardShowDate: false,
+  relatedCardShowReadMore: false,
+  relatedMobileLayout: 'compact_list',
+  mobileStickyBar: DEFAULT_MOBILE_STICKY_BAR_CONFIG,
+};
+
 export const DEFAULT_SIDEBAR_ADS_CONFIG: SidebarAdsConfig = {
   topSlot: {
     enabled: true,
@@ -292,6 +737,10 @@ export const DEFAULT_GOOGLE_TRENDS_CONFIG: GoogleTrendsConfig = {
 export const DEFAULT_HEADER_FOOTER_SETTINGS: HeaderFooterSettings = {
   siteTitle: 'खबरी दोस्त',
   siteTagline: 'KHABARI DOST • भारत का विश्वसनीय हिंदी न्यूज़ पोर्टल',
+  showTagline: false,
+  showTaglineDesktop: true,
+  showTaglineMobile: false,
+  footerBannerAd: DEFAULT_FOOTER_BANNER_AD_CONFIG,
   logoUrl: '',
   headerLogoHeight: 52,
   headerTitleCustomPx: 36,
@@ -303,7 +752,7 @@ export const DEFAULT_HEADER_FOOTER_SETTINGS: HeaderFooterSettings = {
   contactPhone: '+91 11 2345 6789',
   rniNumber: 'DELHIN/2024/84920',
   showRniNumber: false,
-  footerTheme: 'dark_slate',
+  footerTheme: 'light',
   footerAboutHeading: 'खबरी दोस्त • निष्पक्ष पत्रकारिता का संकल्प',
   footerAboutText: 'खबरी दोस्त आपका अपना सच्चा और निष्पक्ष हिंदी न्यूज़ पोर्टल है। यहाँ आपको देश, राजनीति, खेल, मनोरंजन और आपके शहर की हर ताज़ा खबर सबसे पहले और आसान भाषा में मिलती है। हम बिना किसी पक्षपात के सिर्फ सच और जरूरी जानकारी आप तक पहुँचाने के लिए प्रतिबद्ध हैं।',
   footerBrandingPartnerName: 'iTree Network Solutions',
@@ -319,6 +768,39 @@ export const DEFAULT_HEADER_FOOTER_SETTINGS: HeaderFooterSettings = {
   headerShowSearch: true,
   headerShowAdminButton: true,
   headerShowLiveCoverage: true,
+  headerShowLanguageEditions: true,
+  languageEditions: [
+    {
+      id: 'edition-hi',
+      name: 'हिंदी (मुख्य)',
+      langCode: 'hi',
+      icon: '🇮🇳',
+      url: 'https://khabridost.com',
+      openInNewTab: false,
+      enabled: true,
+      isCurrent: true,
+    },
+    {
+      id: 'edition-en',
+      name: 'English Edition',
+      langCode: 'en',
+      icon: '🌐',
+      url: 'https://en.khabridost.com',
+      openInNewTab: true,
+      enabled: true,
+      isCurrent: false,
+    },
+    {
+      id: 'edition-pa',
+      name: 'ਪੰਜਾਬੀ (Punjabi)',
+      langCode: 'pa',
+      icon: '🌾',
+      url: 'https://punjabi.khabridost.com',
+      openInNewTab: true,
+      enabled: true,
+      isCurrent: false,
+    },
+  ],
   socialLinks: {
     whatsappChannel: 'https://whatsapp.com/channel/example',
     telegramChannel: 'https://t.me/example',
@@ -326,6 +808,7 @@ export const DEFAULT_HEADER_FOOTER_SETTINGS: HeaderFooterSettings = {
     twitter: 'https://x.com',
     youtube: 'https://youtube.com',
     instagram: 'https://instagram.com',
+    googleNews: 'https://news.google.com',
   },
   customSocialChannels: [
     {
@@ -544,6 +1027,28 @@ export const DEFAULT_HEADER_FOOTER_SETTINGS: HeaderFooterSettings = {
 - ईमेल: legal@khabridost.com | khabridost.com@gmail.com
 - डाक पता: विधिक अनुभाग, खबरी दोस्त मीडिया नेटवर्क, प्रेस एंक्लेव, कनाट प्लेस, नई दिल्ली - 110001
 - संज्ञान समयसीमा: वैध नोटिस प्राप्ति के 48 घंटे के भीतर समीक्षा कर उल्लंघनकारी सामग्री को हटा दिया जाता है।`,
+
+    cookiePolicy: `खबरी दोस्त (Khabri Dost) - कुकीज़ एवं डेटा ट्रैकिंग नीति (Cookie Policy)
+
+1. कुकीज़ क्या हैं? (What Are Cookies):
+कुकीज़ छोटी टेक्स्ट फाइलें होती हैं जो वेबसाइट पर आने पर आपके कंप्यूटर, स्मार्टफोन या टैबलेट के ब्राउज़र में सुरक्षित रूप से सहेजी जाती हैं। इनका उपयोग वेबसाइट के सुचारू संचालन, उपयोगकर्ता अनुभव को बेहतर बनाने, फ़ॉन्ट प्राथमिकताओं को याद रखने तथा प्रासंगिक सामग्री और विज्ञापन प्रदर्शित करने के लिए किया जाता है।
+
+2. हम किन कुकीज़ का उपयोग करते हैं? (Categories of Cookies We Use):
+(क) आवश्यक तकनीकी कुकीज़ (Strictly Necessary Cookies): ये कुकीज़ वेबसाइट की बुनियादी कार्यप्रणाली जैसे पेज नेविगेशन, सुरक्षित लॉगिन, फ़ॉन्ट आकार समायोजन और सत्र प्रबंधन के लिए अनिवार्य हैं।
+(ख) वरीयता कुकीज़ (Preference Cookies): ये आपके द्वारा चुने गए विकल्पों जैसे पसंदीदा राज्य, फ़ॉन्ट आकार (A/A+/A++) और बुकमार्क किए गए समाचारों को याद रखती हैं।
+(ग) विश्लेषणात्मक कुकीज़ (Analytics Cookies): हम Google Analytics का उपयोग करके यह समझते हैं कि पाठक किन समाचारों को अधिक पसंद कर रहे हैं और वेबसाइट का ट्रैफ़िक कैसा है। यह सारा डेटा अनामीकृत (Anonymized) होता है।
+(घ) विज्ञापन एवं मार्केटिंग कुकीज़ (Advertising Cookies): Google AdSense और प्रमाणित विज्ञापन नेटवर्क आपकी प्राथमिकताओं और रुचियों के अनुरूप विज्ञापन प्रदर्शित करने के लिए कुकीज़ का उपयोग करते हैं।
+
+3. Google AdSense एवं DART कुकी प्रकटीकरण (Third-Party Ad Serving):
+(क) Google हमारी वेबसाइट पर विज्ञापनों के वितरण के लिए DART कुकीज़ का उपयोग कर सकता है।
+(ख) पाठक Google की विज्ञापन गोपनीयता सेटिंग्स पर जाकर रुचि-आधारित विज्ञापनों से बाहर निकल (opt-out) सकते हैं: https://policies.google.com/technologies/ads
+
+4. कुकीज़ को नियंत्रित अथवा अक्षम करने का तरीका (How to Manage & Disable Cookies):
+पाठक अपने वेब ब्राउज़र (Google Chrome, Mozilla Firefox, Apple Safari, Microsoft Edge) की सेटिंग्स में जाकर किसी भी समय कुकीज़ को ब्लॉक, डिलीट या नियंत्रित कर सकते हैं। कृपया ध्यान दें कि आवश्यक कुकीज़ को बंद करने से वेबसाइट की कुछ सुविधाएं प्रभावित हो सकती हैं।
+
+5. संपर्क एवं सहायता (Cookie Inquiries):
+यदि इस कुकी नीति के संबंध में आपके पास कोई प्रश्न है, तो आप हमारे तकनीकी सहायता डेस्क पर संपर्क कर सकते हैं:
+ईमेल: support@khabridost.com | khabridost.com@gmail.com`,
   },
 };
 
@@ -557,6 +1062,7 @@ export const DEFAULT_HOMEPAGE_SECTIONS: HomepageSectionsConfig = {
   webStories: true,
   photoGallery: true,
   categoryBlocks: true,
+  morningCapsule: true,
 };
 
 export const DEFAULT_GOOGLE_SERVICES: GoogleServicesConfig = {
@@ -616,16 +1122,75 @@ export const DEFAULT_API_CONFIG: ApiConfiguration = {
 };
 
 export const DEFAULT_EPAPER_SETTINGS: EPaperSettings = {
-  mode: 'dynamic',
-  customPdfUrl: '',
+  customPdfUrl: '/assets/aistudio/Dainik_Jagran_National_20261021.pdf',
   customPdfTitle: 'खबरी दोस्त • दैनिक राष्ट्रीय समाचार पत्र',
   customPdfEdition: 'राष्ट्रीय संस्करण (नई दिल्ली)',
-  customPdfDate: 'आज का अंक',
-  customPdfThumbnail: 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80',
-  customPdfPageCount: 8,
+  customPdfDate: '2026-10-21',
+  customPdfPageCount: 15,
   featuredHeadline: 'गगनयान मिशन के क्रू मॉड्यूल का सफल परीक्षण, अंतरिक्ष में भारत की ऐतिहासिक छलांग',
   allowDownload: true,
   allowShare: true,
+  allowPrint: true,
+  price: '₹ 4.50',
+  issueNumber: 'वर्ष 1 • अंक 245',
+  activeEditionCode: 'national',
+  activeEditionDate: '2026-10-21',
+  editionsList: [
+    {
+      id: 'edition_national_today',
+      title: 'दैनिक खबरी दोस्त • राष्ट्रीय संस्करण',
+      date: '2026-10-21',
+      editionName: 'राष्ट्रीय संस्करण (नई दिल्ली)',
+      editionCode: 'national',
+      pdfUrl: '/assets/aistudio/Dainik_Jagran_National_20261021.pdf',
+      pdfFileName: 'Dainik_Jagran_National_20261021.pdf',
+      pdfFileSize: '28.6 MB',
+      pageCount: 15,
+      leadHeadline: "'रिजीम चेंज' से परिस्थिति न कभी बदली है, न अब बदलेगी : भागवत",
+      price: '₹ 4.50',
+      issueNumber: 'वर्ष 1 • अंक 245',
+      status: 'published',
+      allowDownload: true,
+      allowPrint: true,
+      createdAt: '2026-10-21T00:00:00.000Z',
+    },
+    {
+      id: 'edition_national_yesterday',
+      title: 'दैनिक खबरी दोस्त • राष्ट्रीय संस्करण (संग्रह)',
+      date: '2026-10-20',
+      editionName: 'राष्ट्रीय संस्करण (नई दिल्ली)',
+      editionCode: 'national',
+      pdfUrl: '/assets/aistudio/Dainik_Jagran_National_20261021.pdf',
+      pdfFileName: 'Dainik_Jagran_National_20261020.pdf',
+      pdfFileSize: '28.6 MB',
+      pageCount: 15,
+      leadHeadline: 'भारत और वैश्विक अर्थव्यवस्था में नई तकनीकी साझेदारी',
+      price: '₹ 4.50',
+      issueNumber: 'वर्ष 1 • अंक 244',
+      status: 'published',
+      allowDownload: true,
+      allowPrint: true,
+      createdAt: '2026-10-20T00:00:00.000Z',
+    },
+    {
+      id: 'edition_up_today',
+      title: 'दैनिक खबरी दोस्त • उत्तर प्रदेश एवं उत्तराखंड',
+      date: '2026-10-21',
+      editionName: 'उत्तर प्रदेश एवं उत्तराखंड संस्करण',
+      editionCode: 'up',
+      pdfUrl: '/assets/aistudio/Dainik_Jagran_National_20261021.pdf',
+      pdfFileName: 'Dainik_Jagran_UP_20261021.pdf',
+      pdfFileSize: '28.6 MB',
+      pageCount: 15,
+      leadHeadline: 'उत्तर प्रदेश में औद्योगिक निवेश और बुनियादी ढांचा विस्तार को नई गति',
+      price: '₹ 4.00',
+      issueNumber: 'वर्ष 1 • अंक 245',
+      status: 'published',
+      allowDownload: true,
+      allowPrint: true,
+      createdAt: '2026-10-21T00:00:00.000Z',
+    },
+  ],
 };
 
 export const DEFAULT_PORTAL_SETTINGS: PortalSettings = {
@@ -662,16 +1227,28 @@ export const DEFAULT_PORTAL_SETTINGS: PortalSettings = {
     showDate: true,
     showViews: true,
     showLocation: true,
+    showBookmark: true,
+    showShare: true,
+    showReadLater: true,
     cardStyle: 'compact',
   },
   articleMetaSettings: DEFAULT_ARTICLE_META_SETTINGS,
+  articlePageConfig: DEFAULT_ARTICLE_PAGE_CONFIG,
+  mobileStickyBar: DEFAULT_MOBILE_STICKY_BAR_CONFIG,
   sidebarWidgets: DEFAULT_ARTICLE_SIDEBAR_WIDGETS,
   typography: {
-    headerFont: "'Rozha One', serif",
-    footerFont: "'Mukta', sans-serif",
-    headlineFont: "'Rozha One', serif",
-    bodyFont: "'Mukta', sans-serif",
-    metaFont: "'Mukta', sans-serif",
+    defaultFontFamily: "'Noto Sans Devanagari', 'Noto Sans', sans-serif",
+    defaultFontWeight: 400,
+    globalLineHeight: 1.6,
+    globalLetterSpacing: 0,
+    globalDesktopFontSize: 16,
+    globalMobileFontSize: 15,
+    sections: {},
+    headerFont: "'Rozha One', 'Noto Serif Devanagari', serif",
+    footerFont: "'Mukta', 'Noto Sans Devanagari', sans-serif",
+    headlineFont: "'Rozha One', 'Noto Serif Devanagari', serif",
+    bodyFont: "'Mukta', 'Noto Sans Devanagari', sans-serif",
+    metaFont: "'Mukta', 'Noto Sans Devanagari', sans-serif",
     headlineWeight: 700,
     bodyWeight: 400,
     mobileScale: 'normal',
@@ -692,6 +1269,19 @@ export const DEFAULT_PORTAL_SETTINGS: PortalSettings = {
     articleBodyLineHeight: 1.75,
     articleExcerptSize: 'normal',
     metaDescriptionSize: 'normal',
+    customScaleFont: 1.0,
+    sizeHeadingScale: 1.0,
+    sizeTitleScale: 1.0,
+    sizeContentScale: 1.0,
+    sizeArchiveScale: 1.0,
+    sizeMetaScale: 1.0,
+    sizeHeaderScale: 1.0,
+    sizeFooterScale: 1.0,
+    sizeHomepageTitleScale: 1.0,
+    sizeArticleTitleScale: 1.0,
+    sizeExcerptScale: 1.0,
+    sizeMetaDescScale: 1.0,
+    mobileSidebarFontScale: 1.0,
     headerLogoHeightPx: 52,
     headerTitleCustomPx: 36,
     navLinkFontSizePx: 14,
@@ -742,6 +1332,12 @@ export const DEFAULT_PORTAL_SETTINGS: PortalSettings = {
   popupConfig: DEFAULT_POPUP_CONFIG,
   mobileSidebarMenu: DEFAULT_MOBILE_SIDEBAR_MENU,
   epaperSettings: DEFAULT_EPAPER_SETTINGS,
+  footerBannerAd: DEFAULT_FOOTER_BANNER_AD_CONFIG,
+  desktopStickyAd: DEFAULT_DESKTOP_STICKY_AD_CONFIG,
+  mobileBottomNav: DEFAULT_MOBILE_BOTTOM_NAV_CONFIG,
+  headlineStyling: DEFAULT_HEADLINE_STYLING_CONFIG,
+  linkStyling: DEFAULT_LINK_STYLING_CONFIG,
+  trendingConfig: DEFAULT_TRENDING_CONFIG,
 };
 
 export const INITIAL_SUBSCRIBERS: SubscriberItem[] = [
@@ -905,7 +1501,7 @@ export const INITIAL_PHOTO_STORIES: PhotoStoryItem[] = [
   },
 ];
 
-export const INITIAL_MEDIA_ASSETS = [
+export const INITIAL_MEDIA_ASSETS: MediaAsset[] = [
   {
     id: 'media-1',
     title: 'Gaganyaan Space Capsule Sea Recovery',
@@ -914,6 +1510,7 @@ export const INITIAL_MEDIA_ASSETS = [
     caption: 'इसरो गगनयान क्रू मॉड्यूल समुद्र परीक्षण',
     type: 'image' as const,
     category: 'national',
+    folder: 'Hero/Breaking',
     fileSize: '1.4 MB',
     dimensions: '1920x1080',
     uploadedAt: new Date(Date.now() - 3 * 86400000).toISOString(),
@@ -927,6 +1524,7 @@ export const INITIAL_MEDIA_ASSETS = [
     caption: 'नई दिल्ली संसद भवन विशेष सत्र',
     type: 'image' as const,
     category: 'politics',
+    folder: 'Gallery/Events & Rallies',
     fileSize: '2.1 MB',
     dimensions: '2048x1365',
     uploadedAt: new Date(Date.now() - 5 * 86400000).toISOString(),
@@ -940,6 +1538,7 @@ export const INITIAL_MEDIA_ASSETS = [
     caption: 'टी-20 वर्ल्ड कप सेमीफाइनल जीत का जश्न',
     type: 'image' as const,
     category: 'sports',
+    folder: 'Hero/Features',
     fileSize: '1.8 MB',
     dimensions: '1920x1280',
     uploadedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
@@ -953,6 +1552,7 @@ export const INITIAL_MEDIA_ASSETS = [
     caption: 'सेंसेक्स रिकॉर्ड 81,420 ऑल-टाइम हाई',
     type: 'image' as const,
     category: 'business',
+    folder: 'Infographics',
     fileSize: '1.6 MB',
     dimensions: '1800x1200',
     uploadedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
@@ -966,6 +1566,7 @@ export const INITIAL_MEDIA_ASSETS = [
     caption: 'वंदे भारत स्लीपर एक्सप्रेस 180 किमी/घंटा ट्रायल',
     type: 'image' as const,
     category: 'national',
+    folder: 'Hero/Features',
     fileSize: '1.9 MB',
     dimensions: '1920x1080',
     uploadedAt: new Date(Date.now() - 4 * 86400000).toISOString(),
@@ -979,6 +1580,7 @@ export const INITIAL_MEDIA_ASSETS = [
     caption: 'अयोध्या-काशी रैपिड रेल व भव्य मंदिर परिसर',
     type: 'image' as const,
     category: 'state',
+    folder: 'Gallery/Ground Reports',
     fileSize: '2.5 MB',
     dimensions: '2400x1600',
     uploadedAt: new Date(Date.now() - 6 * 86400000).toISOString(),
@@ -992,6 +1594,7 @@ export const INITIAL_MEDIA_ASSETS = [
     caption: 'स्वदेशी भारत-जेन 14 भाषाई एआई मॉडल',
     type: 'image' as const,
     category: 'tech',
+    folder: 'Infographics',
     fileSize: '1.2 MB',
     dimensions: '1600x1000',
     uploadedAt: new Date(Date.now() - 8 * 86400000).toISOString(),
@@ -1005,10 +1608,132 @@ export const INITIAL_MEDIA_ASSETS = [
     caption: 'खबरी दोस्त मीडिया नेटवर्क पर विज्ञापन दें',
     type: 'banner' as const,
     category: 'advertising',
+    folder: 'Commercial & Ads',
     fileSize: '450 KB',
     dimensions: '728x90',
     uploadedAt: new Date(Date.now() - 10 * 86400000).toISOString(),
     uploadedBy: 'मुख्य संपादक',
+  },
+  {
+    id: 'media-9',
+    title: 'Chief Editor Avatar & Headshot',
+    url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80',
+    altText: 'Chief Editor Khabri Dost profile avatar',
+    caption: 'वरिष्ठ संपादक प्रोफाइल चित्र',
+    type: 'icon' as const,
+    category: 'national',
+    folder: 'Author Icons',
+    fileSize: '120 KB',
+    dimensions: '512x512',
+    uploadedAt: new Date(Date.now() - 12 * 86400000).toISOString(),
+    uploadedBy: 'मुख्य संपादक',
+  },
+  {
+    id: 'media-10',
+    title: 'Senior Political Columnist Badge',
+    url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80',
+    altText: 'Senior Political Analyst portrait',
+    caption: 'विशेष राजनीतिक स्तंभकार',
+    type: 'icon' as const,
+    category: 'politics',
+    folder: 'Author Icons',
+    fileSize: '140 KB',
+    dimensions: '512x512',
+    uploadedAt: new Date(Date.now() - 14 * 86400000).toISOString(),
+    uploadedBy: 'दीपक चौहान',
+  },
+];
+
+export const DEFAULT_MEDIA_FOLDERS: MediaFolder[] = [
+  {
+    id: 'folder-hero',
+    name: 'Hero',
+    path: 'Hero',
+    parentId: null,
+    description: 'Hero banners, top carousels, and spotlight breaking visuals',
+    color: '#dc2626',
+    icon: 'Flame',
+    isSystem: true,
+  },
+  {
+    id: 'folder-hero-breaking',
+    name: 'Breaking',
+    path: 'Hero/Breaking',
+    parentId: 'folder-hero',
+    description: 'Live breaking news hero spotlight cards',
+    color: '#ef4444',
+    icon: 'Zap',
+    isSystem: true,
+  },
+  {
+    id: 'folder-hero-features',
+    name: 'Features',
+    path: 'Hero/Features',
+    parentId: 'folder-hero',
+    description: 'Weekly in-depth special investigative hero banners',
+    color: '#f97316',
+    icon: 'Sparkles',
+    isSystem: true,
+  },
+  {
+    id: 'folder-gallery',
+    name: 'Gallery',
+    path: 'Gallery',
+    parentId: null,
+    description: 'Photo galleries, press albums, and on-ground photoreports',
+    color: '#2563eb',
+    icon: 'Image',
+    isSystem: true,
+  },
+  {
+    id: 'folder-gallery-events',
+    name: 'Events & Rallies',
+    path: 'Gallery/Events & Rallies',
+    parentId: 'folder-gallery',
+    description: 'Political rallies, public conferences, and national events',
+    color: '#3b82f6',
+    icon: 'Users',
+    isSystem: true,
+  },
+  {
+    id: 'folder-gallery-ground',
+    name: 'Ground Reports',
+    path: 'Gallery/Ground Reports',
+    parentId: 'folder-gallery',
+    description: 'Correspondent photos from districts and state bureaus',
+    color: '#60a5fa',
+    icon: 'Camera',
+    isSystem: true,
+  },
+  {
+    id: 'folder-author-icons',
+    name: 'Author Icons',
+    path: 'Author Icons',
+    parentId: null,
+    description: 'Author avatars, reporter headshots, and editorial column badges',
+    color: '#7c3aed',
+    icon: 'Users',
+    isSystem: true,
+  },
+  {
+    id: 'folder-infographics',
+    name: 'Infographics',
+    path: 'Infographics',
+    parentId: null,
+    description: 'Election seat charts, budget graphs, weather maps, data graphics',
+    color: '#059669',
+    icon: 'BarChart2',
+    isSystem: true,
+  },
+  {
+    id: 'folder-commercial',
+    name: 'Commercial & Ads',
+    path: 'Commercial & Ads',
+    parentId: null,
+    description: 'Header leaderboard ads, sidebar sponsor slots, and branding banners',
+    color: '#d97706',
+    icon: 'DollarSign',
+    isSystem: true,
   },
 ];
 

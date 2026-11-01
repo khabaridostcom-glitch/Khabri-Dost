@@ -95,19 +95,19 @@ export const MobileSidebarSettingsTab: React.FC<MobileSidebarSettingsTabProps> =
   return (
     <div className="space-y-6">
       {/* Top Banner with Quick Actions */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-4 sm:p-5 rounded-2xl text-white border border-slate-800 shadow-md flex items-center justify-between flex-wrap gap-3">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl text-slate-800 border border-slate-200 shadow-sm flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-xs">
-            <Smartphone className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-2xs">
+            <Smartphone className="w-5 h-5 text-indigo-600" />
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <span>Mobile Sidebar Menu Customizer</span>
-              <span className="text-[10px] bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded-full font-mono">
+              <span className="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full font-mono">
                 Admin Control
               </span>
             </h3>
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-slate-600">
               Manage sidebar menu, buttons, fonts, logo, social links and navigation for mobile devices
             </p>
           </div>
@@ -116,9 +116,9 @@ export const MobileSidebarSettingsTab: React.FC<MobileSidebarSettingsTabProps> =
         <button
           type="button"
           onClick={handleReset}
-          className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-1.5 rounded-xl border border-slate-700 transition flex items-center space-x-1.5 cursor-pointer"
+          className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 transition flex items-center space-x-1.5 cursor-pointer shadow-2xs"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
+          <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
           <span>Reset to Default</span>
         </button>
       </div>

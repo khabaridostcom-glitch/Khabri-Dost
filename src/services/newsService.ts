@@ -25,6 +25,7 @@ import {
   ContactInquiry,
   MediaAsset,
   LiveBlogEvent,
+  CitizenNewsSubmission,
 } from '../types/news';
 import { INITIAL_NEWS } from '../data/seedNews';
 import {
@@ -241,8 +242,9 @@ export async function updateArticleReaction(
   const updated: ArticleReactions = {
     like: currentReactions?.like || 0,
     love: currentReactions?.love || 0,
-    insightful: currentReactions?.insightful || 0,
     funny: currentReactions?.funny || 0,
+    surprised: currentReactions?.surprised || 0,
+    insightful: currentReactions?.insightful || 0,
   };
 
   // If user had a different reaction, decrement previous
@@ -655,9 +657,6 @@ export function subscribeToPortalSettings(
   );
 }
 
-/**
- * Save portal settings to Firestore and local storage.
- */
 export async function savePortalSettings(settings: PortalSettings): Promise<void> {
   // Always update local cache first for instant feedback
   try {
@@ -665,8 +664,26 @@ export async function savePortalSettings(settings: PortalSettings): Promise<void
   } catch {}
 
   try {
+    // Sanitize settings: NEVER write raw API keys to the publicly readable Firestore document
+    const { apiConfig, ...publicSettings } = settings;
+    const safeApiConfig = apiConfig
+      ? {
+          activeAiProvider: apiConfig.activeAiProvider || 'gemini',
+          googleTrendsRegion: apiConfig.googleTrendsRegion || 'IN',
+          googleTrendsLanguage: apiConfig.googleTrendsLanguage || 'hi',
+          googleTrendsAutoRefresh: apiConfig.googleTrendsAutoRefresh ?? true,
+          googleTrendsRefreshIntervalMinutes: apiConfig.googleTrendsRefreshIntervalMinutes || 15,
+          // Raw secret keys (geminiApiKey, openaiApiKey, anthropicApiKey) are excluded from public Firestore
+        }
+      : undefined;
+
+    const sanitizedSettings = {
+      ...publicSettings,
+      ...(safeApiConfig ? { apiConfig: safeApiConfig } : {}),
+    };
+
     const docRef = doc(db, SETTINGS_COLLECTION, 'portal_config');
-    await setDoc(docRef, settings, { merge: true });
+    await setDoc(docRef, sanitizedSettings, { merge: true });
   } catch (error) {
     console.warn('Could not save settings to Firestore:', error);
     handleFirestoreError(error, OperationType.UPDATE, `${SETTINGS_COLLECTION}/portal_config`);
@@ -1095,3 +1112,256 @@ export async function checkAndPublishScheduledArticles(
 
   return { updatedArticles, publishedCount: toPublish.length };
 }
+
+/**
+ * -------------------------------------------------------------
+ * FULL PORTAL SNAPSHOT BACKUP & RESTORE SERVICE (PHASE 9)
+ * -------------------------------------------------------------
+ */
+
+export interface PortalBackupSnapshot {
+  metadata: {
+    exportTimestamp: string;
+    portalDomain: string;
+    schemaVersion: string;
+    appName: string;
+    environment: string;
+    exportedBy?: string;
+    counts: {
+      articles: number;
+      mediaAssets: number;
+      liveBlogs: number;
+      inquiries: number;
+      subscribers: number;
+      citizenSubmissions: number;
+    };
+  };
+  settings: PortalSettings;
+  articles: NewsArticle[];
+  mediaAssets: MediaAsset[];
+  liveBlogs: LiveBlogEvent[];
+  inquiries: ContactInquiry[];
+  subscribers: Array<{ email: string; subscribedAt: string; category?: string }>;
+  citizenSubmissions: CitizenNewsSubmission[];
+}
+
+/**
+ * Generate full JSON database backup snapshot across all entities.
+ */
+export async function generatePortalBackupData(exportedBy = 'Super Admin'): Promise<PortalBackupSnapshot> {
+  // 1. Articles
+  let articles: NewsArticle[] = [];
+  try {
+    articles = await fetchArticles('all');
+  } catch {
+    articles = INITIAL_NEWS;
+  }
+
+  // 2. Settings
+  let settings: PortalSettings = DEFAULT_PORTAL_SETTINGS;
+  try {
+    settings = await fetchPortalSettings();
+  } catch {
+    settings = DEFAULT_PORTAL_SETTINGS;
+  }
+
+  // 3. Media Assets
+  let mediaAssets: MediaAsset[] = INITIAL_MEDIA_ASSETS;
+  try {
+    const savedMedia = localStorage.getItem('kd_media_assets');
+    if (savedMedia) {
+      mediaAssets = JSON.parse(savedMedia);
+    }
+  } catch {}
+
+  // 4. Live Blogs
+  let liveBlogs: LiveBlogEvent[] = INITIAL_LIVE_BLOGS;
+  try {
+    const savedBlogs = localStorage.getItem('kd_live_blogs');
+    if (savedBlogs) {
+      liveBlogs = JSON.parse(savedBlogs);
+    }
+  } catch {}
+
+  // 5. Inquiries
+  let inquiries: ContactInquiry[] = [];
+  try {
+    const savedInq = localStorage.getItem('kd_contact_inquiries');
+    if (savedInq) {
+      inquiries = JSON.parse(savedInq);
+    }
+  } catch {}
+
+  // 6. Newsletter Subscribers
+  let subscribers: Array<{ email: string; subscribedAt: string; category?: string }> = [];
+  try {
+    const savedSubs = localStorage.getItem('kd_newsletter_subscribers');
+    if (savedSubs) {
+      subscribers = JSON.parse(savedSubs);
+    }
+  } catch {}
+
+  // 7. Citizen Submissions
+  let citizenSubmissions: CitizenNewsSubmission[] = [];
+  try {
+    const savedCitizen = localStorage.getItem('kd_citizen_submissions');
+    if (savedCitizen) {
+      citizenSubmissions = JSON.parse(savedCitizen);
+    }
+  } catch {}
+
+  const snapshot: PortalBackupSnapshot = {
+    metadata: {
+      exportTimestamp: new Date().toISOString(),
+      portalDomain: 'khabridost.com',
+      schemaVersion: '2.0.0',
+      appName: 'Khabri Dost News CMS',
+      environment: 'production',
+      exportedBy,
+      counts: {
+        articles: articles.length,
+        mediaAssets: mediaAssets.length,
+        liveBlogs: liveBlogs.length,
+        inquiries: inquiries.length,
+        subscribers: subscribers.length,
+        citizenSubmissions: citizenSubmissions.length,
+      },
+    },
+    settings,
+    articles,
+    mediaAssets,
+    liveBlogs,
+    inquiries,
+    subscribers,
+    citizenSubmissions,
+  };
+
+  return snapshot;
+}
+
+/**
+ * Validated restore from JSON backup snapshot.
+ */
+export async function restorePortalBackupData(
+  snapshot: any
+): Promise<{
+  success: boolean;
+  message: string;
+  counts: {
+    articles: number;
+    mediaAssets: number;
+    liveBlogs: number;
+    inquiries: number;
+    subscribers: number;
+  };
+  restoredSettings: PortalSettings | null;
+}> {
+  if (!snapshot || typeof snapshot !== 'object') {
+    throw new Error('Invalid backup file: file content is not a valid JSON object.');
+  }
+
+  // Validate critical structure
+  const hasArticles = Array.isArray(snapshot.articles);
+  const hasSettings = Boolean(snapshot.settings && typeof snapshot.settings === 'object');
+
+  if (!hasArticles && !hasSettings) {
+    throw new Error('Invalid backup format: snapshot contains neither articles nor portal settings.');
+  }
+
+  let restoredSettings: PortalSettings | null = null;
+  const counts = {
+    articles: 0,
+    mediaAssets: 0,
+    liveBlogs: 0,
+    inquiries: 0,
+    subscribers: 0,
+  };
+
+  // 1. Restore Settings
+  if (hasSettings) {
+    const validSettings: PortalSettings = {
+      ...DEFAULT_PORTAL_SETTINGS,
+      ...snapshot.settings,
+    };
+    restoredSettings = validSettings;
+    await savePortalSettings(validSettings);
+  }
+
+  // 2. Restore Articles
+  if (hasArticles) {
+    const articlesList: NewsArticle[] = snapshot.articles;
+    counts.articles = articlesList.length;
+    // Persist each article to Firestore if authenticated / available
+    for (const art of articlesList) {
+      try {
+        const articleRef = doc(db, ARTICLES_COLLECTION, art.id);
+        await setDoc(articleRef, art, { merge: true });
+      } catch (err) {
+        console.warn(`Could not sync restored article ${art.id} to Firestore:`, err);
+      }
+    }
+  }
+
+  // 3. Restore Media Assets
+  if (Array.isArray(snapshot.mediaAssets)) {
+    counts.mediaAssets = snapshot.mediaAssets.length;
+    try {
+      localStorage.setItem('kd_media_assets', JSON.stringify(snapshot.mediaAssets));
+      for (const media of snapshot.mediaAssets) {
+        try {
+          const docRef = doc(db, MEDIA_COLLECTION, media.id);
+          await setDoc(docRef, media, { merge: true });
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('Could not store restored media assets:', e);
+    }
+  }
+
+  // 4. Restore Live Blogs
+  if (Array.isArray(snapshot.liveBlogs)) {
+    counts.liveBlogs = snapshot.liveBlogs.length;
+    try {
+      localStorage.setItem('kd_live_blogs', JSON.stringify(snapshot.liveBlogs));
+      for (const blog of snapshot.liveBlogs) {
+        try {
+          const docRef = doc(db, LIVE_BLOGS_COLLECTION, blog.id);
+          await setDoc(docRef, blog, { merge: true });
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('Could not store restored live blogs:', e);
+    }
+  }
+
+  // 5. Restore Inquiries
+  if (Array.isArray(snapshot.inquiries)) {
+    counts.inquiries = snapshot.inquiries.length;
+    try {
+      localStorage.setItem('kd_contact_inquiries', JSON.stringify(snapshot.inquiries));
+    } catch {}
+  }
+
+  // 6. Restore Newsletter Subscribers
+  if (Array.isArray(snapshot.subscribers)) {
+    counts.subscribers = snapshot.subscribers.length;
+    try {
+      localStorage.setItem('kd_newsletter_subscribers', JSON.stringify(snapshot.subscribers));
+    } catch {}
+  }
+
+  // 7. Restore Citizen Submissions
+  if (Array.isArray(snapshot.citizenSubmissions)) {
+    try {
+      localStorage.setItem('kd_citizen_submissions', JSON.stringify(snapshot.citizenSubmissions));
+    } catch {}
+  }
+
+  return {
+    success: true,
+    message: `Restore completed successfully: ${counts.articles} articles, ${counts.mediaAssets} media items, and portal settings synchronized.`,
+    counts,
+    restoredSettings,
+  };
+}
+

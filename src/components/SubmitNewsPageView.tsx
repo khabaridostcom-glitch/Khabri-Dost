@@ -404,7 +404,7 @@ export const SubmitNewsPageView: React.FC<SubmitNewsPageViewProps> = ({
                       key={idx}
                       className="relative rounded-2xl overflow-hidden border-2 border-red-500 shadow-sm aspect-[4/3] bg-slate-100 group"
                     >
-                      <img src={imgSrc} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
+                      <img src={imgSrc || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(idx)}

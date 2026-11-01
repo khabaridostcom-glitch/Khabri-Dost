@@ -12,6 +12,7 @@ import {
   Sparkles,
   BookmarkCheck,
   CheckCircle2,
+  Zap,
 } from 'lucide-react';
 import { PortalSettings, HomepageSectionsConfig } from '../../types/news';
 import { DEFAULT_HOMEPAGE_SECTIONS } from '../../data/portalDefaults';
@@ -73,21 +74,21 @@ export const HomepageSectionsSettingsTab: React.FC<HomepageSectionsSettingsTabPr
   return (
     <div className="space-y-6 max-w-4xl text-slate-800">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-red-950 text-white p-5 rounded-2xl border border-slate-700 shadow-md">
+      <div className="bg-white text-slate-800 p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center text-white shadow-md">
-            <Layout className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shadow-2xs">
+            <Layout className="w-5 h-5 text-red-600" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="text-base sm:text-lg font-bold">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">
                 Homepage Sections & Live Studio Controls
               </h2>
-              <span className="bg-red-500/20 text-red-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-red-500/40">
+              <span className="bg-red-50 text-red-700 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-red-200">
                 LIVE TOGGLES
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-xs text-slate-600 mt-0.5">
               Control the visibility of any section on your homepage and navigation bar in real-time.
             </p>
           </div>
@@ -368,6 +369,30 @@ export const HomepageSectionsSettingsTab: React.FC<HomepageSectionsSettingsTabPr
               }`}
             >
               {sections.briefsTicker ? 'Enabled' : 'Disabled'}
+            </button>
+          </div>
+
+          {/* Morning 60-Second News Capsule (सुबह का 60-सेकंड कैप्सूल) */}
+          <div className="p-3.5 rounded-xl border border-slate-200 hover:border-slate-300 transition flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-lg bg-amber-50 text-red-600">
+                <Zap className="w-4 h-4 fill-amber-500 text-amber-500" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">सुबह का 60-सेकंड कैप्सूल (Morning Brief)</h4>
+                <p className="text-[11px] text-slate-500">Quick 4-card morning brief strip on homepage</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleToggleSection('morningCapsule')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                sections.morningCapsule !== false
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  : 'bg-slate-100 text-slate-500 border border-slate-200'
+              }`}
+            >
+              {sections.morningCapsule !== false ? 'Enabled' : 'Disabled'}
             </button>
           </div>
         </div>

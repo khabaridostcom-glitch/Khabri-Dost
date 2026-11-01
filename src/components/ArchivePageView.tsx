@@ -257,26 +257,26 @@ export const ArchivePageView: React.FC<ArchivePageViewProps> = ({
   return (
     <div className="min-h-screen bg-slate-50 font-kd-body text-slate-800">
       {/* 1. TOP HEADER & BREADCRUMBS */}
-      <div className="bg-slate-900 text-white border-b border-slate-800 shadow-md">
+      <div className="bg-white text-slate-900 border-b border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <div className="flex items-center space-x-2 text-xs font-semibold text-red-400 font-kd-meta mb-1">
+              <div className="flex items-center space-x-2 text-xs font-semibold text-red-600 font-kd-meta mb-1">
                 <button
                   onClick={onBackToHome}
-                  className="hover:underline flex items-center space-x-1 text-slate-300 hover:text-white transition cursor-pointer"
+                  className="hover:underline flex items-center space-x-1 text-slate-500 hover:text-slate-900 transition cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>मुख्य पृष्ठ (Home)</span>
                 </button>
-                <span className="text-slate-600">/</span>
-                <span className="text-red-400">समाचार पुरालेख (Archive)</span>
+                <span className="text-slate-300">/</span>
+                <span className="text-red-600 font-bold">समाचार पुरालेख (Archive)</span>
               </div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black font-kd-headline tracking-tight text-white flex items-center gap-2">
-                <CalendarIcon className="w-6 h-6 sm:w-7 sm:h-7 text-red-500" />
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black font-kd-headline tracking-tight text-slate-900 flex items-center gap-2">
+                <CalendarIcon className="w-6 h-6 sm:w-7 sm:h-7 text-red-600" />
                 <span>समाचार पुरालेख एवं ऐतिहासिक कवरेज</span>
               </h1>
-              <p className="text-xs sm:text-sm text-slate-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
                 विगत तिथियों, महीनों व वर्षों के प्रकाशित समाचार, विशेष रिपोर्ट एवं श्रेणीवार पुरालेख खोजें
               </p>
             </div>
@@ -284,7 +284,7 @@ export const ArchivePageView: React.FC<ArchivePageViewProps> = ({
             <div className="flex items-center space-x-2 shrink-0">
               <button
                 onClick={onBackToHome}
-                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl border border-slate-700 transition flex items-center space-x-1.5 cursor-pointer shadow-xs"
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition flex items-center space-x-1.5 cursor-pointer shadow-2xs"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>होम पर वापस</span>
@@ -742,7 +742,7 @@ export const ArchivePageView: React.FC<ArchivePageViewProps> = ({
                       <div className="w-full sm:w-44 md:w-52 h-36 sm:h-32 rounded-xl overflow-hidden bg-slate-100 shrink-0 relative">
                         {art.imageUrl ? (
                           <img
-                            src={art.imageUrl}
+                            src={art.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                             alt={art.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             loading="lazy"

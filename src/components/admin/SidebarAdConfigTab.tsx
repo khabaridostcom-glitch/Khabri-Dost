@@ -151,28 +151,28 @@ export const SidebarAdConfigTab: React.FC<SidebarAdConfigTabProps> = ({
       </div>
 
       {/* Visual Sequence Guide */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-4 rounded-2xl border border-slate-800 text-xs font-kd-meta shadow-sm">
-        <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block mb-1">
+      <div className="bg-white text-slate-800 p-4 rounded-2xl border border-slate-200 text-xs font-kd-meta shadow-sm">
+        <span className="text-[10px] text-red-600 font-bold uppercase tracking-wider block mb-1">
           Sidebar Modular Layout Flow
         </span>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="bg-red-600/30 text-red-300 border border-red-500/40 px-2 py-0.5 rounded font-mono font-bold">
+          <span className="bg-red-50 text-red-800 border border-red-200 px-2 py-0.5 rounded font-mono font-bold">
             1. Advertisement (Top Slot)
           </span>
           <span className="text-slate-400">➔</span>
-          <span className="bg-white/10 text-slate-200 px-2 py-0.5 rounded font-bold">
+          <span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-bold border border-slate-200">
             2. Trending Stories Feed
           </span>
           <span className="text-slate-400">➔</span>
-          <span className="bg-amber-600/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded font-mono font-bold">
+          <span className="bg-amber-50 text-amber-800 border border-amber-300 px-2 py-0.5 rounded font-mono font-bold">
             3. Advertisement (Middle Slot)
           </span>
           <span className="text-slate-400">➔</span>
-          <span className="bg-white/10 text-slate-200 px-2 py-0.5 rounded font-bold">
+          <span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-bold border border-slate-200">
             4. Opinion Poll
           </span>
           <span className="text-slate-400">➔</span>
-          <span className="bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-mono font-bold">
+          <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded font-mono font-bold">
             5. Advertisement (Bottom Slot)
           </span>
         </div>
@@ -409,7 +409,7 @@ const SidebarSlotEditor: React.FC<SidebarSlotEditorProps> = ({
                   </span>
                   <div className="max-w-xs mx-auto border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-slate-900 relative group">
                     <img
-                      src={slotConfig.bannerUrl}
+                      src={slotConfig.bannerUrl || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=640&auto=format&fit=crop&q=80'}
                       alt={slotConfig.bannerTitle || 'Sidebar Ad'}
                       className="w-full h-40 object-cover group-hover:scale-105 transition duration-300"
                     />

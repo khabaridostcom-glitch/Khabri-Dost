@@ -81,14 +81,16 @@ export const SpotlightSettingsTab: React.FC<SpotlightSettingsTabProps> = ({
   return (
     <div className="space-y-6 text-xs sm:text-sm max-w-4xl mx-auto">
       {/* Overview Banner */}
-      <div className="bg-gradient-to-r from-red-900 to-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-xs border border-red-800/40">
+      <div className="bg-white text-slate-800 p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200">
         <div className="flex items-start space-x-3">
-          <Layers className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="w-9 h-9 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shrink-0">
+            <Layers className="w-5 h-5 text-red-600" />
+          </div>
           <div>
-            <h4 className="font-bold text-sm sm:text-base">
+            <h4 className="font-bold text-sm sm:text-base text-slate-900">
               Homepage 3-Column Spotlight & Slider Studio
             </h4>
-            <p className="text-slate-300 text-xs mt-1 leading-relaxed">
+            <p className="text-slate-600 text-xs mt-1 leading-relaxed">
               Manage the 3 main spotlight columns: Card 1 (Hero Carousel Slider), Card 2 (4 Featured Stories Stack),
               and Card 3 (Bottom-to-Top Sliding Headlines Ticker).
             </p>
@@ -305,7 +307,7 @@ export const SpotlightSettingsTab: React.FC<SpotlightSettingsTabProps> = ({
                             <Square className="w-4 h-4 text-slate-300 shrink-0" />
                           )}
                           <img
-                            src={art.imageUrl}
+                            src={art.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                             alt=""
                             className="w-8 h-8 rounded object-cover shrink-0"
                           />

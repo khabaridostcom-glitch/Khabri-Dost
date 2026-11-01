@@ -159,16 +159,18 @@ export const SpotlightHeroSlider: React.FC<SpotlightHeroSliderProps> = ({
       onClick={() => onSelectArticle(currentArticle)}
       className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-slate-200/90 cursor-pointer flex flex-col h-full select-none"
     >
-      {/* Media / Photo Area with Slide Transition */}
-      <div className="relative aspect-[16/10] sm:aspect-[16/9.5] w-full overflow-hidden bg-slate-900 shrink-0">
+      {/* Media / Photo Area with Modern aspect-video & CSS Skeleton Placeholder */}
+      <div className="relative aspect-video w-full overflow-hidden bg-slate-900 shrink-0">
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 animate-pulse pointer-events-none" />
         <img
           key={currentArticle.id}
-          src={currentArticle.imageUrl}
-          alt={currentArticle.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out animate-fadeIn"
-          loading="eager"
+          src={currentArticle.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
+          alt={currentArticle.imageAltText || currentArticle.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out animate-fadeIn relative z-0"
+          loading={currentIndex === 0 ? 'eager' : 'lazy'}
+          decoding="async"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent z-[1]" />
 
         {/* Badges on Top Left */}
         <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 max-w-[55%] flex flex-wrap gap-1 sm:gap-1.5 items-center font-kd-meta z-10">
@@ -309,38 +311,9 @@ export const SpotlightHeroSlider: React.FC<SpotlightHeroSliderProps> = ({
           </h2>
 
           {/* Summary / Excerpt - Line-clamped to maintain perfect height balance */}
-          <p className="text-xs sm:text-sm text-slate-600 line-clamp-2 sm:line-clamp-3 font-kd-body leading-relaxed mb-2">
+          <p className="text-xs sm:text-sm text-slate-600 line-clamp-2 sm:line-clamp-3 font-kd-body leading-relaxed">
             {currentArticle.summary}
           </p>
-        </div>
-
-        {/* Meta info & Footer Row */}
-        <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100 font-kd-meta mt-1">
-          <div className="flex items-center space-x-2 truncate">
-            {displayOptions.showAuthor && (
-              <span className="font-semibold text-slate-700 truncate max-w-[130px] sm:max-w-none">
-                {currentArticle.authorName}
-              </span>
-            )}
-            {displayOptions.showDate && (
-              <span className="text-slate-400 shrink-0">
-                • {formatHindiTimeAgo(currentArticle.createdAt)}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-3 shrink-0">
-            {displayOptions.showViews && (
-              <span className="flex items-center space-x-1 text-slate-400">
-                <Eye className="w-3.5 h-3.5" />
-                <span>{currentArticle.viewsCount}</span>
-              </span>
-            )}
-            <span className="text-red-600 font-bold text-xs group-hover:underline flex items-center space-x-0.5">
-              <span>विस्तार से</span>
-              <span>→</span>
-            </span>
-          </div>
         </div>
       </div>
     </div>

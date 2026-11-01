@@ -167,7 +167,7 @@ export const CitizenSubmissionsTab: React.FC<CitizenSubmissionsTabProps> = ({
                   {item.images && item.images.length > 0 && (
                     <div className="mt-2.5 flex items-center gap-1.5 overflow-hidden rounded-xl border border-slate-100">
                       <img
-                        src={item.images[0]}
+                        src={item.images[0] || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                         alt={item.title}
                         className="w-full h-28 object-cover group-hover:scale-102 transition duration-200"
                       />
@@ -266,7 +266,7 @@ export const CitizenSubmissionsTab: React.FC<CitizenSubmissionsTabProps> = ({
                 {selectedSubmission.images.map((img, i) => (
                   <img
                     key={i}
-                    src={img}
+                    src={img || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                     alt="Citizen photo"
                     className="w-full h-44 object-cover rounded-xl border border-slate-200"
                   />

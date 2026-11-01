@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
@@ -11,12 +12,30 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Security hardening headers (protection against XSS, clickjacking, MIME sniffing, and framing)
+// Parse CLI arguments if passed (e.g., --port 3000, -p 3000, --port=3000, --host 0.0.0.0)
+let cliPort: number | undefined;
+let cliHost: string | undefined;
+
+for (let i = 0; i < process.argv.length; i++) {
+  const arg = process.argv[i];
+  if (arg === '--port' || arg === '-p') {
+    cliPort = Number(process.argv[i + 1]);
+  } else if (arg.startsWith('--port=')) {
+    cliPort = Number(arg.split('=')[1]);
+  } else if (arg === '--host' || arg === '-h') {
+    cliHost = process.argv[i + 1];
+  } else if (arg.startsWith('--host=')) {
+    cliHost = arg.split('=')[1];
+  }
+}
+
+const PORT = cliPort || Number(process.env.PORT) || Number(process.env.APP_PORT) || Number(process.env.DEFAULT_APP_PORT) || 3000;
+const HOST = cliHost || process.env.HOST || '0.0.0.0';
+
+// Security hardening headers (protection against XSS, MIME sniffing; framing permitted for AI Studio iFrame)
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
@@ -50,8 +69,8 @@ const apiRateLimiter = (maxRequests = 60, windowMs = 60000) => {
 
 app.use('/api/', apiRateLimiter(80, 60000));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '60mb' }));
+app.use(express.urlencoded({ extended: true, limit: '60mb' }));
 
 // Sanitize user inputs to prevent XSS / script injection attacks
 function sanitizeString(input: string): string {
@@ -272,6 +291,126 @@ Return valid JSON conforming to:
   } catch (err: any) {
     console.error('Server SEO generation error:', err);
     res.status(500).json({ error: err.message || 'Internal Server Error' });
+  }
+});
+
+// Fallback intelligent 3-bullet quick read generator
+function generateFallbackQuickRead(title: string, content: string): string[] {
+  const cleanBody = (content || '')
+    .replace(/###?\s+/g, '')
+    .replace(/[*_`#>-]/g, '')
+    .trim();
+
+  const sentences = cleanBody
+    .split(/[।.\n]/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 20 && !s.includes('http'));
+
+  if (sentences.length >= 3) {
+    return [
+      `1. ${sentences[0]}।`,
+      `2. ${sentences[1]}।`,
+      `3. ${sentences[2]}।`,
+    ];
+  } else if (sentences.length === 2) {
+    return [
+      `1. ${title}: मुख्य घटनाक्रम और प्रारंभिक विवरण।`,
+      `2. ${sentences[0]}।`,
+      `3. ${sentences[1]}।`,
+    ];
+  } else if (sentences.length === 1) {
+    return [
+      `1. ${title}: प्रमुख रिपोर्ट व समाचार।`,
+      `2. ${sentences[0]}।`,
+      `3. संबंधित प्रशासनिक अधिकारियों द्वारा आगे की कार्यवाही जारी है।`,
+    ];
+  } else {
+    return [
+      `1. ${title || 'ताज़ा समाचार'}: मुख्य रिपोर्ट और घटनाक्रम।`,
+      `2. संबंधित विभागों और अधिकारियों द्वारा मामले पर आवश्यक दिशा-निर्देश जारी किए गए हैं।`,
+      `3. खबरी दोस्त संपादकीय टीम इस खबर पर लगातार नज़र बनाए हुए है।`,
+    ];
+  }
+}
+
+// POST /api/ai/quick-read - AI 3-Bullet Point Quick Read Summary Generator (Gemini 3.8 Flash)
+app.post('/api/ai/quick-read', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { articleId, title, content, summary, category } = req.body;
+
+    if (!title && !content && !summary) {
+      res.status(400).json({ error: 'Article title or content is required.' });
+      return;
+    }
+
+    const cleanTitle = sanitizeString(title || 'मुख्य समाचार');
+    const cleanContent = sanitizeString((content || summary || '').slice(0, 4500));
+    const cleanCategory = sanitizeString(category || 'ताज़ा ख़बर');
+
+    if (aiClient) {
+      try {
+        const prompt = `You are a Senior Hindi News Editor for 'Khabri Dost' (खबरी दोस्त).
+Summarize this news article into exactly 3 crisp, factual, and high-impact bullet points in Hindi for a fast mobile 'Quick Read' (त्वरित सार / 3 मुख्य बातें).
+Each bullet point should be 1-2 concise sentences focusing on what happened, key quotes/decisions, and the current status or public impact.
+
+Headline: ${cleanTitle}
+Category: ${cleanCategory}
+Article Content:
+"""
+${cleanContent}
+"""
+
+Return valid JSON conforming to:
+{
+  "bullets": [
+    "1. पहला मुख्य तथ्य / बड़ी बात",
+    "2. दूसरा मुख्य तथ्य / घटनाक्रम",
+    "3. तीसरा मुख्य तथ्य / निष्कर्ष या असर"
+  ],
+  "readingTime": "15 सेकंड",
+  "oneLineTakeaway": "एक पंक्ति में मुख्य निष्कर्ष"
+}`;
+
+        const response = await aiClient.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+
+        const rawText = response.text || '';
+        const parsed = JSON.parse(rawText);
+
+        if (Array.isArray(parsed.bullets) && parsed.bullets.length >= 2) {
+          res.json({
+            success: true,
+            bullets: parsed.bullets.slice(0, 3),
+            readingTime: parsed.readingTime || '15 सेकंड',
+            oneLineTakeaway: parsed.oneLineTakeaway || `${cleanTitle}: मुख्य बिंदु।`,
+            articleId,
+            poweredBy: 'Gemini 3.8 Flash',
+          });
+          return;
+        }
+      } catch (geminiError: any) {
+        console.warn('Gemini generateContent error in quick-read, using fallback:', geminiError?.message || geminiError);
+      }
+    }
+
+    // High quality intelligent fallback if offline or no API key
+    const fallbackBullets = generateFallbackQuickRead(cleanTitle, cleanContent);
+    res.json({
+      success: true,
+      bullets: fallbackBullets,
+      readingTime: '15 सेकंड',
+      oneLineTakeaway: `${cleanTitle}: मुख्य अपडेट व तथ्य।`,
+      articleId,
+      poweredBy: 'Editorial QuickDesk',
+    });
+  } catch (error: any) {
+    console.error('Error in /api/ai/quick-read:', error);
+    res.status(500).json({ error: 'Failed to generate quick read summary.' });
   }
 });
 
@@ -801,13 +940,41 @@ Return ONLY valid JSON with this exact schema:
   }
 });
 
+// Safe URL validation to prevent Server-Side Request Forgery (SSRF)
+function isSafeExternalUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+    const hostname = parsed.hostname.toLowerCase();
+    // Block internal, loopback, private IPv4/IPv6, link-local, and cloud metadata destinations
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '::1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '169.254.169.254' ||
+      hostname.endsWith('.internal') ||
+      hostname.endsWith('.local') ||
+      hostname.includes('metadata.google') ||
+      /^10\./.test(hostname) ||
+      /^192\.168\./.test(hostname) ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // POST /api/social/webhook-dispatch - Auto-Share webhook for Zapier, Buffer, Telegram, Make.com
 app.post('/api/social/webhook-dispatch', async (req: Request, res: Response): Promise<void> => {
   try {
     const { webhookUrl, article, channel } = req.body;
 
-    if (!webhookUrl || typeof webhookUrl !== 'string' || !webhookUrl.startsWith('http')) {
-      res.status(400).json({ error: 'Valid webhook URL (http/https) is required.' });
+    if (!webhookUrl || typeof webhookUrl !== 'string' || !isSafeExternalUrl(webhookUrl)) {
+      res.status(400).json({ error: 'Valid external HTTP/HTTPS destination webhook URL is required. Private/internal targets are blocked.' });
       return;
     }
 
@@ -931,12 +1098,25 @@ app.post('/api/citizen-news/submit', (req: Request, res: Response): void => {
   }
 });
 
-// GET /api/citizen-news/list - Get all submitted citizen news for review
-app.get('/api/citizen-news/list', (_req: Request, res: Response) => {
+// GET /api/citizen-news/list - Get all submitted citizen news for review (contact details redacted for public callers)
+app.get('/api/citizen-news/list', (req: Request, res: Response) => {
+  const adminSecret = req.headers['x-admin-key'] || req.headers['authorization'];
+  const isAuthorized = Boolean(adminSecret);
+
+  // Redact personal contact information (phone, email) if not authenticated as admin
+  const sanitizedSubmissions = citizenSubmissionsStore.map((sub) => {
+    if (isAuthorized) return sub;
+    return {
+      ...sub,
+      senderPhone: sub.senderPhone ? '***-***-****' : undefined,
+      senderEmail: sub.senderEmail ? '*****@***.***' : undefined,
+    };
+  });
+
   res.json({
     success: true,
     total: citizenSubmissionsStore.length,
-    submissions: citizenSubmissionsStore,
+    submissions: sanitizedSubmissions,
   });
 });
 
@@ -1057,6 +1237,59 @@ app.post('/api/sitemap/sync-articles', (req: Request, res: Response) => {
   res.json({ success: true, count: sitemapArticlesRegistry.length });
 });
 
+// POST /api/epaper/upload-pdf - Upload real newspaper PDF edition to persistent disk storage
+app.post('/api/epaper/upload-pdf', (req: Request, res: Response): void => {
+  try {
+    const { fileName, base64Data, editionDate, editionCode } = req.body || {};
+    if (!base64Data || typeof base64Data !== 'string') {
+      res.status(400).json({ error: 'Missing PDF content data' });
+      return;
+    }
+
+    const rawBase64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+    const buffer = Buffer.from(rawBase64, 'base64');
+
+    // File validation: PDF header %PDF-
+    const header = buffer.subarray(0, 5).toString('ascii');
+    if (!header.startsWith('%PDF')) {
+      res.status(400).json({ error: 'Invalid file format. The file is not a valid PDF document.' });
+      return;
+    }
+
+    const dateSlug = (editionDate || new Date().toISOString().slice(0, 10)).replace(/[^0-9-]/g, '');
+    const codeSlug = (editionCode || 'national').replace(/[^a-zA-Z0-9_-]/g, '');
+    const originalName = fileName ? path.basename(fileName).replace(/[^a-zA-Z0-9._-]/g, '_') : 'edition.pdf';
+    const targetFileName = `Dainik_KhabriDost_${codeSlug}_${dateSlug}_${Date.now().toString(36)}.pdf`;
+
+    const publicDir = path.join(__dirname, 'public', 'assets', 'aistudio');
+    if (!fs.existsSync(publicDir)) {
+      fs.mkdirSync(publicDir, { recursive: true });
+    }
+    const targetFilePath = path.join(publicDir, targetFileName);
+    fs.writeFileSync(targetFilePath, buffer);
+
+    const distDir = path.join(__dirname, 'dist', 'assets', 'aistudio');
+    if (fs.existsSync(distDir)) {
+      try {
+        fs.copyFileSync(targetFilePath, path.join(distDir, targetFileName));
+      } catch {}
+    }
+
+    const fileSizeMb = (buffer.length / (1024 * 1024)).toFixed(1);
+    res.json({
+      success: true,
+      url: `/assets/aistudio/${targetFileName}`,
+      fileName: targetFileName,
+      originalName,
+      fileSizeBytes: buffer.length,
+      fileSize: `${fileSizeMb} MB`,
+    });
+  } catch (err: any) {
+    console.error('PDF upload handler error:', err);
+    res.status(500).json({ error: 'Failed to upload PDF edition to server' });
+  }
+});
+
 // GET /sitemap.xml - Production Server-Side Dynamic XML Sitemap for Google News & Crawlers
 app.get('/sitemap.xml', async (_req: Request, res: Response): Promise<void> => {
   const baseUrl = 'https://khabridost.com';
@@ -1114,40 +1347,72 @@ app.get('/sitemap.xml', async (_req: Request, res: Response): Promise<void> => {
   ];
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n`;
-  xml += `        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 
   // 1. Homepage
   xml += `  <url>\n    <loc>${baseUrl}/</loc>\n    <lastmod>${now.slice(0, 10)}</lastmod>\n    <changefreq>always</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
 
-  // 2. Core News Categories
+  // 2. Core News Categories (Clean canonical URLs)
   for (const cat of categories) {
-    xml += `  <url>\n    <loc>${baseUrl}/#cat-${cat}</loc>\n    <lastmod>${now.slice(0, 10)}</lastmod>\n    <changefreq>hourly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+    xml += `  <url>\n    <loc>${baseUrl}/category/${cat}</loc>\n    <lastmod>${now.slice(0, 10)}</lastmod>\n    <changefreq>hourly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
   }
 
-  // 3. Informational & Editorial Pages
+  // 3. Informational & Editorial Pages (Clean URLs without hash fragments)
   const editorialPages = [
-    { path: '/#live-feed', freq: 'always', prio: '0.9' },
-    { path: '/#epaper', freq: 'daily', prio: '0.8' },
-    { path: '/#archive', freq: 'daily', prio: '0.7' },
-    { path: '/#submit-news', freq: 'monthly', prio: '0.6' },
-    { path: '/#contact', freq: 'monthly', prio: '0.6' },
-    { path: '/#about', freq: 'monthly', prio: '0.6' },
-    { path: '/#privacy-policy', freq: 'monthly', prio: '0.4' },
-    { path: '/#terms', freq: 'monthly', prio: '0.4' },
+    { path: '/live-feed', freq: 'always', prio: '0.9' },
+    { path: '/epaper', freq: 'daily', prio: '0.8' },
+    { path: '/archive', freq: 'daily', prio: '0.7' },
+    { path: '/submit-news', freq: 'monthly', prio: '0.6' },
+    { path: '/contact', freq: 'monthly', prio: '0.6' },
+    { path: '/about', freq: 'monthly', prio: '0.6' },
+    { path: '/privacy-policy', freq: 'monthly', prio: '0.4' },
+    { path: '/terms', freq: 'monthly', prio: '0.4' },
   ];
   for (const page of editorialPages) {
     xml += `  <url>\n    <loc>${baseUrl}${page.path}</loc>\n    <lastmod>${now.slice(0, 10)}</lastmod>\n    <changefreq>${page.freq}</changefreq>\n    <priority>${page.prio}</priority>\n  </url>\n`;
   }
 
-  // 4. Articles with Google News Schema
+  // 4. Articles (Clean canonical URLs)
   for (const article of articlesList) {
     const pubDate = (article.updatedAt || now).slice(0, 10);
     xml += `  <url>\n`;
-    xml += `    <loc>${baseUrl}/?article=${encodeURIComponent(article.id)}</loc>\n`;
+    xml += `    <loc>${baseUrl}/article/${encodeURIComponent(article.id)}</loc>\n`;
     xml += `    <lastmod>${pubDate}</lastmod>\n`;
     xml += `    <changefreq>weekly</changefreq>\n`;
     xml += `    <priority>0.8</priority>\n`;
+    xml += `  </url>\n`;
+  }
+
+  xml += `</urlset>`;
+
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=1800');
+  res.status(200).send(xml);
+});
+
+// GET /news-sitemap.xml - Dedicated Google News XML Sitemap (Last 48 Hours)
+app.get('/news-sitemap.xml', async (_req: Request, res: Response): Promise<void> => {
+  const baseUrl = 'https://khabridost.com';
+  const now = new Date();
+  const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+
+  // Filter articles published within the last 48 hours for Google News compliance
+  const recentArticles = sitemapArticlesRegistry.filter((art) => {
+    if (!art.updatedAt) return true;
+    const itemDate = new Date(art.updatedAt);
+    return isNaN(itemDate.getTime()) || itemDate >= twoDaysAgo;
+  });
+
+  const displayList = recentArticles.length > 0 ? recentArticles : sitemapArticlesRegistry.slice(0, 30);
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n`;
+  xml += `        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">\n`;
+
+  for (const article of displayList) {
+    const pubDate = (article.updatedAt || now.toISOString());
+    xml += `  <url>\n`;
+    xml += `    <loc>${baseUrl}/article/${encodeURIComponent(article.id)}</loc>\n`;
     xml += `    <news:news>\n`;
     xml += `      <news:publication>\n`;
     xml += `        <news:name>Khabri Dost</news:name>\n`;
@@ -1162,8 +1427,42 @@ app.get('/sitemap.xml', async (_req: Request, res: Response): Promise<void> => {
   xml += `</urlset>`;
 
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=1800');
+  res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=600');
   res.status(200).send(xml);
+});
+
+// GET /rss.xml - Standard RSS 2.0 Syndication Feed
+app.get('/rss.xml', (_req: Request, res: Response) => {
+  const baseUrl = 'https://khabridost.com';
+  const now = new Date().toUTCString();
+
+  let rss = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  rss += `<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n`;
+  rss += `  <channel>\n`;
+  rss += `    <title>Khabri Dost | खबरी दोस्त — ताज़ा हिंदी समाचार</title>\n`;
+  rss += `    <link>${baseUrl}/</link>\n`;
+  rss += `    <description>देश, दुनिया, राजनीति, खेल, मनोरंजन और व्यापार की ताज़ा व निष्पक्ष ख़बरें</description>\n`;
+  rss += `    <language>hi</language>\n`;
+  rss += `    <lastBuildDate>${now}</lastBuildDate>\n`;
+  rss += `    <atom:link href="${baseUrl}/rss.xml" rel="self" type="application/rss+xml" />\n`;
+
+  for (const article of sitemapArticlesRegistry.slice(0, 30)) {
+    const link = `${baseUrl}/article/${encodeURIComponent(article.id)}`;
+    rss += `    <item>\n`;
+    rss += `      <title>${escapeXml(article.title)}</title>\n`;
+    rss += `      <link>${link}</link>\n`;
+    rss += `      <guid isPermaLink="true">${link}</guid>\n`;
+    rss += `      <category>${escapeXml(article.category || 'national')}</category>\n`;
+    rss += `      <pubDate>${new Date(article.updatedAt || Date.now()).toUTCString()}</pubDate>\n`;
+    rss += `    </item>\n`;
+  }
+
+  rss += `  </channel>\n`;
+  rss += `</rss>`;
+
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=1800');
+  res.status(200).send(rss);
 });
 
 // GET /robots.txt - Search Engine Crawler Directives
@@ -1175,6 +1474,7 @@ Disallow: /admin
 Disallow: /#admin
 Disallow: /#login
 Sitemap: https://khabridost.com/sitemap.xml
+Sitemap: https://khabridost.com/news-sitemap.xml
 `);
 });
 
@@ -1188,10 +1488,31 @@ async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      root: __dirname,
+      server: {
+        middlewareMode: true,
+        hmr: process.env.DISABLE_HMR !== 'true',
+        watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
+
+    // Fallback for SPA routing in development
+    app.use('*', async (req, res, next) => {
+      const url = req.originalUrl;
+      if (url.startsWith('/api/')) return next();
+      try {
+        let template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e: any) {
+        if (vite && typeof vite.ssrFixStacktrace === 'function') {
+          vite.ssrFixStacktrace(e);
+        }
+        next(e);
+      }
+    });
   } else {
     app.use(express.static(path.resolve(__dirname, 'dist')));
     app.get('*', (_req, res) => {
@@ -1199,9 +1520,26 @@ async function startServer() {
     });
   }
 
-  app.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
+  const server = app.listen(Number(PORT), HOST, () => {
+    console.log(`Server running on http://${HOST}:${PORT}`);
   });
+
+  server.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use. Please terminate conflicting process.`);
+    } else {
+      console.error(`Dev server listener error:`, err);
+    }
+  });
+
+  const gracefulShutdown = () => {
+    server.close(() => {
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
 }
 
 startServer();

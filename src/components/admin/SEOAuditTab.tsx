@@ -497,7 +497,7 @@ Sitemap: https://khabridost.com/sitemap.xml
                   key={item.id}
                   className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-3"
                 >
-                  <img src={item.url} alt="" className="w-16 h-12 object-cover rounded-lg bg-slate-200 shrink-0" />
+                  <img src={item.url || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'} alt="" className="w-16 h-12 object-cover rounded-lg bg-slate-200 shrink-0" />
                   <div className="min-w-0 flex-1">
                     <h5 className="text-xs font-bold text-slate-900 truncate">{item.title}</h5>
                     <p className="text-[11px] text-slate-500 truncate mt-0.5">

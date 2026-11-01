@@ -166,20 +166,20 @@ export const GoogleTrendsTab: React.FC<GoogleTrendsTabProps> = ({
   return (
     <div className="space-y-6 max-w-6xl mx-auto font-sans text-slate-800">
       {/* 1. TOP HEADER BANNER */}
-      <div className="bg-gradient-to-r from-red-950 via-slate-900 to-slate-950 text-white p-5 rounded-2xl border border-red-900/60 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white text-slate-800 p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
-            <span className="p-1.5 rounded-lg bg-red-600/30 border border-red-500/40 text-red-300">
+            <span className="p-1.5 rounded-lg bg-red-50 border border-red-200 text-red-600">
               <TrendingUp className="w-5 h-5" />
             </span>
-            <h2 className="font-bold text-lg sm:text-xl tracking-tight text-white">
+            <h2 className="font-bold text-lg sm:text-xl tracking-tight text-slate-900">
               Google Trends Integration & Real-Time Keywords
             </h2>
-            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase">
+            <span className="bg-emerald-50 text-emerald-700 border border-emerald-300 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase">
               LIVE RADAR
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
             Track trending search queries and viral topics across India in real-time. Feed high-ranking queries straight into the AI Assistant or News Post Editor to boost Google News & Discover ranking.
           </p>
         </div>

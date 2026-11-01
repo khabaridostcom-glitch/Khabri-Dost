@@ -72,21 +72,21 @@ export const GoogleSuiteSettingsTab: React.FC<GoogleSuiteSettingsTabProps> = ({
   return (
     <form onSubmit={handleSave} className="space-y-6 max-w-4xl">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-950 text-white p-5 rounded-2xl border border-blue-800/40 shadow-md">
+      <div className="bg-white text-slate-800 p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md">
-            <Globe className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs">
+            <Globe className="w-5 h-5 text-blue-600" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="text-base sm:text-lg font-bold font-kd-headline">
+              <h2 className="text-base sm:text-lg font-bold font-kd-headline text-slate-900">
                 Google Services Suite & Monetization
               </h2>
-              <span className="bg-blue-500/20 text-blue-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-blue-500/40">
+              <span className="bg-blue-50 text-blue-700 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-blue-200">
                 OFFICIAL APIS
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-xs text-slate-600 mt-0.5">
               Manage official integrations for Google Analytics 4, Search Console, Tag Manager, and Google AdSense in one unified dashboard.
             </p>
           </div>

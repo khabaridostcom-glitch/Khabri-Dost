@@ -132,23 +132,22 @@ export const ApiConfigTab: React.FC<ApiConfigTabProps> = ({ apiConfig, onSave })
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 rounded-2xl p-5 sm:p-6 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 text-slate-800 shadow-sm relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
           <div className="flex items-start space-x-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-indigo-600/30 border border-indigo-500/50 flex items-center justify-center text-indigo-400 shrink-0 shadow-inner">
+            <div className="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0 shadow-2xs">
               <Key className="w-6 h-6 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-extrabold tracking-tight">
+                <h3 className="text-base sm:text-lg font-extrabold tracking-tight text-slate-900">
                   API Configuration & Integrations Suite
                 </h3>
-                <span className="text-[10px] font-mono uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] font-mono uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
                   ENCRYPTED STORAGE
                 </span>
               </div>
-              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+              <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
                 Securely manage credentials for AI Content & SEO generation (Google Gemini, OpenAI, Anthropic) and real-time Google Trends. Each key is verified on server proxy routes and never exposed to the public browser.
               </p>
             </div>
@@ -156,7 +155,7 @@ export const ApiConfigTab: React.FC<ApiConfigTabProps> = ({ apiConfig, onSave })
 
           <button
             type="submit"
-            className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition flex items-center justify-center space-x-2 shadow-lg shadow-indigo-950/60 cursor-pointer shrink-0 self-start sm:self-center"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition flex items-center justify-center space-x-2 shadow-sm cursor-pointer shrink-0 self-start sm:self-center"
           >
             {isSaved ? (
               <>

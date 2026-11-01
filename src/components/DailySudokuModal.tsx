@@ -414,7 +414,7 @@ export const DailySudokuModal: React.FC<DailySudokuModalProps> = ({
         }`}
       >
         {/* HEADER BAR */}
-        <header className="bg-gradient-to-r from-red-700 via-red-600 to-slate-900 text-white px-4 sm:px-6 py-3.5 flex items-center justify-between shrink-0 shadow-sm">
+        <header className="bg-gradient-to-r from-red-700 via-red-600 to-red-800 text-white px-4 sm:px-6 py-3.5 flex items-center justify-between shrink-0 shadow-sm">
           <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-amber-300 shrink-0">
               <Gamepad2 className="w-5 h-5" />
@@ -424,7 +424,7 @@ export const DailySudokuModal: React.FC<DailySudokuModalProps> = ({
                 <h2 className="text-base sm:text-lg font-black font-kd-headline text-white truncate">
                   दैनिक सुडोकू पहेली (Daily Sudoku)
                 </h2>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider bg-red-900/80 text-amber-200 px-2 py-0.5 rounded-full border border-red-500/40">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider bg-red-800/80 text-amber-200 px-2 py-0.5 rounded-full border border-red-400/40">
                   {difficulty === 'easy'
                     ? 'सरल'
                     : difficulty === 'medium'

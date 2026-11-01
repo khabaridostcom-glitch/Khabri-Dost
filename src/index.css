@@ -1,29 +1,56 @@
 @import "tailwindcss";
 
-html, body {
-  overflow-x: hidden;
-  max-width: 100%;
-  scroll-behavior: smooth;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  font-size: calc(16px * var(--scale-font, 1));
-  line-height: 1.6;
-}
-
-@media (min-width: 640px) {
-  html {
-    font-size: calc(16px * var(--scale-font, 1));
-  }
-}
-
 :root {
-  --font-headline: 'Rozha One', 'Noto Serif Devanagari', serif;
-  --font-body: 'Mukta', 'Noto Sans Devanagari', sans-serif;
-  --font-header: 'Rozha One', 'Noto Serif Devanagari', serif;
-  --font-footer: 'Mukta', 'Noto Sans Devanagari', sans-serif;
-  --font-meta: 'Mukta', 'Noto Sans Devanagari', sans-serif;
-  --weight-headline: 700;
-  --weight-body: 400;
+  color-scheme: light !important;
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border-subtle: #e2e8f0;
+  --color-primary: #dc2626;
+
+  /* Complete Noto Sans Families */
+  --font-noto-devanagari: 'Noto Sans Devanagari', 'Noto Sans', sans-serif;
+  --font-noto-latin: 'Noto Sans', sans-serif;
+
+  /* Global Typography Tokens */
+  --font-global: 'Noto Sans Devanagari', 'Noto Sans', sans-serif;
+  --weight-global: 400;
+  --line-height-global: 1.6;
+  --letter-spacing-global: 0px;
+  --font-size-desktop-global: 16px;
+  --font-size-mobile-global: 15px;
+
+  /* Section Overrides (inherit from global unless overridden) */
+  --font-header: var(--font-header-custom, 'Rozha One', 'Noto Serif Devanagari', serif);
+  --weight-header: var(--weight-header-custom, 700);
+  --font-nav: var(--font-nav-custom, var(--font-global));
+  --font-homepage: var(--font-homepage-custom, var(--font-global));
+  --font-homepage-headings: var(--font-homepage-headings-custom, var(--font-headline));
+  --font-cards: var(--font-cards-custom, var(--font-global));
+  --font-category: var(--font-category-custom, var(--font-global));
+  --font-single-article: var(--font-single-article-custom, var(--font-global));
+  --font-article-headline: var(--font-article-headline-custom, var(--font-headline));
+  --weight-article-headline: var(--weight-article-headline-custom, 700);
+  --font-article-body: var(--font-article-body-custom, var(--font-body));
+  --weight-article-body: var(--weight-article-body-custom, 400);
+  --font-article-subheadings: var(--font-article-subheadings-custom, var(--font-global));
+  --font-article-desc: var(--font-article-desc-custom, var(--font-global));
+  --font-author: var(--font-author-custom, var(--font-global));
+  --font-caption: var(--font-caption-custom, var(--font-meta));
+  --font-sidebar: var(--font-sidebar-custom, var(--font-global));
+  --font-widget-headings: var(--font-widget-headings-custom, var(--font-global));
+  --font-footer: var(--font-footer-custom, var(--font-global));
+  --font-legal: var(--font-legal-custom, var(--font-global));
+  --font-admin-editor: var(--font-admin-editor-custom, var(--font-global));
+
+  /* Backward Compatibility Tokens */
+  --font-headline: var(--font-article-headline-custom, 'Rozha One', 'Noto Serif Devanagari', serif);
+  --font-body: var(--font-article-body-custom, 'Noto Sans Devanagari', 'Noto Sans', sans-serif);
+  --font-meta: var(--font-caption-custom, 'Noto Sans Devanagari', 'Noto Sans', sans-serif);
+  --weight-headline: var(--weight-article-headline-custom, 700);
+  --weight-body: var(--weight-article-body-custom, 400);
   --scale-font: 1.0;
   --size-heading-scale: 1;
   --size-title-scale: 1;
@@ -52,46 +79,128 @@ html, body {
   --font-footer-text-size: 13px;
 }
 
-/* Typography Customizer classes - TV9 Hindi & News18 Hindi standard styling with active scaling */
+html, body {
+  background-color: #f8fafc;
+  color: #0f172a;
+  overflow-x: hidden;
+  max-width: 100%;
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  font-size: calc(16px * var(--scale-font, 1));
+  line-height: 1.6;
+}
+
+@media (min-width: 640px) {
+  html {
+    font-size: calc(16px * var(--scale-font, 1));
+  }
+}
+
+/* Enforce 100% Light Mode Consistency - System-independent */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Typography Customizer classes - Clean cascading without !important font-size overrides */
 .font-kd-headline {
-  font-family: var(--font-headline) !important;
-  font-weight: var(--weight-headline) !important;
-  font-size: calc(1em * var(--size-heading-scale, 1) * var(--size-homepage-title-scale, 1)) !important;
-  line-height: 1.35 !important;
+  font-family: var(--font-headline, 'Mukta', sans-serif);
+  font-weight: var(--weight-headline, 700);
+  font-size: calc(1em * var(--size-heading-scale, 1) * var(--size-homepage-title-scale, 1));
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .font-kd-title {
-  font-family: var(--font-headline) !important;
-  font-weight: var(--weight-headline) !important;
-  font-size: calc(1em * var(--size-title-scale, 1) * var(--size-homepage-title-scale, 1)) !important;
-  line-height: 1.38 !important;
+  font-family: var(--font-headline, 'Mukta', sans-serif);
+  font-weight: var(--weight-headline, 700);
+  font-size: calc(1em * var(--size-title-scale, 1) * var(--size-homepage-title-scale, 1));
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .font-kd-body {
-  font-family: var(--font-body) !important;
-  font-weight: var(--weight-body) !important;
-  font-size: calc(1em * var(--size-content-scale, 1) * var(--size-excerpt-scale, 1)) !important;
-  line-height: 1.72 !important;
+  font-family: var(--font-body, 'Yantramanav', sans-serif);
+  font-weight: var(--weight-body, 400);
+  font-size: calc(1em * var(--size-content-scale, 1) * var(--size-excerpt-scale, 1));
+  line-height: 1.72;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .font-kd-header {
-  font-family: var(--font-header) !important;
-  font-size: calc(1em * var(--size-header-scale, 1)) !important;
+  font-family: var(--font-header, 'Mukta', sans-serif);
+  font-size: calc(1em * var(--size-header-scale, 1));
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .font-kd-footer {
-  font-family: var(--font-footer, var(--font-body)) !important;
-  font-size: calc(1em * var(--size-footer-scale, 1)) !important;
+  font-family: var(--font-footer, var(--font-body, 'Mukta', sans-serif));
+  font-size: calc(1em * var(--size-footer-scale, 1));
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .font-kd-meta {
-  font-family: var(--font-meta) !important;
-  font-size: calc(1em * var(--size-meta-scale, 1) * var(--size-meta-desc-scale, 1)) !important;
+  font-family: var(--font-meta, 'Yantramanav', sans-serif);
+  font-size: calc(1em * var(--size-meta-scale, 1) * var(--size-meta-desc-scale, 1));
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .font-kd-archive {
-  font-family: var(--font-headline) !important;
-  font-size: calc(1em * var(--size-archive-scale, 1)) !important;
+  font-family: var(--font-headline, 'Mukta', sans-serif);
+  font-size: calc(1em * var(--size-archive-scale, 1));
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+/* Deep text overflow prevention rules for article and portal typography */
+.article-text-wrap {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+/* Article content container & typography safeguard */
+.article-content-container {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.article-content-container p,
+.article-content-container h1,
+.article-content-container h2,
+.article-content-container h3,
+.article-content-container h4,
+.article-content-container li,
+.article-content-container blockquote,
+.article-content-container figcaption,
+.article-content-container span {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.article-content-container pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre;
+  word-break: normal;
+}
+
+.article-content-container code {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.article-content-container img,
+.article-content-container iframe,
+.article-content-container video {
+  max-width: 100%;
+  height: auto;
 }
 
 /* Breaking news standard marquee */
@@ -183,4 +292,55 @@ html, body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Elastic Touch-Swipe Transitions for Category Navigation */
+@keyframes elasticSwipeInRight {
+  0% {
+    transform: translateX(48px) scale(0.98);
+    opacity: 0.6;
+  }
+  60% {
+    transform: translateX(-8px) scale(1.004);
+    opacity: 0.95;
+  }
+  82% {
+    transform: translateX(3px) scale(0.999);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes elasticSwipeInLeft {
+  0% {
+    transform: translateX(-48px) scale(0.98);
+    opacity: 0.6;
+  }
+  60% {
+    transform: translateX(8px) scale(1.004);
+    opacity: 0.95;
+  }
+  82% {
+    transform: translateX(-3px) scale(0.999);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-elastic-swipe-left {
+  animation: elasticSwipeInLeft 0.44s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-elastic-swipe-right {
+  animation: elasticSwipeInRight 0.44s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.transition-elastic {
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
 }

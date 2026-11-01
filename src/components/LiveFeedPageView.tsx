@@ -611,7 +611,7 @@ export const LiveFeedPageView: React.FC<LiveFeedPageViewProps> = ({
                     className="flex space-x-3 group cursor-pointer"
                   >
                     <img
-                      src={art.imageUrl}
+                      src={art.imageUrl || 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80'}
                       alt={art.title}
                       className="w-14 h-14 rounded-lg object-cover bg-slate-100 shrink-0 group-hover:opacity-90"
                     />

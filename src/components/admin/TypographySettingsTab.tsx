@@ -1,7 +1,30 @@
 import React, { useState } from 'react';
-import { Type, Smartphone, Check, Sparkles, Sliders, RotateCcw, RefreshCw, AlertTriangle, X } from 'lucide-react';
-import { PortalSettings, TypographySettings } from '../../types/news';
-import { DEFAULT_PORTAL_SETTINGS } from '../../data/portalDefaults';
+import {
+  Type,
+  Check,
+  Sparkles,
+  Sliders,
+  RotateCcw,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Smartphone,
+  Monitor,
+  Layers,
+  Heading,
+  FileText,
+  Bookmark,
+  Compass,
+  Layout,
+  User,
+  Camera,
+  Shield,
+  Edit3,
+  AlignLeft,
+} from 'lucide-react';
+import { PortalSettings, TypographySettings, TypographySectionOverride } from '../../types/news';
+import { DEFAULT_PORTAL_SETTINGS, FONT_OPTIONS, TYPOGRAPHY_PRESETS } from '../../data/portalDefaults';
 import { resetRootCssVariablesToDefault } from '../../utils/cssDefaults';
 
 export interface TypographySettingsTabProps {
@@ -11,16 +34,200 @@ export interface TypographySettingsTabProps {
   onOpenAdminReset?: () => void;
 }
 
-const FONT_OPTIONS = [
-  { id: "'Rozha One', serif", name: 'Rozha One (क्लासिक संपादकीय - Classical Editorial)' },
-  { id: "'Yantramanav', sans-serif", name: 'Yantramanav (आधुनिक व स्पष्ट - Modern & Crisp)' },
-  { id: "'Tiro Devanagari Hindi', serif", name: 'Tiro Devanagari (साहित्यिक व गंभीर - Journalistic)' },
-  { id: "'Noto Sans Devanagari', sans-serif", name: 'Noto Sans Devanagari (सर्वश्रेष्ठ डिजिटल पठनीयता)' },
-  { id: "'Mukta', sans-serif", name: 'Mukta (दैनिक भास्कर / नवभारत टाइम्स स्टाइल)' },
-  { id: "'Gotu', sans-serif", name: 'Gotu (बोल्ड हेडलाइन्स)' },
-  { id: "'Poppins', sans-serif", name: 'Poppins (इंटरनेशनल क्लीन लुक)' },
-  { id: "'Inter', sans-serif", name: 'Inter (UI प्रोफेशनल)' },
-  { id: "system-ui, -apple-system, sans-serif", name: 'System Native (तेज़ व डिफ़ॉल्ट)' },
+interface SectionDefinition {
+  id: 'global' | keyof NonNullable<TypographySettings['sections']>;
+  name: string;
+  description: string;
+  icon: React.ElementType;
+  defaultDesktopPx: number;
+  defaultMobilePx: number;
+  defaultWeight: number;
+}
+
+const SECTIONS_METADATA: SectionDefinition[] = [
+  {
+    id: 'global',
+    name: '1. Global Typography',
+    description: 'Universal default font family, weight, and base sizing applied across the entire portal.',
+    icon: Type,
+    defaultDesktopPx: 16,
+    defaultMobilePx: 15,
+    defaultWeight: 400,
+  },
+  {
+    id: 'header',
+    name: '2. Header & Top Bar',
+    description: 'Portal logo title, tagline, date & weather bar, breaking news ticker.',
+    icon: Layout,
+    defaultDesktopPx: 26,
+    defaultMobilePx: 20,
+    defaultWeight: 700,
+  },
+  {
+    id: 'navigation',
+    name: '3. Navigation & Menus',
+    description: 'Category navigation links, dropdown menus, mobile drawer items.',
+    icon: Compass,
+    defaultDesktopPx: 14,
+    defaultMobilePx: 14,
+    defaultWeight: 600,
+  },
+  {
+    id: 'homepage',
+    name: '4. Homepage Layout',
+    description: 'General grid content, section separators, layout text containers.',
+    icon: Layout,
+    defaultDesktopPx: 16,
+    defaultMobilePx: 15,
+    defaultWeight: 400,
+  },
+  {
+    id: 'homepageHeadings',
+    name: '5. Homepage Headings',
+    description: 'Major section titles (National, State, Business, Entertainment).',
+    icon: Heading,
+    defaultDesktopPx: 22,
+    defaultMobilePx: 18,
+    defaultWeight: 800,
+  },
+  {
+    id: 'newsCards',
+    name: '6. News Cards',
+    description: 'Story headlines in grid cards, excerpt previews, bylines, and timestamps.',
+    icon: Bookmark,
+    defaultDesktopPx: 17,
+    defaultMobilePx: 15,
+    defaultWeight: 700,
+  },
+  {
+    id: 'categoryPages',
+    name: '7. Category & Archive Pages',
+    description: 'Category hero headline, breadcrumbs, filter buttons, and story lists.',
+    icon: Layers,
+    defaultDesktopPx: 28,
+    defaultMobilePx: 22,
+    defaultWeight: 800,
+  },
+  {
+    id: 'singleArticle',
+    name: '8. Single Article Container',
+    description: 'Main article reading viewport container and background text sizing.',
+    icon: FileText,
+    defaultDesktopPx: 18,
+    defaultMobilePx: 16,
+    defaultWeight: 400,
+  },
+  {
+    id: 'articleHeadline',
+    name: '9. Article Headline (H1)',
+    description: 'Main article title at top of the article view (Fixes previous font reset bug).',
+    icon: Heading,
+    defaultDesktopPx: 38,
+    defaultMobilePx: 26,
+    defaultWeight: 800,
+  },
+  {
+    id: 'articleBody',
+    name: '10. Article Body & Content',
+    description: 'Reading body paragraphs in news stories (Optimized line height & letter spacing).',
+    icon: AlignLeft,
+    defaultDesktopPx: 18,
+    defaultMobilePx: 16,
+    defaultWeight: 400,
+  },
+  {
+    id: 'articleSubheadings',
+    name: '11. Article Subheadings (H2, H3, H4)',
+    description: 'In-article sectional sub-headings created in the WordPress editor.',
+    icon: Heading,
+    defaultDesktopPx: 24,
+    defaultMobilePx: 20,
+    defaultWeight: 700,
+  },
+  {
+    id: 'articleDescription',
+    name: '12. Article Description / Standfirst',
+    description: 'Lead intro paragraph and editorial summary below the headline.',
+    icon: FileText,
+    defaultDesktopPx: 20,
+    defaultMobilePx: 16,
+    defaultWeight: 600,
+  },
+  {
+    id: 'authorProfiles',
+    name: '13. Author Profiles & Bylines',
+    description: 'Author names, editor credentials, reporter bylines, and bio boxes.',
+    icon: User,
+    defaultDesktopPx: 14,
+    defaultMobilePx: 13,
+    defaultWeight: 600,
+  },
+  {
+    id: 'imageCaptions',
+    name: '14. Image Captions & Credits',
+    description: 'Photo captions, agency credit tags (ANI, PTI), and illustration metadata.',
+    icon: Camera,
+    defaultDesktopPx: 12,
+    defaultMobilePx: 11,
+    defaultWeight: 400,
+  },
+  {
+    id: 'sidebar',
+    name: '15. Sidebar & Trending Stories',
+    description: 'Related stories sidebar list, trending articles, newsletter subscription box.',
+    icon: Layers,
+    defaultDesktopPx: 14,
+    defaultMobilePx: 13,
+    defaultWeight: 600,
+  },
+  {
+    id: 'widgetHeadings',
+    name: '16. Widget Headings',
+    description: 'Sidebar widget block titles (Opinion Poll, Trending Now, Top Stories).',
+    icon: Heading,
+    defaultDesktopPx: 16,
+    defaultMobilePx: 15,
+    defaultWeight: 700,
+  },
+  {
+    id: 'footer',
+    name: '17. Footer & Copyright',
+    description: 'Footer column headers, policy links, company information, copyright statement.',
+    icon: Layout,
+    defaultDesktopPx: 13,
+    defaultMobilePx: 12,
+    defaultWeight: 400,
+  },
+  {
+    id: 'legalPages',
+    name: '18. Legal & Policy Pages',
+    description: 'Privacy Policy, Terms of Service, Grievance Officer, About Us content.',
+    icon: Shield,
+    defaultDesktopPx: 16,
+    defaultMobilePx: 15,
+    defaultWeight: 400,
+  },
+  {
+    id: 'adminEditor',
+    name: '19. Admin Visual Editor Canvas',
+    description: 'Font family and styling rendered inside the WordPress Visual WYSIWYG editor.',
+    icon: Edit3,
+    defaultDesktopPx: 16,
+    defaultMobilePx: 15,
+    defaultWeight: 400,
+  },
+];
+
+const WEIGHT_OPTIONS = [
+  { value: 100, label: '100 Thin' },
+  { value: 200, label: '200 ExtraLight' },
+  { value: 300, label: '300 Light' },
+  { value: 400, label: '400 Regular' },
+  { value: 500, label: '500 Medium' },
+  { value: 600, label: '600 SemiBold' },
+  { value: 700, label: '700 Bold' },
+  { value: 800, label: '800 ExtraBold' },
+  { value: 900, label: '900 Black' },
 ];
 
 export const TypographySettingsTab: React.FC<TypographySettingsTabProps> = ({
@@ -29,11 +236,21 @@ export const TypographySettingsTab: React.FC<TypographySettingsTabProps> = ({
   onUpdateSettings,
   onOpenAdminReset,
 }) => {
-  const typo = settings.typography;
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [resetToast, setResetToast] = useState<string | null>(null);
+  const typo = settings.typography || DEFAULT_PORTAL_SETTINGS.typography;
+  const sections = typo.sections || DEFAULT_PORTAL_SETTINGS.typography.sections || {};
 
-  // Reset to original system defaults
+  const [expandedSection, setExpandedSection] = useState<string>('global');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Apply typography preset
+  const applyPreset = (presetName: string, presetData: Partial<TypographySettings>) => {
+    onUpdateTypography(presetData);
+    setToastMessage(`Typography preset applied: ${presetName}`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Reset typography to original defaults
   const handleResetTypography = () => {
     onUpdateTypography(DEFAULT_PORTAL_SETTINGS.typography);
     resetRootCssVariablesToDefault();
@@ -42,118 +259,77 @@ export const TypographySettingsTab: React.FC<TypographySettingsTabProps> = ({
       localStorage.removeItem('kd_reader_font_family');
     } catch {}
     setShowResetConfirm(false);
-    setResetToast('✓ सभी फ़ॉन्ट सेटिंग्स व आकार मूल डिफ़ॉल्ट पर रीसेट कर दी गईं!');
-    setTimeout(() => setResetToast(null), 3500);
+    setToastMessage('Typography settings successfully reset to editorial defaults.');
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Apply curated font presets
-  const applyPreset = (presetName: string, presetData: Partial<TypographySettings>) => {
-    onUpdateTypography(presetData);
-    setResetToast(`✓ फ़ॉन्ट प्रीसेट लागू: ${presetName}`);
-    setTimeout(() => setResetToast(null), 3000);
-  };
+  // Update a specific section override
+  const handleUpdateSection = (
+    sectionKey: 'global' | keyof NonNullable<TypographySettings['sections']>,
+    updates: Partial<TypographySectionOverride>
+  ) => {
+    if (sectionKey === 'global') return;
+    const existing = sections[sectionKey] || {
+      enabled: false,
+      fontFamily: typo.defaultFontFamily || "'Noto Sans Devanagari', 'Noto Sans', sans-serif",
+      fontWeight: 400,
+    };
 
-  const renderCustomControl = (
-    label: string,
-    currentVal: number,
-    onChange: (val: number) => void,
-    min: number,
-    max: number,
-    step = 1,
-    quickChips: number[] = [],
-    unit = 'px',
-    description?: string
-  ) => (
-    <div className="bg-slate-50/90 p-3.5 rounded-xl border border-slate-200 space-y-2 hover:border-slate-300 transition">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <label className="text-xs font-bold text-slate-800 block">{label}</label>
-          {description && <p className="text-[10px] text-slate-400">{description}</p>}
-        </div>
-        <div className="flex items-center space-x-1 shrink-0">
-          <input
-            type="number"
-            min={min}
-            max={max}
-            step={step}
-            value={currentVal}
-            onChange={(e) => {
-              const num = Number(e.target.value);
-              if (!isNaN(num) && num > 0) onChange(num);
-            }}
-            className="w-16 px-2 py-1 text-xs text-right font-mono font-bold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none text-slate-900 shadow-2xs"
-          />
-          <span className="text-xs text-slate-500 font-bold">{unit}</span>
-        </div>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={currentVal}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-red-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
-      />
-      {quickChips.length > 0 && (
-        <div className="flex items-center flex-wrap gap-1 pt-0.5">
-          <span className="text-[10px] text-slate-400 mr-0.5 font-medium">Quick:</span>
-          {quickChips.map((chip) => (
-            <button
-              key={chip}
-              type="button"
-              onClick={() => onChange(chip)}
-              className={`px-1.5 py-0.5 text-[10px] rounded font-bold transition cursor-pointer ${
-                currentVal === chip
-                  ? 'bg-red-600 text-white shadow-2xs'
-                  : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
-              }`}
-            >
-              {chip}{unit}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+    const updatedSection: TypographySectionOverride = {
+      ...existing,
+      ...updates,
+    };
+
+    const updatedSections = {
+      ...sections,
+      [sectionKey]: updatedSection,
+    };
+
+    onUpdateTypography({
+      sections: updatedSections,
+    });
+  };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Reset Success Toast */}
-      {resetToast && (
-        <div className="bg-emerald-950/90 border border-emerald-500/60 text-emerald-200 text-xs px-4 py-2.5 rounded-xl flex items-center justify-between shadow-lg animate-fadeIn">
+    <div className="space-y-6 max-w-5xl mx-auto font-sans text-slate-900">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="bg-emerald-900 text-emerald-100 text-xs px-4 py-3 rounded-xl flex items-center justify-between shadow-lg border border-emerald-700 animate-fadeIn">
           <div className="flex items-center space-x-2 font-semibold">
             <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>{resetToast}</span>
+            <span>{toastMessage}</span>
           </div>
           <button
             type="button"
-            onClick={() => setResetToast(null)}
-            className="text-emerald-400 hover:text-white p-1 cursor-pointer"
+            onClick={() => setToastMessage(null)}
+            className="text-emerald-300 hover:text-white p-1 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* Top Banner with Reset Font Settings Button */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-red-950 text-white p-5 rounded-2xl border border-slate-700 shadow-md">
+      {/* TOP HEADER BANNER */}
+      <div className="bg-white text-slate-800 p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center text-white shadow-md shrink-0">
-              <Type className="w-5 h-5" />
+          <div className="flex items-center space-x-3.5">
+            <div className="w-11 h-11 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shadow-2xs shrink-0">
+              <Type className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center space-x-2 flex-wrap">
-                <h2 className="text-base sm:text-lg font-bold">
-                  Typography & Font Settings (फ़ॉन्ट कस्टमाइज़ेशन)
+                <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                  Typography & Font Management
                 </h2>
-                <span className="bg-red-500/20 text-red-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-red-500/40">
-                  LIVE APPLIED
+                <span className="bg-red-50 text-red-700 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-red-200">
+                  NOTO SANS READY
+                </span>
+                <span className="bg-emerald-50 text-emerald-700 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-emerald-200">
+                  18 SECTIONS
                 </span>
               </div>
-              <p className="text-xs text-slate-300 mt-0.5">
-                पोर्टल के प्रत्येक हिस्से (हेडर, हेडलाइन, बॉडी, साइडबार) के लिए कस्टम फ़ॉन्ट फ़ैमिली व exact px साइज़ सेट करें।
+              <p className="text-xs text-slate-600 mt-1">
+                Centralized global font system for Khabri Dost. Set universal defaults or customize any of the 18 sections independently.
               </p>
             </div>
           </div>
@@ -162,106 +338,73 @@ export const TypographySettingsTab: React.FC<TypographySettingsTabProps> = ({
             <button
               type="button"
               onClick={() => setShowResetConfirm(true)}
-              className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-white border border-amber-500/40 text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
-              title="फ़ॉन्ट सेटिंग्स को मूल डिफ़ॉल्ट पर रीसेट करें"
+              className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-2xs cursor-pointer"
+              title="Reset typography to original system defaults"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>फ़ॉन्ट सेटिंग्स रीसेट करें (Reset Fonts)</span>
+              <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+              <span>Reset Fonts</span>
             </button>
             {onOpenAdminReset && (
               <button
                 type="button"
                 onClick={onOpenAdminReset}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
-                title="संपूर्ण एडमिन सेटिंग्स रीसेट करें"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5 shadow-2xs cursor-pointer"
+                title="Reset all admin settings"
               >
-                <Sliders className="w-3.5 h-3.5 text-slate-400" />
-                <span>एडमिन सेटिंग्स रीसेट (Reset Admin)</span>
+                <Sliders className="w-3.5 h-3.5 text-slate-500" />
+                <span>Reset Admin</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Quick Presets Bar */}
-        <div className="mt-4 pt-3 border-t border-slate-700/60 flex items-center flex-wrap gap-2 text-xs">
-          <span className="text-slate-400 font-semibold text-[11px] flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>त्वरित प्रीसेट्स (Quick Presets):</span>
-          </span>
-          <button
-            type="button"
-            onClick={() =>
-              applyPreset('दैनिक समाचार डिफ़ॉल्ट', {
-                headerFont: "'Rozha One', serif",
-                headlineFont: "'Rozha One', serif",
-                bodyFont: "'Mukta', sans-serif",
-                footerFont: "'Mukta', sans-serif",
-                articleTitleDesktopPx: 32,
-                articleBodyFontSizePx: 17,
-                articleBodyLineHeight: 1.75,
-              })
-            }
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-medium cursor-pointer transition"
-          >
-            📰 क्लासिक हिंदी न्यूज़ (Rozha + Mukta)
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              applyPreset('आधुनिक डिजिटल', {
-                headerFont: "'Noto Sans Devanagari', sans-serif",
-                headlineFont: "'Noto Sans Devanagari', sans-serif",
-                bodyFont: "'Noto Sans Devanagari', sans-serif",
-                footerFont: "'Noto Sans Devanagari', sans-serif",
-                articleTitleDesktopPx: 36,
-                articleBodyFontSizePx: 16.5,
-                articleBodyLineHeight: 1.7,
-              })
-            }
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-medium cursor-pointer transition"
-          >
-            ⚡ आधुनिक डिजिटल (Noto Sans All)
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              applyPreset('साहित्यिक गंभीर', {
-                headerFont: "'Tiro Devanagari Hindi', serif",
-                headlineFont: "'Tiro Devanagari Hindi', serif",
-                bodyFont: "'Yantramanav', sans-serif",
-                footerFont: "'Yantramanav', sans-serif",
-                articleTitleDesktopPx: 40,
-                articleBodyFontSizePx: 18,
-                articleBodyLineHeight: 1.8,
-              })
-            }
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-medium cursor-pointer transition"
-          >
-            📖 साहित्यिक गंभीर (Tiro + Yantra)
-          </button>
+        {/* 1-CLICK TYPOGRAPHY PRESETS */}
+        <div className="mt-5 pt-4 border-t border-slate-200 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-slate-800 font-bold text-xs flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <span>1-Click Curated Presets:</span>
+            </span>
+            <span className="text-[10px] text-amber-800 font-mono font-semibold">6 Curated Styles</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+            {TYPOGRAPHY_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => applyPreset(p.name, p.settings)}
+                className="p-3 rounded-xl bg-slate-50 hover:bg-white text-left border border-slate-200 hover:border-red-400 transition cursor-pointer group shadow-2xs"
+              >
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <span className="text-xs font-bold text-slate-900 group-hover:text-red-600 transition truncate">
+                    {p.name}
+                  </span>
+                  <span className="text-[9px] bg-red-100 text-red-800 border border-red-200 font-bold px-1.5 py-0.5 rounded shrink-0">
+                    {p.badge}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-700 font-medium truncate">{p.hindiName}</div>
+                <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">{p.description}</p>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Confirmation Modal for Reset Fonts */}
+      {/* CONFIRMATION MODAL: RESET TYPOGRAPHY */}
       {showResetConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-2xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-fadeIn">
             <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
               <RotateCcw className="w-6 h-6" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                फ़ॉन्ट सेटिंग्स रीसेट करें (Reset Font Settings)?
+                Reset Typography Settings?
               </h3>
               <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
-                क्या आप सभी फ़ॉन्ट फ़ैमिली (Rozha One, Mukta) और पिक्सल आकार को मूल संपादकीय डिफ़ॉल्ट पर पुनर्स्थापित करना चाहते हैं?
+                Are you sure you want to revert all global font families, section overrides, and pixel dimensions to default Noto Sans / Rozha One settings?
               </p>
-              <div className="mt-3 p-3 bg-amber-50 rounded-xl border border-amber-200/80 text-[11px] text-amber-800 space-y-1">
-                <div>• हेडलाइन फ़ॉन्ट: <strong>Rozha One, serif</strong></div>
-                <div>• बॉडी फ़ॉन्ट: <strong>Mukta, sans-serif</strong></div>
-                <div>• लेख शीर्षक: <strong>38px Desktop / 28px Mobile</strong></div>
-                <div>• लेख बॉडी: <strong>17px (लाइन हाइट: 1.75x)</strong></div>
-              </div>
             </div>
             <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
               <button
@@ -269,7 +412,7 @@ export const TypographySettingsTab: React.FC<TypographySettingsTabProps> = ({
                 onClick={() => setShowResetConfirm(false)}
                 className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
               >
-                रद्द करें (Cancel)
+                Cancel
               </button>
               <button
                 type="button"
@@ -277,651 +420,411 @@ export const TypographySettingsTab: React.FC<TypographySettingsTabProps> = ({
                 className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-sm cursor-pointer flex items-center space-x-1.5"
               >
                 <Check className="w-3.5 h-3.5" />
-                <span>हाँ, फ़ॉन्ट रीसेट करें (Confirm Reset)</span>
+                <span>Confirm Reset</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 1. HEADER, LOGO & NAVIGATION */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+      {/* LIVE BILINGUAL TYPOGRAPHY PREVIEW BOX */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <div className="flex items-center space-x-2">
-            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs">
-              H
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">1. Header, Logo & Navigation (हेडर, लोगो एवं मेन्यू)</h3>
-              <p className="text-[11px] text-slate-500">वेबसाइट का मुख्य नाम, लोगो इमेज की ऊंचाई, मेन्यू लिंक्स और ब्रेकिंग न्यूज़ टिकर</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-bold text-slate-700 mb-1">Header Font Family</label>
-            <select
-              value={typo.headerFont}
-              onChange={(e) => onUpdateTypography({ headerFont: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              {FONT_OPTIONS.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Header Title Text Custom Size */}
-          {renderCustomControl(
-            'Site Title / Brand Text Font Size (वेबसाइट नाम का फ़ॉन्ट)',
-            settings.headerFooter?.headerTitleCustomPx || typo.headerTitleCustomPx || 36,
-            (val) => {
-              onUpdateTypography({ headerTitleCustomPx: val });
-              if (settings.headerFooter) {
-                onUpdateSettings({
-                  ...settings,
-                  headerFooter: { ...settings.headerFooter, headerTitleCustomPx: val },
-                });
-              }
-            },
-            18,
-            72,
-            1,
-            [26, 32, 36, 42, 48],
-            'px',
-            'हेडर में दिखने वाले टेक्स्ट लोगो का वास्तविक साइज़'
-          )}
-
-          {/* Header Logo Image Height */}
-          {renderCustomControl(
-            'Header Logo Image Height (लोगो इमेज की ऊंचाई)',
-            settings.headerFooter?.headerLogoHeight || typo.headerLogoHeightPx || 52,
-            (val) => {
-              onUpdateTypography({ headerLogoHeightPx: val });
-              if (settings.headerFooter) {
-                onUpdateSettings({
-                  ...settings,
-                  headerFooter: { ...settings.headerFooter, headerLogoHeight: val },
-                });
-              }
-            },
-            24,
-            110,
-            2,
-            [40, 48, 52, 60, 72],
-            'px',
-            'अपलोड किए गए लोगो की ऊंचाई'
-          )}
-
-          {/* Navigation Links Font Size */}
-          {renderCustomControl(
-            'Navbar Category Links Size (मेन्यू बार लिंक्स)',
-            typo.navLinkFontSizePx || 14,
-            (val) => onUpdateTypography({ navLinkFontSizePx: val }),
-            11,
-            22,
-            1,
-            [12, 13, 14, 15, 16],
-            'px',
-            'मुख्य नेविगेशन बार में श्रेणियों का फ़ॉन्ट साइज़'
-          )}
-
-          {/* Breaking News Ticker Font Size */}
-          {renderCustomControl(
-            'Breaking News Ticker Font Size (बड़ी ख़बर टिकर)',
-            typo.tickerFontSizePx || 13,
-            (val) => onUpdateTypography({ tickerFontSizePx: val }),
-            11,
-            22,
-            1,
-            [12, 13, 14, 15, 16],
-            'px',
-            'लाल पट्टी में चलने वाली ब्रेकिंग न्यूज़ हेडलाइन्स'
-          )}
-        </div>
-      </div>
-
-      {/* 2. HOMEPAGE & SECTION HEADINGS */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <div className="flex items-center space-x-2">
-            <div className="w-7 h-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold text-xs">
-              H1
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">2. Homepage & Section Headings (होमपेज व सेक्शन हेडिंग्स)</h3>
-              <p className="text-[11px] text-slate-500">सेक्शन टाइटल ('ताज़ा ख़बरें', 'राजनीति'), मुख्य लीड स्टोरी, ग्रिड कार्ड शीर्षक और सारांश</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Headline Font Family</label>
-            <select
-              value={typo.headlineFont}
-              onChange={(e) => onUpdateTypography({ headlineFont: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              {FONT_OPTIONS.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Headline Font Weight</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {[600, 700, 800].map((w) => (
-                <button
-                  key={w}
-                  type="button"
-                  onClick={() => onUpdateTypography({ headlineWeight: w })}
-                  className={`py-2 px-1 text-center rounded-lg text-xs font-bold border transition cursor-pointer ${
-                    (typo.headlineWeight || 700) === w
-                      ? 'bg-red-600 border-red-600 text-white shadow-xs'
-                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  {w === 600 ? 'Med (600)' : w === 700 ? 'Bold (700)' : 'Heavy (800)'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Section Headings */}
-          {renderCustomControl(
-            'Category Section Block Headings (सेक्शन हेडिंग्स)',
-            typo.sectionHeadingPx || 20,
-            (val) => onUpdateTypography({ sectionHeadingPx: val }),
-            14,
-            34,
-            1,
-            [16, 18, 20, 22, 24, 28],
-            'px',
-            "'ताज़ा ख़बरें', 'राजनीति', 'मनोरंजन' जैसे ब्लॉक टाइटल्स"
-          )}
-
-          {/* Hero / Big Story Headline */}
-          {renderCustomControl(
-            'Hero / Lead Big Story Headline (लीड स्टोरी टाइटल)',
-            typo.heroTitlePx || 26,
-            (val) => onUpdateTypography({ heroTitlePx: val }),
-            18,
-            42,
-            1,
-            [22, 24, 26, 28, 32],
-            'px',
-            'होमपेज पर सबसे बड़ी मुख्य लीड स्टोरी का हेडलाइन साइज़'
-          )}
-
-          {/* Standard Grid Card Title */}
-          {renderCustomControl(
-            'News Card Story Headline (ग्रिड कार्ड समाचार शीर्षक)',
-            typo.gridCardTitlePx || 16,
-            (val) => onUpdateTypography({ gridCardTitlePx: val }),
-            12,
-            26,
-            1,
-            [13, 14, 15, 16, 18, 20],
-            'px',
-            'होमपेज व सेक्शन ग्रिड में सभी समाचार कार्ड्स के टाइटल'
-          )}
-
-          {/* News Card Excerpt / Summary */}
-          {renderCustomControl(
-            'News Card Summary / Excerpt (समाचार कार्ड सारांश)',
-            typo.gridCardExcerptPx || 13,
-            (val) => onUpdateTypography({ gridCardExcerptPx: val }),
-            11,
-            20,
-            1,
-            [11, 12, 13, 14, 15],
-            'px',
-            'कार्ड्स में नीचे दिखने वाले 2-लाइन सारांश का साइज़'
-          )}
-
-          {/* Card Meta & Category Badges */}
-          {renderCustomControl(
-            'Card Category Badges & Meta Tags (कैटेगरी बैज व समय)',
-            typo.cardMetaFontSizePx || 11,
-            (val) => onUpdateTypography({ cardMetaFontSizePx: val }),
-            9,
-            16,
-            1,
-            [10, 11, 12, 13],
-            'px',
-            'कार्ड्स के ऊपर लाल कैटेगरी टैग और तारीख का साइज़'
-          )}
-        </div>
-      </div>
-
-      {/* 3. SINGLE ARTICLE PAGE TYPOGRAPHY */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <div className="flex items-center space-x-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
-              P
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">3. Single Article Page Typography (संपूर्ण आर्टिकल पेज फ़ॉन्ट्स)</h3>
-              <p className="text-[11px] text-slate-500">डेस्कटॉप व मोबाइल मुख्य H1 शीर्षक, सबटाइटल, पैराग्राफ कंटेंट, लाइन हाइट एवं संबंधित ख़बरें</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Body & Article Font Family</label>
-            <select
-              value={typo.bodyFont}
-              onChange={(e) => onUpdateTypography({ bodyFont: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              {FONT_OPTIONS.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Body Text Weight</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {[400, 500, 600].map((w) => (
-                <button
-                  key={w}
-                  type="button"
-                  onClick={() => onUpdateTypography({ bodyWeight: w })}
-                  className={`py-2 px-1 text-center rounded-lg text-xs font-bold border transition cursor-pointer ${
-                    (typo.bodyWeight || 400) === w
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
-                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  {w === 400 ? 'Regular (400)' : w === 500 ? 'Medium (500)' : 'Semi-Bold (600)'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Desktop Article Title Size */}
-          {renderCustomControl(
-            'Desktop Article H1 Title Size (डेस्कटॉप शीर्षक)',
-            typo.articleTitleDesktopPx || 32,
-            (val) => onUpdateTypography({ articleTitleDesktopPx: val }),
-            22,
-            54,
-            1,
-            [26, 28, 32, 36, 40],
-            'px',
-            'डेस्कटॉप व लैपटॉप स्क्रीन पर आर्टिकल का मुख्य H1 हेडिंग साइज़ (Default 32px)'
-          )}
-
-          {/* Mobile Article Title Size */}
-          {renderCustomControl(
-            'Mobile Article H1 Title Size (मोबाइल शीर्षक)',
-            typo.articleTitleMobilePx || 26,
-            (val) => onUpdateTypography({ articleTitleMobilePx: val }),
-            18,
-            40,
-            1,
-            [20, 24, 26, 28, 32],
-            'px',
-            'स्मार्टफोन पर आर्टिकल हेडिंग का प्राकृतिक साइज़'
-          )}
-
-          {/* Article Lead Subtitle */}
-          {renderCustomControl(
-            'Article Lead Subtitle (सबटाइटल/लीड)',
-            typo.articleLeadSubtitlePx || 18,
-            (val) => onUpdateTypography({ articleLeadSubtitlePx: val }),
-            12,
-            26,
-            1,
-            [14, 16, 18, 20, 22],
-            'px',
-            'हेडिंग के ठीक नीचे लाल बॉर्डर वाला मुख्य सबटाइटल'
-          )}
-
-          {/* Article Body Paragraph Size */}
-          {renderCustomControl(
-            'Article Body Paragraph Size (पैराग्राफ टेक्स्ट)',
-            typo.articleBodyFontSizePx || 17,
-            (val) => onUpdateTypography({ articleBodyFontSizePx: val }),
-            13,
-            26,
-            1,
-            [15, 16, 17, 18, 20],
-            'px',
-            'आर्टिकल की मुख्य ख़बर के अनुच्छेदों (Paragraphs) का फ़ॉन्ट साइज़'
-          )}
-
-          {/* Article Body Line Height */}
-          {renderCustomControl(
-            'Article Body Line Height Spacing (पंक्तियों के बीच दूरी)',
-            typo.articleBodyLineHeight || 1.75,
-            (val) => onUpdateTypography({ articleBodyLineHeight: val }),
-            1.3,
-            2.4,
-            0.05,
-            [1.5, 1.65, 1.75, 1.9, 2.0],
-            'x',
-            'आर्टिकल पढ़ने में आसानी हेतु लाइनों का अंतराल'
-          )}
-
-          {/* Related Articles Section Heading */}
-          {renderCustomControl(
-            'संबंधित ख़बरें (Related Articles) Heading Size',
-            typo.relatedHeadingCustomPx || 18,
-            (val) => onUpdateTypography({ relatedHeadingCustomPx: val }),
-            14,
-            32,
-            1,
-            [14, 16, 18, 22, 26],
-            'px',
-            'आर्टिकल के अंत में संबंधित ख़बरें सेक्शन का हेडर'
-          )}
-
-          {/* Related Card Story Title */}
-          {renderCustomControl(
-            'Related Card Story Title (संबंधित कार्ड शीर्षक)',
-            typo.relatedCardTitlePx || 15,
-            (val) => onUpdateTypography({ relatedCardTitlePx: val }),
-            12,
-            22,
-            1,
-            [13, 14, 15, 16, 18],
-            'px',
-            'संबंधित ख़बरों के ग्रिड में कार्ड टाइटल'
-          )}
-
-          {/* Related Category Badge */}
-          {renderCustomControl(
-            'Related Category Badge (संबंधित कैटेगरी बैज)',
-            typo.relatedCategoryBadgePx || 12,
-            (val) => onUpdateTypography({ relatedCategoryBadgePx: val }),
-            9,
-            16,
-            1,
-            [10, 11, 12, 14],
-            'px',
-            'संबंधित ख़बरों के कार्ड पर लाल कैटेगरी टैग'
-          )}
-        </div>
-      </div>
-
-      {/* 4. SIDEBAR & WIDGETS TYPOGRAPHY */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <div className="flex items-center space-x-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">
-              W
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">4. Sidebar & Widgets Typography (साइडबार विजेट्स)</h3>
-              <p className="text-[11px] text-slate-500">ट्रेंडिंग ख़बरें, सोने-चांदी का भाव, दैनिक राशिफल और विजेट्स के शीर्षकों का आकार</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Sidebar Widget Headings */}
-          {renderCustomControl(
-            'Sidebar Widget Header Title Size (विजेट हेडर शीर्षक)',
-            typo.sidebarHeadingPx || 15,
-            (val) => onUpdateTypography({ sidebarHeadingPx: val }),
-            12,
-            24,
-            1,
-            [13, 14, 15, 16, 18],
-            'px',
-            "'ट्रेंडिंग ख़बरें', 'आज के सोने-चांदी का भाव', 'दैनिक राशिफल'"
-          )}
-
-          {/* Sidebar Item Titles */}
-          {renderCustomControl(
-            'Trending Sidebar Story Titles (ट्रेंडिंग आइटम शीर्षक)',
-            typo.sidebarItemTitlePx || 13,
-            (val) => onUpdateTypography({ sidebarItemTitlePx: val }),
-            11,
-            20,
-            1,
-            [11, 12, 13, 14, 15],
-            'px',
-            'साइडबार में स्क्रॉल होने वाले समाचारों का टाइटल साइज़'
-          )}
-        </div>
-      </div>
-
-      {/* 5. FOOTER TYPOGRAPHY */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-        <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
-          <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs">
-            F
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">5. Footer Typography (फ़ूटर फ़ॉन्ट्स)</h3>
-            <p className="text-[11px] text-slate-500">फ़ूटर कॉलम शीर्षकों और डायरेक्टरी लिंक्स का फ़ॉन्ट साइज़</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Footer Font Family</label>
-            <select
-              value={typo.footerFont || typo.bodyFont}
-              onChange={(e) => onUpdateTypography({ footerFont: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              {FONT_OPTIONS.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Footer Column Headings */}
-          {renderCustomControl(
-            'Footer Column Titles (कॉलम हेडिंग्स)',
-            typo.footerHeadingPx || 16,
-            (val) => onUpdateTypography({ footerHeadingPx: val }),
-            12,
-            24,
-            1,
-            [13, 14, 16, 18, 20],
-            'px',
-            'प्रमुख विषय, राज्य, कानूनी नीतियां आदि'
-          )}
-
-          {/* Footer Directory Links Text */}
-          {renderCustomControl(
-            'Footer Links & About Text (लिंक्स व विवरण)',
-            typo.footerTextPx || 13,
-            (val) => onUpdateTypography({ footerTextPx: val }),
-            10,
-            18,
-            1,
-            [11, 12, 13, 14, 15],
-            'px',
-            'फ़ूटर लिंक्स, कॉपीराइट और परिचय पाठ'
-          )}
-        </div>
-      </div>
-
-      {/* 6. GLOBAL BASE SCALE & META DETAILS */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-          <Smartphone className="w-4 h-4 text-slate-700" />
-          <span>6. Global Base Scale & Meta Details (ग्लोबल बेस स्केल व मेटा फ़ॉन्ट)</span>
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Meta Font Family</label>
-            <select
-              value={typo.metaFont}
-              onChange={(e) => onUpdateTypography({ metaFont: e.target.value })}
-              className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              {FONT_OPTIONS.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Global Base HTML Font */}
-          {renderCustomControl(
-            'Global Base HTML Font (समस्त वेबसाइट बेस साइज़)',
-            typo.baseFontSizePx || 16,
-            (val) => onUpdateTypography({ baseFontSizePx: val }),
-            12,
-            22,
-            1,
-            [14, 15, 16, 17, 18],
-            'px',
-            'वेबसाइट का मुख्य आधारभूत फ़ॉन्ट साइज़'
-          )}
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Scale Preset</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {[
-                { id: 'compact', label: 'Compact' },
-                { id: 'normal', label: 'Standard' },
-                { id: 'large', label: 'Large' },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => onUpdateTypography({ mobileScale: item.id as any })}
-                  className={`py-2 px-1 text-center rounded-lg text-xs font-bold border transition cursor-pointer ${
-                    (typo.mobileScale || 'normal') === item.id
-                      ? 'bg-red-600 border-red-600 text-white shadow-xs'
-                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 7. REAL-TIME LIVE TYPOGRAPHY PREVIEW */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-            Real-Time Typography Preview (लाइव पूर्वावलोकन)
-          </span>
-          <span className="text-xs font-mono text-emerald-600 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-            <Check className="w-3.5 h-3.5" />
-            <span>Applied Live in Portal</span>
-          </span>
-        </div>
-
-        <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
-          {/* Header Preview */}
-          <div className="border-b border-slate-200 pb-2 flex items-center justify-between flex-wrap gap-2">
-            <span
-              className="font-black text-red-700"
-              style={{
-                fontFamily: typo.headerFont,
-                fontSize: `${settings.headerFooter?.headerTitleCustomPx || typo.headerTitleCustomPx || 36}px`,
-              }}
-            >
-              खबरी दोस्त • KHABRI DOST
-            </span>
-            <span className="text-xs text-slate-500 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">
-              Header Text: {settings.headerFooter?.headerTitleCustomPx || typo.headerTitleCustomPx || 36}px
+            <Eye className="w-4 h-4 text-red-600" />
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+              Live Real-Time Typography Preview
             </span>
           </div>
-
-          {/* Section Block Sample */}
-          <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-            <h4
-              className="font-bold text-slate-900"
-              style={{
-                fontFamily: typo.headlineFont,
-                fontSize: `${typo.sectionHeadingPx || 20}px`,
-              }}
-            >
-              ताज़ा ख़बरें (Section Heading: {typo.sectionHeadingPx || 20}px)
-            </h4>
-            <span className="text-xs text-red-600 font-bold">सभी देखें →</span>
-          </div>
-
-          {/* Hero Headline Title */}
+          <span className="text-[11px] font-mono text-slate-400">
+            Font: {typo.defaultFontFamily ? typo.defaultFontFamily.split(',')[0].replace(/['"]/g, '') : 'Noto Sans Devanagari'} • Weight: {typo.defaultFontWeight || 400}
+          </span>
+        </div>
+        <div
+          className="p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-2 transition-all"
+          style={{
+            fontFamily: typo.defaultFontFamily || "'Noto Sans Devanagari', 'Noto Sans', sans-serif",
+            lineHeight: typo.globalLineHeight || 1.6,
+            letterSpacing: typo.globalLetterSpacing ? `${typo.globalLetterSpacing}px` : 'normal',
+          }}
+        >
           <h3
-            className="text-slate-900 leading-snug"
+            className="text-xl sm:text-2xl text-slate-900 tracking-tight"
             style={{
-              fontFamily: typo.headlineFont,
-              fontWeight: typo.headlineWeight || 700,
-              fontSize: `${typo.heroTitlePx || 26}px`,
+              fontWeight: typo.headlineWeight || typo.defaultFontWeight || 700,
+              fontFamily: typo.headlineFont || typo.defaultFontFamily,
             }}
           >
-            संसद बजट सत्र: भारतीय अर्थव्यवस्था, रक्षा एवं डिजिटल इनोवेशन पर ऐतिहासिक फैसले (Hero Title: {typo.heroTitlePx || 26}px)
+            खबरी दोस्त — निष्पक्ष, सटीक व निर्भीक पत्रकारिता
           </h3>
-
-          {/* Meta Description / Tag */}
-          <div
-            className="flex items-center gap-2 text-slate-500"
-            style={{
-              fontFamily: typo.metaFont,
-              fontSize: `${typo.cardMetaFontSizePx || 11}px`,
-            }}
-          >
-            <span className="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded">राष्ट्रीय</span>
-            <span>• 10 मिनट पहले</span>
-            <span>• नई दिल्ली ब्यूरो</span>
-            <span>• 14.5K व्यूज़</span>
-          </div>
-
-          {/* Article Lead Subtitle */}
-          <div
-            className="border-l-4 border-red-600 pl-3 italic text-slate-700 font-semibold"
-            style={{
-              fontFamily: typo.bodyFont,
-              fontSize: `${typo.articleLeadSubtitlePx || 18}px`,
-            }}
-          >
-            यह आर्टिकल का मुख्य लीड सबटाइटल है (Lead Subtitle: {typo.articleLeadSubtitlePx || 18}px)
-          </div>
-
-          {/* Article Paragraph Content */}
           <p
-            className="text-slate-700"
+            className="text-sm text-slate-700 leading-relaxed"
             style={{
-              fontFamily: typo.bodyFont,
-              fontWeight: typo.bodyWeight || 400,
-              fontSize: `${typo.articleBodyFontSizePx || 17}px`,
-              lineHeight: typo.articleBodyLineHeight || 1.75,
+              fontWeight: typo.bodyWeight || typo.defaultFontWeight || 400,
+              fontFamily: typo.bodyFont || typo.defaultFontFamily,
             }}
           >
-            खबरी दोस्त डिजिटल न्यूज़ पोर्टल पर देश एवं दुनिया की सभी महत्वपूर्ण खबरें निष्पक्षता, सत्यता और संपूर्ण विश्लेषण के साथ। आपके द्वारा चुना गया फ़ॉन्ट और पिक्सल साइज़ अब पूरे पोर्टल में सक्रिय है। (Paragraph Text: {typo.articleBodyFontSizePx || 17}px, Line Height: {typo.articleBodyLineHeight || 1.75}x)
+            Breaking News & Editorial Coverage: देश, विदेश, राज्य, राजनीति, व्यापार और खेल जगत की हर बड़ी खबर पर सबसे सटीक व विश्वसनीय विश्लेषण।
           </p>
-
-          {/* Footer Sample */}
-          <div
-            className="pt-2 border-t border-slate-200 text-slate-500"
-            style={{
-              fontFamily: typo.footerFont || typo.bodyFont,
-              fontSize: `${typo.footerTextPx || 13}px`,
-            }}
-          >
-            © 2026 Khabri Dost Media Network. सर्वाधिकार सुरक्षित। (Footer Text: {typo.footerTextPx || 13}px)
-          </div>
         </div>
+      </div>
+
+      {/* 18 SECTIONS ACCORDION / EDITORS */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            Portal Typography Sections ({SECTIONS_METADATA.length} Total)
+          </h3>
+          <span className="text-xs text-slate-400">
+            Click any section to customize font family, weight, and responsive sizes
+          </span>
+        </div>
+
+        {SECTIONS_METADATA.map((sec) => {
+          const isExpanded = expandedSection === sec.id;
+          const isGlobal = sec.id === 'global';
+          const secConfig: TypographySectionOverride = (sections as any)[sec.id] || {
+            enabled: false,
+            fontFamily: typo.defaultFontFamily,
+            fontWeight: sec.defaultWeight,
+            desktopFontSizePx: sec.defaultDesktopPx,
+            mobileFontSizePx: sec.defaultMobilePx,
+          };
+
+          const isOverridden = !isGlobal && secConfig.enabled;
+          const SectionIcon = sec.icon;
+
+          return (
+            <div
+              key={sec.id}
+              className={`rounded-2xl border transition shadow-2xs overflow-hidden ${
+                isExpanded ? 'bg-white border-red-200 ring-2 ring-red-500/10' : 'bg-white border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              {/* SECTION HEADER ROW */}
+              <div
+                onClick={() => setExpandedSection(isExpanded ? '' : sec.id)}
+                className="p-4 sm:p-4.5 flex items-center justify-between cursor-pointer select-none bg-slate-50/50 hover:bg-slate-50 transition"
+              >
+                <div className="flex items-center space-x-3 min-w-0">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition ${
+                      isExpanded
+                        ? 'bg-red-600 text-white shadow-2xs'
+                        : 'bg-slate-200/80 text-slate-700'
+                    }`}
+                  >
+                    <SectionIcon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center space-x-2 flex-wrap">
+                      <span className="text-sm font-bold text-slate-900 truncate">
+                        {sec.name}
+                      </span>
+                      {isGlobal ? (
+                        <span className="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          PRIMARY DEFAULT
+                        </span>
+                      ) : isOverridden ? (
+                        <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Check className="w-3 h-3 text-amber-700" />
+                          <span>CUSTOM OVERRIDE</span>
+                        </span>
+                      ) : (
+                        <span className="bg-slate-100 text-slate-600 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                          INHERITS GLOBAL
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 truncate mt-0.5">
+                      {sec.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 shrink-0 ml-3">
+                  <button
+                    type="button"
+                    className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
+                  >
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* EXPANDED SECTION EDITING CONTROLS */}
+              {isExpanded && (
+                <div className="p-5 border-t border-slate-100 space-y-5 bg-white animate-fadeIn">
+                  {/* OVERRIDE TOGGLE (FOR NON-GLOBAL SECTIONS) */}
+                  {!isGlobal && (
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 block">
+                          Enable Section Custom Override
+                        </span>
+                        <p className="text-[11px] text-slate-500">
+                          {isOverridden
+                            ? 'This section uses its own independent font family, weights, and pixel sizing.'
+                            : 'This section automatically inherits the universal settings from Section 1 (Global Typography).'}
+                        </p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={isOverridden}
+                          onChange={(e) =>
+                            handleUpdateSection(sec.id, { enabled: e.target.checked })
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                      </label>
+                    </div>
+                  )}
+
+                  {/* CONTROLS (IF GLOBAL OR IF OVERRIDDEN) */}
+                  {(isGlobal || isOverridden) && (
+                    <div className="space-y-4">
+                      {/* FONT FAMILY SELECTOR */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 block">
+                          Font Family Selection
+                        </label>
+                        <select
+                          value={
+                            isGlobal
+                              ? typo.defaultFontFamily || "'Noto Sans Devanagari', 'Noto Sans', sans-serif"
+                              : secConfig.fontFamily || typo.defaultFontFamily
+                          }
+                          onChange={(e) => {
+                            if (isGlobal) {
+                              onUpdateTypography({ defaultFontFamily: e.target.value });
+                            } else {
+                              handleUpdateSection(sec.id, { fontFamily: e.target.value });
+                            }
+                          }}
+                          className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-red-500 focus:outline-none"
+                        >
+                          {FONT_OPTIONS.map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.name} ({f.category})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* FONT WEIGHT SELECTOR (100 THIN TO 900 BLACK) */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-700 block">
+                            Font Weight Range (100 Thin to 900 Black)
+                          </label>
+                          <span className="text-xs font-mono font-bold text-red-700">
+                            Current: {isGlobal ? typo.defaultFontWeight || 400 : secConfig.fontWeight || 400}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 sm:grid-cols-9 gap-1.5">
+                          {WEIGHT_OPTIONS.map((w) => {
+                            const currentW = isGlobal
+                              ? typo.defaultFontWeight || 400
+                              : secConfig.fontWeight || 400;
+                            const isSelected = currentW === w.value;
+                            return (
+                              <button
+                                key={w.value}
+                                type="button"
+                                onClick={() => {
+                                  if (isGlobal) {
+                                    onUpdateTypography({ defaultFontWeight: w.value });
+                                  } else {
+                                    handleUpdateSection(sec.id, { fontWeight: w.value });
+                                  }
+                                }}
+                                className={`py-1.5 px-1 rounded-lg text-[11px] font-bold text-center transition cursor-pointer border ${
+                                  isSelected
+                                    ? 'bg-red-600 text-white border-red-700 shadow-2xs'
+                                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                                }`}
+                              >
+                                {w.label.replace(' ', '\n')}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* RESPONSIVE FONT SIZING: DESKTOP & MOBILE */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        {/* Desktop Font Size */}
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                              <Monitor className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Desktop Font Size</span>
+                            </span>
+                            <div className="flex items-center space-x-1">
+                              <input
+                                type="number"
+                                min={10}
+                                max={80}
+                                value={
+                                  isGlobal
+                                    ? typo.globalDesktopFontSize || 16
+                                    : secConfig.desktopFontSizePx || sec.defaultDesktopPx
+                                }
+                                onChange={(e) => {
+                                  const num = Number(e.target.value);
+                                  if (!isNaN(num) && num > 0) {
+                                    if (isGlobal) {
+                                      onUpdateTypography({ globalDesktopFontSize: num });
+                                    } else {
+                                      handleUpdateSection(sec.id, { desktopFontSizePx: num });
+                                    }
+                                  }
+                                }}
+                                className="w-16 px-2 py-1 text-xs text-right font-mono font-bold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                              />
+                              <span className="text-xs text-slate-500 font-bold">px</span>
+                            </div>
+                          </div>
+                          <input
+                            type="range"
+                            min={10}
+                            max={60}
+                            value={
+                              isGlobal
+                                ? typo.globalDesktopFontSize || 16
+                                : secConfig.desktopFontSizePx || sec.defaultDesktopPx
+                            }
+                            onChange={(e) => {
+                              const num = Number(e.target.value);
+                              if (isGlobal) {
+                                onUpdateTypography({ globalDesktopFontSize: num });
+                              } else {
+                                handleUpdateSection(sec.id, { desktopFontSizePx: num });
+                              }
+                            }}
+                            className="w-full accent-red-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+                          />
+                        </div>
+
+                        {/* Mobile Font Size */}
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                              <Smartphone className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Mobile Font Size</span>
+                            </span>
+                            <div className="flex items-center space-x-1">
+                              <input
+                                type="number"
+                                min={10}
+                                max={50}
+                                value={
+                                  isGlobal
+                                    ? typo.globalMobileFontSize || 15
+                                    : secConfig.mobileFontSizePx || sec.defaultMobilePx
+                                }
+                                onChange={(e) => {
+                                  const num = Number(e.target.value);
+                                  if (!isNaN(num) && num > 0) {
+                                    if (isGlobal) {
+                                      onUpdateTypography({ globalMobileFontSize: num });
+                                    } else {
+                                      handleUpdateSection(sec.id, { mobileFontSizePx: num });
+                                    }
+                                  }
+                                }}
+                                className="w-16 px-2 py-1 text-xs text-right font-mono font-bold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                              />
+                              <span className="text-xs text-slate-500 font-bold">px</span>
+                            </div>
+                          </div>
+                          <input
+                            type="range"
+                            min={10}
+                            max={44}
+                            value={
+                              isGlobal
+                                ? typo.globalMobileFontSize || 15
+                                : secConfig.mobileFontSizePx || sec.defaultMobilePx
+                            }
+                            onChange={(e) => {
+                              const num = Number(e.target.value);
+                              if (isGlobal) {
+                                onUpdateTypography({ globalMobileFontSize: num });
+                              } else {
+                                handleUpdateSection(sec.id, { mobileFontSizePx: num });
+                              }
+                            }}
+                            className="w-full accent-red-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+                          />
+                        </div>
+                      </div>
+
+                      {/* LINE HEIGHT & LETTER SPACING */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                          <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                            <span>Line Height</span>
+                            <span className="font-mono text-red-700">
+                              {isGlobal ? typo.globalLineHeight || 1.6 : secConfig.lineHeight || 1.6}x
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={1.0}
+                            max={2.4}
+                            step={0.05}
+                            value={isGlobal ? typo.globalLineHeight || 1.6 : secConfig.lineHeight || 1.6}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              if (isGlobal) {
+                                onUpdateTypography({ globalLineHeight: val });
+                              } else {
+                                handleUpdateSection(sec.id, { lineHeight: val });
+                              }
+                            }}
+                            className="w-full accent-red-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+                          />
+                        </div>
+
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                          <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                            <span>Letter Spacing</span>
+                            <span className="font-mono text-red-700">
+                              {isGlobal ? typo.globalLetterSpacing || 0 : secConfig.letterSpacingPx || 0}px
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={-1}
+                            max={3}
+                            step={0.25}
+                            value={isGlobal ? typo.globalLetterSpacing || 0 : secConfig.letterSpacingPx || 0}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              if (isGlobal) {
+                                onUpdateTypography({ globalLetterSpacing: val });
+                              } else {
+                                handleUpdateSection(sec.id, { letterSpacingPx: val });
+                              }
+                            }}
+                            className="w-full accent-red-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

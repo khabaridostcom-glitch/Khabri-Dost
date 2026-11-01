@@ -14,15 +14,14 @@ export const ADMIN_SESSION_TIMEOUT_MS = 4 * 60 * 60 * 1000;
 export const isPlatformAdminEmail = (email?: string | null): boolean => {
   if (!email) return false;
   const normalized = email.trim().toLowerCase();
-  return (
-    normalized === ADMIN_EMAIL.toLowerCase() ||
-    normalized === ALT_ADMIN_EMAIL.toLowerCase() ||
-    normalized === 'admin@khabridost.com' ||
-    normalized === 'contact@khabridost.com' ||
-    normalized === 'editor@khabridost.com' ||
-    normalized.startsWith('khabridost') ||
-    normalized.startsWith('khabaridost')
-  );
+  const allowedAdmins = [
+    ADMIN_EMAIL.toLowerCase(),
+    ALT_ADMIN_EMAIL.toLowerCase(),
+    'admin@khabridost.com',
+    'contact@khabridost.com',
+    'editor@khabridost.com',
+  ];
+  return allowedAdmins.includes(normalized);
 };
 
 export interface StaffAuthSession {
@@ -463,14 +462,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const isOwner =
-    isPlatformAdminEmail(user?.email) ||
-    isPlatformAdminEmail(staffSession?.email);
+  // Verify that staff/admin state is bound to verified authentication identity
+  const isOwner = isPlatformAdminEmail(user?.email);
 
-  const isStaff = isOwner || !!staffSession;
+  const isStaff =
+    isOwner ||
+    (!!user && !!staffSession && user.email?.toLowerCase() === staffSession.email.toLowerCase()) ||
+    userProfile?.role === 'editor' ||
+    userProfile?.role === 'admin';
+
   const isAdmin =
     isOwner ||
-    staffSession?.role === 'super_admin' ||
+    (!!user && staffSession?.role === 'super_admin' && user.email?.toLowerCase() === staffSession.email.toLowerCase()) ||
     userProfile?.role === 'admin' ||
     serverVerifiedAdmin;
 

@@ -23,15 +23,16 @@ service cloud.firestore {
       return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    // Server-side verified Administrator check
+    // Server-side verified Administrator check (Exact email or verified admin record)
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == 'khabaridost.com@gmail.com' ||
-        request.auth.token.email == 'khabridost.com@gmail.com' ||
-        request.auth.token.email == 'admin@khabridost.com' ||
-        request.auth.token.email == 'contact@khabridost.com' ||
-        (request.auth.token.email != null && request.auth.token.email.matches('^khabridost.*')) ||
-        (request.auth.token.email != null && request.auth.token.email.matches('^khabaridost.*')) ||
+        request.auth.token.email in [
+          'khabaridost.com@gmail.com',
+          'khabridost.com@gmail.com',
+          'admin@khabridost.com',
+          'contact@khabridost.com',
+          'editor@khabridost.com'
+        ] ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -56,19 +57,24 @@ service cloud.firestore {
     }
 
     match /articles/{articleId} {
-      allow read: if true;
+      // Public read restricted to published articles; drafts & scheduled posts require staff/admin
+      allow read: if !('status' in resource.data) || resource.data.status == 'published' || isAdmin() || (isStaff() && resource.data.authorUid == request.auth.uid);
       allow create: if isSignedIn() && isValidId(articleId) &&
                        isValidArticle(incoming()) &&
                        (isAdmin() || (isStaff() && incoming().authorUid == request.auth.uid));
       allow update: if isValidId(articleId) && (
         isAdmin() ||
         (isStaff() && existing().authorUid == request.auth.uid && incoming().authorUid == existing().authorUid && isValidArticle(incoming())) ||
-        // Action: view count increment
-        (incoming().diff(existing()).affectedKeys().hasOnly(['viewsCount']) && incoming().viewsCount is number) ||
-        // Action: like count increment (signed in readers)
-        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['likesCount']) && incoming().likesCount is number) ||
-        // Action: emoji reactions
-        (incoming().diff(existing()).affectedKeys().hasOnly(['reactions', 'likesCount']))
+        // Action: view count atomic increment (+1)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['viewsCount']) && 
+         incoming().viewsCount is number && 
+         incoming().viewsCount == existing().viewsCount + 1) ||
+        // Action: like count increment/decrement (signed in readers)
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['likesCount']) && 
+         incoming().likesCount is number && 
+         (incoming().likesCount == existing().likesCount + 1 || incoming().likesCount == existing().likesCount - 1)) ||
+        // Action: emoji reactions (signed in readers)
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['reactions', 'likesCount']))
       );
       allow delete: if isValidId(articleId) && (isAdmin() || (isStaff() && existing().authorUid == request.auth.uid));
     }

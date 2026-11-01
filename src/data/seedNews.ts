@@ -2,6 +2,7 @@ import { NewsArticle, CategoryItem } from '../types/news';
 
 export const CATEGORIES: CategoryItem[] = [
   { id: 'all', labelHindi: 'ताज़ा ख़बरें', labelEnglish: 'Top Stories' },
+  { id: 'trending', labelHindi: 'ट्रेंडिंग 🔥', labelEnglish: 'Trending' },
   { id: 'national', labelHindi: 'देश', labelEnglish: 'National' },
   { id: 'state', labelHindi: 'राज्य', labelEnglish: 'States' },
   { id: 'politics', labelHindi: 'राजनीति', labelEnglish: 'Politics' },
@@ -208,6 +209,17 @@ const RAW_NEWS: NewsArticle[] = [
 अंतरराष्ट्रीय अंतरिक्ष एजेंसियों जैसे नासा और ईएसए ने भी भारत की इस तीव्र प्रगति की सराहना की है। गगनयान मिशन न केवल भारत के लिए बल्कि संपूर्ण दक्षिण एशिया के वैज्ञानिक अनुसंधान के लिए एक स्वर्णिम अध्याय सिद्ध होगा।`,
     category: 'national',
     imageUrl: 'https://images.unsplash.com/photo-1517976487502-5f714249a5b4?w=1200&auto=format&fit=crop&q=80',
+    galleryImages: [
+      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=1200&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=1200&auto=format&fit=crop&q=80',
+    ],
+    galleryCaptions: [
+      'इसरो द्वारा गगनयान मिशन के क्रू मॉड्यूल परीक्षण का विहंगम दृश्य',
+      'पृथ्वी की निचली कक्षा में अंतरिक्ष यान का सिमुलेशन दृश्य',
+      'अंतरिक्ष कैप्सूल की रिकवरी और तकनीकी टीम का संयुक्त अभियान',
+      'भारतीय अंतरिक्ष यात्रियों के प्रशिक्षण केंद्र का आंतरिक दृश्य',
+    ],
     imageCaption: 'इसरो द्वारा गगनयान मिशन के क्रू मॉड्यूल परीक्षण का विहंगम दृश्य',
     authorName: 'आकाश शर्मा',
     authorEmail: 'khabridost.com@gmail.com',
